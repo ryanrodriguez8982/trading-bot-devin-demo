@@ -45,21 +45,52 @@ pytest tests/
 
 ## Logging
 
-The bot automatically logs all trading signals to timestamped files in the `logs/` directory:
+The bot automatically logs all trading signals to both files and a SQLite database:
 
+### File Logging
 - **Log Location**: `logs/{timestamp}_signals.log`
 - **Log Format**: Each line contains timestamp, action, symbol, and price
 - **Example**: `2024-01-01 10:30:00 | BUY | BTC/USDT | $50000.00`
 
 The logs directory is created automatically if it doesn't exist. Each bot run generates a new log file with a timestamp in the filename format `YYYYMMDD_HHMMSS_signals.log`.
 
-### Log File Example
+#### Log File Example
 ```
 Trading Signals Log - BTC/USDT
 Generated at: 2024-01-01 10:30:00
 ==================================================
 2024-01-01 10:15:00 | BUY | BTC/USDT | $49500.00
 2024-01-01 10:25:00 | SELL | BTC/USDT | $50200.00
+```
+
+### Database Logging
+- **Database Location**: `signals.db` (SQLite database in project root)
+- **Table Schema**: `signals(timestamp TEXT, action TEXT, price REAL, symbol TEXT, strategy_id TEXT)`
+- **Strategy ID**: Defaults to 'sma' for the SMA crossover strategy
+
+The database is created automatically if it doesn't exist. All signals are stored persistently and can be queried for analysis and visualization.
+
+#### Database Schema
+```sql
+CREATE TABLE signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    action TEXT NOT NULL,
+    price REAL NOT NULL,
+    symbol TEXT NOT NULL,
+    strategy_id TEXT NOT NULL
+);
+```
+
+#### Example Database Query
+```python
+from trading_bot.signal_logger import get_signals_from_db
+
+# Get last 10 BTC/USDT signals
+signals = get_signals_from_db(symbol="BTC/USDT", limit=10)
+
+# Get all signals for a specific strategy
+sma_signals = get_signals_from_db(strategy_id="sma")
 ```
 
 ## Configuration

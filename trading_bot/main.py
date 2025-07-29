@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from data_fetch import fetch_btc_usdt_data
 from strategy import sma_crossover_strategy
+from signal_logger import log_signals_to_db
 
 def load_config():
     """Load configuration from config.json file."""
@@ -89,6 +90,7 @@ def main():
         logging.info(f"Generated {len(signals)} trading signals")
         
         log_signals_to_file(signals, symbol)
+        log_signals_to_db(signals, symbol)
         
         print(f"\n=== Trading Bot Results for {symbol} ===")
         print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
