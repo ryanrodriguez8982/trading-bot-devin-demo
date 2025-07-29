@@ -6,9 +6,14 @@ import time
 import signal as sig
 import sys
 from datetime import datetime
-from .data_fetch import fetch_btc_usdt_data
-from .strategy import sma_crossover_strategy
-from .signal_logger import log_signals_to_db
+try:
+    from .data_fetch import fetch_btc_usdt_data
+    from .strategy import sma_crossover_strategy
+    from .signal_logger import log_signals_to_db
+except ImportError:
+    from data_fetch import fetch_btc_usdt_data
+    from strategy import sma_crossover_strategy
+    from signal_logger import log_signals_to_db
 
 def load_config():
     """Load configuration from config.json file."""
