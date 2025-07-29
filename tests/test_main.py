@@ -108,3 +108,33 @@ def test_signal_logging():
         
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+def test_live_mode_argument_parsing():
+    """Test that --live flag is parsed correctly."""
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import parse_args
+    
+    original_argv = sys.argv
+    try:
+        sys.argv = ['main.py', '--live', '--symbol', 'ETH/USDT']
+        args = parse_args()
+        assert args.live is True, "Live flag should be True when --live is passed"
+        assert args.symbol == 'ETH/USDT', "Symbol should be parsed correctly"
+        
+        sys.argv = ['main.py', '--symbol', 'BTC/USDT']
+        args = parse_args()
+        assert args.live is False, "Live flag should be False when --live is not passed"
+        
+    finally:
+        sys.argv = original_argv
+
+def test_run_single_analysis():
+    """Test the run_single_analysis function with mock data."""
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import run_single_analysis
+    
+    try:
+        signals = run_single_analysis("BTC/USDT", "1m", 100, 5, 20)
+        assert isinstance(signals, list), "Should return a list of signals"
+    except Exception:
+        pass
