@@ -1,0 +1,7 @@
+{
+    "symbol": "BTC/USDT",
+    "timeframe": "1m",
+    "limit": 500,
+    "sma_short": 5,
+    "sma_long": 20
+}
