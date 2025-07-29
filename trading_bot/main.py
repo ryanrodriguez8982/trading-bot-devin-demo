@@ -1,7 +1,36 @@
 import logging
+import json
+import argparse
+import os
 from datetime import datetime
 from data_fetch import fetch_btc_usdt_data
 from strategy import sma_crossover_strategy
+
+def load_config():
+    """Load configuration from config.json file."""
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+    try:
+        with open(config_path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.warning("config.json not found, using default values")
+        return {
+            "symbol": "BTC/USDT",
+            "timeframe": "1m",
+            "limit": 500,
+            "sma_short": 5,
+            "sma_long": 20
+        }
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='Crypto Trading Bot')
+    parser.add_argument('--symbol', type=str, help='Trading pair symbol (e.g., BTC/USDT)')
+    parser.add_argument('--timeframe', type=str, help='Timeframe for candles (e.g., 1m, 5m)')
+    parser.add_argument('--limit', type=int, help='Number of candles to fetch')
+    parser.add_argument('--sma-short', type=int, help='Short-period SMA window')
+    parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
+    return parser.parse_args()
 
 def main():
     """
@@ -10,16 +39,26 @@ def main():
     """
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
+    config = load_config()
+    args = parse_args()
+    
+    symbol = args.symbol or config['symbol']
+    timeframe = args.timeframe or config['timeframe']
+    limit = args.limit or config['limit']
+    sma_short = getattr(args, 'sma_short') or config['sma_short']
+    sma_long = getattr(args, 'sma_long') or config['sma_long']
+    
     try:
-        logging.info("Starting trading bot...")
+        logging.info(f"Starting trading bot with {symbol}, {timeframe}, limit={limit}, SMA({sma_short},{sma_long})")
         
-        data = fetch_btc_usdt_data()
+        data = fetch_btc_usdt_data(symbol, timeframe, limit)
         logging.info(f"Fetched {len(data)} data points")
         
-        signals = sma_crossover_strategy(data)
+        signals = sma_crossover_strategy(data, sma_short, sma_long)
         logging.info(f"Generated {len(signals)} trading signals")
         
-        print("\n=== Trading Bot Results ===")
+        print(f"\n=== Trading Bot Results for {symbol} ===")
+        print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
         print(f"Total signals generated: {len(signals)}")
         
         if signals:

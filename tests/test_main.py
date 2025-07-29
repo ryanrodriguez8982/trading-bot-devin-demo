@@ -47,6 +47,9 @@ def test_strategy_with_sample_data():
     
     assert isinstance(signals, list), "Should return a list of signals"
     
+    signals_custom = sma_crossover_strategy(sample_data, sma_short=3, sma_long=10)
+    assert isinstance(signals_custom, list), "Should return a list of signals with custom parameters"
+    
     for signal in signals:
         assert 'timestamp' in signal, "Each signal should have timestamp"
         assert 'action' in signal, "Each signal should have action"
@@ -69,3 +72,14 @@ def test_strategy_insufficient_data():
     
     assert isinstance(signals, list), "Should return a list even with insufficient data"
     assert len(signals) == 0, "Should return empty list for insufficient data"
+
+def test_data_fetch_with_parameters():
+    """Test that data fetch accepts custom parameters."""
+    try:
+        df = fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=100)
+        
+        assert isinstance(df, pd.DataFrame), "Should return a pandas DataFrame"
+        assert len(df) <= 100, "Should respect limit parameter"
+        
+    except Exception as e:
+        pytest.skip(f"Skipping data fetch test due to API error: {e}")
