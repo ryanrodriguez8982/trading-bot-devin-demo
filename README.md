@@ -9,44 +9,88 @@ Create a trading bot using `ccxt` that:
 - Executes buy/sell logic
 - Logs results and generates reports
 
-## Usage
+## Installation
 
-### Installation
+### Option 1: Pip Installation (Recommended)
+
+Install the trading bot as a CLI tool:
+
 ```bash
-pip install -r requirements.txt
+# Standard installation
+pip install .
+
+# Development installation (editable)
+pip install -e .
 ```
+
+After installation, you can use the `trading-bot` command from anywhere:
+
+```bash
+# Basic usage
+trading-bot --symbol BTC/USDT
+
+# With custom parameters
+trading-bot --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
+
+# Live trading mode
+trading-bot --live --symbol BTC/USDT
+
+# View help
+trading-bot --help
+```
+
+### Option 2: Direct Python Execution
+
+For development or if you prefer not to install:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run directly
+python trading_bot/main.py --symbol BTC/USDT
+```
+
+## Usage
 
 ### Running the Trading Bot
 
-#### Basic usage (uses config.json defaults):
+#### Using the CLI tool (after pip installation):
 ```bash
-python trading_bot/main.py
-```
+# Basic usage (uses config.json defaults)
+trading-bot
 
-#### With CLI arguments (overrides config.json):
-```bash
 # Change trading pair and timeframe
-python trading_bot/main.py --symbol ETH/USDT --timeframe 5m
+trading-bot --symbol ETH/USDT --timeframe 5m
 
 # Customize SMA periods
-python trading_bot/main.py --sma-short 10 --sma-long 50
+trading-bot --sma-short 10 --sma-long 50
 
 # Fetch more data points
-python trading_bot/main.py --limit 1000
+trading-bot --limit 1000
 
 # Combine multiple parameters
-python trading_bot/main.py --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
+trading-bot --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
 ```
 
 #### Live Trading Simulation Mode:
 ```bash
 # Run in live mode (fetches latest data every 60 seconds)
-python trading_bot/main.py --live
+trading-bot --live
 
 # Live mode with custom parameters
-python trading_bot/main.py --live --symbol ETH/USDT --sma-short 10 --sma-long 30
+trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
 
 # Stop live mode gracefully with Ctrl+C
+```
+
+#### Alternative: Direct Python execution:
+```bash
+# Basic usage (uses config.json defaults)
+python trading_bot/main.py
+
+# With CLI arguments
+python trading_bot/main.py --symbol ETH/USDT --timeframe 5m
 ```
 
 ### Running Tests
@@ -144,11 +188,14 @@ The bot supports a live trading simulation mode that continuously monitors the m
 
 ### Usage
 ```bash
-# Start live mode with default settings
-python trading_bot/main.py --live
+# Start live mode with default settings (CLI tool)
+trading-bot --live
 
-# Live mode with custom parameters
-python trading_bot/main.py --live --symbol ETH/USDT --sma-short 10 --sma-long 30
+# Live mode with custom parameters (CLI tool)
+trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
+
+# Alternative: Direct Python execution
+python trading_bot/main.py --live
 ```
 
 ### Live Mode Output
