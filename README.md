@@ -173,3 +173,26 @@ Press `Ctrl+C` at any time to gracefully shutdown:
 ^C=== Live Trading Mode Shutdown ===
 Gracefully shutting down. Thank you for using the trading bot!
 ```
+
+## Dashboard
+
+The project includes a Streamlit dashboard for visualizing trading signals and price data.
+
+### Running the Dashboard
+```bash
+streamlit run dashboard.py
+```
+
+### Dashboard Features
+- **Interactive Price Charts**: View price data with SMA overlays and signal markers
+- **Signal Table**: Browse recent trading signals with filtering options
+- **Real-time Filters**: Filter by symbol, strategy, and number of signals
+- **SMA Configuration**: Adjust SMA periods to see different crossover patterns
+
+The dashboard loads signals from the `signals.db` database and displays:
+- Price charts with configurable SMA crossover visualization
+- Buy/sell signal markers overlaid on price data
+- Filterable table showing timestamp, action, price, symbol, and strategy
+- Signal statistics and metrics
+
+**Note**: Run the trading bot first to generate signals that will appear in the dashboard.
