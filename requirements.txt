@@ -1,4 +1,5 @@
 ccxt
 pandas
 pytest
-flake8
+streamlit
+matplotlib
