@@ -53,7 +53,9 @@ def test_strategy_with_sample_data():
     for signal in signals:
         assert 'timestamp' in signal, "Each signal should have timestamp"
         assert 'action' in signal, "Each signal should have action"
+        assert 'price' in signal, "Each signal should have price"
         assert signal['action'] in ['buy', 'sell'], "Action should be 'buy' or 'sell'"
+        assert isinstance(signal['price'], (int, float)) or hasattr(signal['price'], 'dtype'), "Price should be numeric"
 
 def test_strategy_insufficient_data():
     """Test strategy handles insufficient data gracefully."""
@@ -83,3 +85,26 @@ def test_data_fetch_with_parameters():
         
     except Exception as e:
         pytest.skip(f"Skipping data fetch test due to API error: {e}")
+
+def test_signal_logging():
+    """Test that signals are logged to file correctly."""
+    import tempfile
+    import shutil
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import log_signals_to_file
+    
+    temp_dir = tempfile.mkdtemp()
+    
+    try:
+        signals = [
+            {'timestamp': pd.Timestamp('2024-01-01 10:00:00'), 'action': 'buy', 'price': 50000.0},
+            {'timestamp': pd.Timestamp('2024-01-01 11:00:00'), 'action': 'sell', 'price': 51000.0}
+        ]
+        
+        log_signals_to_file(signals, "BTC/USDT")
+        
+        logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+        assert os.path.exists(logs_dir), "Logs directory should be created"
+        
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)

@@ -39,12 +39,14 @@ def sma_crossover_strategy(df, sma_short=5, sma_long=20):
         if (prev_short_sma <= prev_long_sma and current_short_sma > current_long_sma):
             signals.append({
                 'timestamp': df.iloc[i]['timestamp'],
-                'action': 'buy'
+                'action': 'buy',
+                'price': df.iloc[i]['close']
             })
         elif (prev_short_sma >= prev_long_sma and current_short_sma < current_long_sma):
             signals.append({
                 'timestamp': df.iloc[i]['timestamp'],
-                'action': 'sell'
+                'action': 'sell',
+                'price': df.iloc[i]['close']
             })
     
     logging.info(f"Generated {len(signals)} trading signals")
