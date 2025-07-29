@@ -43,6 +43,25 @@ python trading_bot/main.py --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma
 pytest tests/
 ```
 
+## Logging
+
+The bot automatically logs all trading signals to timestamped files in the `logs/` directory:
+
+- **Log Location**: `logs/{timestamp}_signals.log`
+- **Log Format**: Each line contains timestamp, action, symbol, and price
+- **Example**: `2024-01-01 10:30:00 | BUY | BTC/USDT | $50000.00`
+
+The logs directory is created automatically if it doesn't exist. Each bot run generates a new log file with a timestamp in the filename format `YYYYMMDD_HHMMSS_signals.log`.
+
+### Log File Example
+```
+Trading Signals Log - BTC/USDT
+Generated at: 2024-01-01 10:30:00
+==================================================
+2024-01-01 10:15:00 | BUY | BTC/USDT | $49500.00
+2024-01-01 10:25:00 | SELL | BTC/USDT | $50200.00
+```
+
 ## Configuration
 
 The bot uses a `config.json` file for default parameters:

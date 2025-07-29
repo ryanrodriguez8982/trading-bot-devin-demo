@@ -32,6 +32,37 @@ def parse_args():
     parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
     return parser.parse_args()
 
+def log_signals_to_file(signals, symbol):
+    """
+    Log trading signals to a timestamped file in logs/ directory.
+    
+    Args:
+        signals (list): List of trading signals with timestamp, action, price
+        symbol (str): Trading pair symbol
+    """
+    if not signals:
+        return
+    
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    os.makedirs(logs_dir, exist_ok=True)
+    
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_filename = f"{timestamp}_signals.log"
+    log_path = os.path.join(logs_dir, log_filename)
+    
+    with open(log_path, 'w') as f:
+        f.write(f"Trading Signals Log - {symbol}\n")
+        f.write(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("=" * 50 + "\n")
+        
+        for signal in signals:
+            timestamp_str = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+            action = signal['action'].upper()
+            price = signal['price']
+            f.write(f"{timestamp_str} | {action} | {symbol} | ${price:.2f}\n")
+    
+    logging.info(f"Logged {len(signals)} signals to {log_path}")
+
 def main():
     """
     Main function to orchestrate the trading bot.
@@ -56,6 +87,8 @@ def main():
         
         signals = sma_crossover_strategy(data, sma_short, sma_long)
         logging.info(f"Generated {len(signals)} trading signals")
+        
+        log_signals_to_file(signals, symbol)
         
         print(f"\n=== Trading Bot Results for {symbol} ===")
         print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
