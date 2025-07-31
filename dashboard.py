@@ -91,13 +91,17 @@ with col1:
                 signals = sma_crossover_strategy(df_copy, sma_short=sma_short,
                                                  sma_long=sma_long)
             else:
-                strategy_fn = STRATEGY_REGISTRY.get(selected_strategy,
-                                                    sma_crossover_strategy)
+                strategy_fn = STRATEGY_REGISTRY.get(
+                    selected_strategy, sma_crossover_strategy
+                )
                 if selected_strategy == "rsi":
                     signals = strategy_fn(df_copy, period=14)
+                elif selected_strategy == "macd":
+                    signals = strategy_fn(df_copy)
                 else:
-                    signals = strategy_fn(df_copy, sma_short=sma_short,
-                                          sma_long=sma_long)
+                    signals = strategy_fn(
+                        df_copy, sma_short=sma_short, sma_long=sma_long
+                    )
 
             fig, ax = plt.subplots(figsize=(12, 6))
 

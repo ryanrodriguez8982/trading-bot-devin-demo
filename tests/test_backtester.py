@@ -58,9 +58,11 @@ def test_backtest_different_strategies(tmp_path):
 
     result_sma = run_backtest(str(csv_file), strategy='sma')
     result_rsi = run_backtest(str(csv_file), strategy='rsi')
+    result_macd = run_backtest(str(csv_file), strategy='macd')
 
     assert 'net_pnl' in result_sma
     assert 'net_pnl' in result_rsi
+    assert 'net_pnl' in result_macd
 
 
 def test_backtest_saves_outputs(tmp_path):
