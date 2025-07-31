@@ -10,10 +10,12 @@ try:
     from .data_fetch import fetch_btc_usdt_data
     from .strategy import sma_crossover_strategy
     from .signal_logger import log_signals_to_db
+    from ..strategies.rsi_strategy import rsi_crossover_strategy
 except ImportError:
     from data_fetch import fetch_btc_usdt_data
     from strategy import sma_crossover_strategy
     from signal_logger import log_signals_to_db
+    from strategies.rsi_strategy import rsi_crossover_strategy
 
 def load_config():
     """Load configuration from config.json file."""
@@ -40,6 +42,8 @@ def parse_args():
     parser.add_argument('--sma-short', type=int, help='Short-period SMA window')
     parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
     parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
+    parser.add_argument('--strategy', type=str, default='sma', choices=['sma', 'rsi'],
+                        help='Trading strategy to use (sma or rsi)')
     return parser.parse_args()
 
 def log_signals_to_file(signals, symbol):
@@ -80,13 +84,16 @@ def signal_handler(signum, frame):
     print("Gracefully shutting down. Thank you for using the trading bot!")
     sys.exit(0)
 
-def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long):
+def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma"):
     """Run a single analysis cycle and return signals."""
     try:
         data = fetch_btc_usdt_data(symbol, timeframe, limit)
         logging.info(f"Fetched {len(data)} data points")
         
-        signals = sma_crossover_strategy(data, sma_short, sma_long)
+        if strategy == "rsi":
+            signals = rsi_crossover_strategy(data, period=14)
+        else:
+            signals = sma_crossover_strategy(data, sma_short, sma_long)
         logging.info(f"Generated {len(signals)} trading signals")
         
         if signals:
@@ -98,7 +105,7 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long):
         logging.error(f"Error in analysis cycle: {e}")
         return []
 
-def run_live_mode(symbol, timeframe, sma_short, sma_long):
+def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma"):
     """Run the bot in live trading simulation mode."""
     live_limit = 25
     
@@ -106,7 +113,10 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long):
     
     print(f"\n=== Live Trading Mode Started ===")
     print(f"Symbol: {symbol}")
-    print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
+    if strategy == "rsi":
+        print("Strategy: RSI crossover")
+    else:
+        print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
     print(f"Fetching {live_limit} candles every 60 seconds")
     print("Press Ctrl+C to stop gracefully")
     print("=" * 50)
@@ -120,7 +130,7 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long):
         print(f"\n[{current_time}] Iteration #{iteration}")
         logging.info(f"Starting live analysis iteration #{iteration}")
         
-        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long)
+        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy)
         
         if signals:
             print(f"🚨 NEW SIGNALS DETECTED ({len(signals)} signals):")
@@ -150,18 +160,24 @@ def main():
     limit = args.limit or config['limit']
     sma_short = getattr(args, 'sma_short') or config['sma_short']
     sma_long = getattr(args, 'sma_long') or config['sma_long']
+    strategy_choice = getattr(args, 'strategy', 'sma')
     
     try:
         if args.live:
-            logging.info(f"Starting live trading mode with {symbol}, {timeframe}, SMA({sma_short},{sma_long})")
-            run_live_mode(symbol, timeframe, sma_short, sma_long)
+            logging.info(
+                f"Starting live trading mode with {symbol}, {timeframe}, strategy={strategy_choice}" )
+            run_live_mode(symbol, timeframe, sma_short, sma_long, strategy=strategy_choice)
         else:
-            logging.info(f"Starting trading bot with {symbol}, {timeframe}, limit={limit}, SMA({sma_short},{sma_long})")
-            
-            signals = run_single_analysis(symbol, timeframe, limit, sma_short, sma_long)
+            logging.info(
+                f"Starting trading bot with {symbol}, {timeframe}, limit={limit}, strategy={strategy_choice}")
+
+            signals = run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=strategy_choice)
             
             print(f"\n=== Trading Bot Results for {symbol} ===")
-            print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
+            if strategy_choice == "rsi":
+                print("Strategy: RSI crossover")
+            else:
+                print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
             print(f"Total signals generated: {len(signals)}")
             
             if signals:
