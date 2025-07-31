@@ -6,6 +6,10 @@ import time
 import signal as sig
 import sys
 from datetime import datetime
+try:
+    from .backtester import run_backtest
+except ImportError:  # when running as script without package context
+    from backtester import run_backtest
 
 try:
     from plyer import notification
@@ -51,6 +55,8 @@ def parse_args():
                         help='List available strategies and exit')
     parser.add_argument('--alert-mode', action='store_true',
                         help='Enable alert notifications for BUY/SELL signals')
+    parser.add_argument('--backtest', type=str,
+                        help='Path to CSV file for historical backtesting')
     return parser.parse_args()
 
 def log_signals_to_file(signals, symbol):
@@ -204,9 +210,14 @@ def main():
             "Unknown strategy. Use --list-strategies to view options.")
 
     strategy_fn = STRATEGY_REGISTRY[strategy_choice]
-    
+
     try:
-        if args.live:
+        if args.backtest:
+            logging.info(
+                f"Starting backtest using {args.backtest} with strategy={strategy_choice}")
+            run_backtest(args.backtest, strategy=strategy_choice,
+                        sma_short=sma_short, sma_long=sma_long, plot=False)
+        elif args.live:
             logging.info(
                 f"Starting live trading mode with {symbol}, {timeframe}, strategy={strategy_choice}" )
             run_live_mode(symbol, timeframe, sma_short, sma_long, strategy=strategy_choice, alert_mode=alert_mode)
