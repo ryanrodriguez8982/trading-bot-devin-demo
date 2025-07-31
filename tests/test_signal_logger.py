@@ -3,8 +3,6 @@ import pandas as pd
 import sqlite3
 import os
 import sys
-import tempfile
-import shutil
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
 
@@ -130,6 +128,7 @@ def test_locked_database(tmp_path):
     good_signal = [{'timestamp': pd.Timestamp('2024-01-01'), 'action': 'buy', 'price': 100}]
     with pytest.raises(sqlite3.OperationalError):
         log_signals_to_db(good_signal, "BTC/USDT", db_path=str(db_file))
+    conn.close()
 
 
 def test_invalid_schema_detection(tmp_path):
@@ -144,3 +143,18 @@ def test_invalid_schema_detection(tmp_path):
     signal = [{'timestamp': pd.Timestamp('2024-01-01'), 'action': 'buy', 'price': 100}]
     with pytest.raises(sqlite3.OperationalError):
         log_signals_to_db(signal, "BTC/USDT", db_path=str(db_file))
+
+
+def test_timestamp_parsing_failure(tmp_path):
+    """Logging should fail when timestamp objects are invalid."""
+    db_file = tmp_path / "timefail.db"
+    conn = sqlite3.connect(db_file)
+    conn.execute(
+        "CREATE TABLE signals (timestamp TEXT, action TEXT, price REAL, symbol TEXT, strategy_id TEXT)"
+    )
+    conn.commit()
+    conn.close()
+
+    bad_signal = [{'timestamp': '2024-01-01', 'action': 'buy', 'price': 100}]
+    with pytest.raises(AttributeError):
+        log_signals_to_db(bad_signal, "BTC/USDT", db_path=str(db_file))
