@@ -13,14 +13,12 @@ except Exception:
     notification = None
 try:
     from .data_fetch import fetch_btc_usdt_data
-    from .strategy import sma_crossover_strategy
     from .signal_logger import log_signals_to_db
-    from ..strategies.rsi_strategy import rsi_crossover_strategy
+    from ..strategies import STRATEGY_REGISTRY, list_strategies
 except ImportError:
     from data_fetch import fetch_btc_usdt_data
-    from strategy import sma_crossover_strategy
     from signal_logger import log_signals_to_db
-    from strategies.rsi_strategy import rsi_crossover_strategy
+    from strategies import STRATEGY_REGISTRY, list_strategies
 
 def load_config():
     """Load configuration from config.json file."""
@@ -47,8 +45,10 @@ def parse_args():
     parser.add_argument('--sma-short', type=int, help='Short-period SMA window')
     parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
     parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
-    parser.add_argument('--strategy', type=str, default='sma', choices=['sma', 'rsi'],
-                        help='Trading strategy to use (sma or rsi)')
+    parser.add_argument('--strategy', type=str, default='sma',
+                        help='Trading strategy to use')
+    parser.add_argument('--list-strategies', action='store_true',
+                        help='List available strategies and exit')
     parser.add_argument('--alert-mode', action='store_true',
                         help='Enable alert notifications for BUY/SELL signals')
     return parser.parse_args()
@@ -107,13 +107,17 @@ def signal_handler(signum, frame):
 def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma", alert_mode=False):
     """Run a single analysis cycle and return signals."""
     try:
+        if strategy not in STRATEGY_REGISTRY:
+            raise ValueError("Unknown strategy. Use --list-strategies to view options.")
+
         data = fetch_btc_usdt_data(symbol, timeframe, limit)
         logging.info(f"Fetched {len(data)} data points")
-        
+
+        strategy_fn = STRATEGY_REGISTRY[strategy]
         if strategy == "rsi":
-            signals = rsi_crossover_strategy(data, period=14)
+            signals = strategy_fn(data, period=14)
         else:
-            signals = sma_crossover_strategy(data, sma_short, sma_long)
+            signals = strategy_fn(data, sma_short, sma_long)
         logging.info(f"Generated {len(signals)} trading signals")
         
         if signals:
@@ -134,6 +138,9 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_
     
     sig.signal(sig.SIGINT, signal_handler)
     
+    if strategy not in STRATEGY_REGISTRY:
+        raise ValueError("Unknown strategy. Use --list-strategies to view options.")
+
     print(f"\n=== Live Trading Mode Started ===")
     print(f"Symbol: {symbol}")
     if strategy == "rsi":
@@ -185,6 +192,18 @@ def main():
     sma_long = getattr(args, 'sma_long') or config['sma_long']
     strategy_choice = getattr(args, 'strategy', 'sma')
     alert_mode = getattr(args, 'alert_mode', False)
+
+    if getattr(args, 'list_strategies', False):
+        print("Available strategies:")
+        for name in list_strategies():
+            print(f"- {name}")
+        return
+
+    if strategy_choice not in STRATEGY_REGISTRY:
+        raise ValueError(
+            "Unknown strategy. Use --list-strategies to view options.")
+
+    strategy_fn = STRATEGY_REGISTRY[strategy_choice]
     
     try:
         if args.live:
