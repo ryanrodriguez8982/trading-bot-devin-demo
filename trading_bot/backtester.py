@@ -1,6 +1,7 @@
 import pandas as pd
 import logging
 import os
+import json
 from datetime import datetime
 try:
     from .signal_logger import log_signals_to_db
@@ -87,14 +88,35 @@ def simulate_equity(df, signals, initial_capital=10000):
 
     max_drawdown = compute_drawdown(equity_history)
     return equity_history, {
-        'net_pnl': net_pnl,
-        'win_rate': win_rate,
-        'max_drawdown': max_drawdown,
+        'net_pnl': float(net_pnl),
+        'win_rate': float(win_rate),
+        'max_drawdown': float(max_drawdown),
     }
 
 
-def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False, equity_out=None):
-    """Run backtest on CSV data using specified strategy."""
+def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
+                 equity_out=None, stats_out=None, chart_out=None):
+    """Run backtest on CSV data using specified strategy.
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to historical data CSV.
+    strategy : str
+        Strategy name from STRATEGY_REGISTRY.
+    sma_short : int
+        Short SMA window for SMA strategy.
+    sma_long : int
+        Long SMA window for SMA strategy.
+    plot : bool, optional
+        Whether to generate a matplotlib plot.
+    equity_out : str, optional
+        File path to write equity curve CSV.
+    stats_out : str, optional
+        File path to write summary statistics JSON.
+    chart_out : str, optional
+        File path to save the equity chart PNG when ``plot`` is True.
+    """
     df = load_csv_data(csv_path)
 
     if strategy not in STRATEGY_REGISTRY:
@@ -119,11 +141,18 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
     else:
         logging.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
 
+    if stats_out:
+        with open(stats_out, 'w') as f:
+            json.dump(stats, f, indent=2)
+        logging.info(f"Summary stats saved to {stats_out}")
+
     logging.info(f"Net PnL: {stats['net_pnl']:.2f}")
     logging.info(f"Win rate: {stats['win_rate']:.2f}%")
     logging.info(f"Max drawdown: {stats['max_drawdown']:.2f}%")
 
-    if plot:
+    if plot and chart_out:
+        import matplotlib
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
         plt.figure(figsize=(10, 4))
         plt.plot(eq_df['timestamp'], eq_df['equity'])
@@ -131,8 +160,7 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
         plt.ylabel('Equity')
         plt.title('Equity Curve')
         plt.tight_layout()
-        png_path = os.path.splitext(equity_out or csv_path)[0] + '_equity.png'
-        plt.savefig(png_path)
-        logging.info(f"Equity plot saved to {png_path}")
+        plt.savefig(chart_out)
+        logging.info(f"Equity chart saved to {chart_out}")
 
     return stats

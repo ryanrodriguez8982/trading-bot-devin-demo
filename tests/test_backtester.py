@@ -62,3 +62,27 @@ def test_backtest_different_strategies(tmp_path):
     assert 'net_pnl' in result_sma
     assert 'net_pnl' in result_rsi
 
+
+def test_backtest_saves_outputs(tmp_path):
+    timestamps = pd.date_range('2024-01-01', periods=10, freq='1min')
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'open': [100]*10,
+        'high': [105]*10,
+        'low': [95]*10,
+        'close': [100 + i for i in range(10)],
+        'volume': [1000]*10
+    })
+    csv_file = write_csv(tmp_path, df)
+
+    equity_out = tmp_path / 'equity_curve.csv'
+    stats_out = tmp_path / 'summary_stats.json'
+    chart_out = tmp_path / 'equity_chart.png'
+
+    run_backtest(str(csv_file), strategy='sma', plot=True,
+                equity_out=str(equity_out), stats_out=str(stats_out), chart_out=str(chart_out))
+
+    assert equity_out.exists()
+    assert stats_out.exists()
+    assert chart_out.exists()
+
