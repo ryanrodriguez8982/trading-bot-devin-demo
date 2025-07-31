@@ -4,10 +4,8 @@ import pandas as pd
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
-
-from data_fetch import fetch_btc_usdt_data
-from strategy import sma_crossover_strategy
+from trading_bot.data_fetch import fetch_btc_usdt_data
+from trading_bot.strategy import sma_crossover_strategy
 
 def test_data_fetch_structure():
     """Test that data fetch returns correct structure."""

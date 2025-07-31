@@ -2,13 +2,9 @@ import pandas as pd
 import numpy as np
 import logging
 import pytest
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from strategies.sma_strategy import sma_crossover_strategy
-from strategies.rsi_strategy import rsi_crossover_strategy
-from strategies.macd_strategy import macd_strategy
+from trading_bot.strategies.sma_strategy import sma_crossover_strategy
+from trading_bot.strategies.rsi_strategy import rsi_crossover_strategy
+from trading_bot.strategies.macd_strategy import macd_strategy
 
 
 def generate_ohlcv(length=30, constant=False):
