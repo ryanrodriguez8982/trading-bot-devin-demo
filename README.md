@@ -35,6 +35,9 @@ trading-bot --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
 # Live trading mode
 trading-bot --live --symbol BTC/USDT
 
+# Check version
+trading-bot --version
+
 # View help
 trading-bot --help
 ```
