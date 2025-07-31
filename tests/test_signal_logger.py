@@ -99,3 +99,59 @@ def test_database_schema():
         assert column_types['price'] == 'REAL', "price should be REAL type"
         assert column_types['symbol'] == 'TEXT', "symbol should be TEXT type"
         assert column_types['strategy_id'] == 'TEXT', "strategy_id should be TEXT type"
+
+
+def test_missing_database_file(tmp_path):
+    """Ensure informative error when database path does not exist."""
+    bad_db_path = tmp_path / "nonexistent" / "signals.db"
+    signal = [{'timestamp': pd.Timestamp('2024-01-01 00:00:00'), 'action': 'buy', 'price': 100}]
+    with pytest.raises(Exception) as excinfo:
+        log_signals_to_db(signal, "BTC/USDT", db_path=str(bad_db_path))
+    assert "No such file" in str(excinfo.value) or "unable to open database file" in str(excinfo.value)
+
+
+def test_malformed_signal_entry(tmp_path):
+    db_file = tmp_path / "test.db"
+    conn = sqlite3.connect(db_file)
+    conn.execute("CREATE TABLE IF NOT EXISTS signals (timestamp TEXT, action TEXT, price REAL, symbol TEXT, strategy_id TEXT)")
+    conn.close()
+
+    bad_signal = [{'timestamp': pd.Timestamp('2024-01-01'), 'price': 100}]
+    with pytest.raises(KeyError):
+        log_signals_to_db(bad_signal, "BTC/USDT", db_path=str(db_file))
+
+
+def test_locked_database(tmp_path):
+    db_file = tmp_path / "locked.db"
+    conn = sqlite3.connect(db_file)
+    conn.execute("CREATE TABLE IF NOT EXISTS signals (timestamp TEXT, action TEXT, price REAL, symbol TEXT, strategy_id TEXT)")
+    conn.execute("BEGIN EXCLUSIVE")
+
+    good_signal = [{'timestamp': pd.Timestamp('2024-01-01'), 'action': 'buy', 'price': 100}]
+    with pytest.raises(sqlite3.OperationalError):
+        log_signals_to_db(good_signal, "BTC/USDT", db_path=str(db_file))
+
+
+def test_invalid_schema_detection(tmp_path):
+    """Logging should fail if schema is missing required columns."""
+    db_file = tmp_path / "invalid.db"
+    conn = sqlite3.connect(db_file)
+    # Create table without strategy_id column
+    conn.execute("CREATE TABLE signals (timestamp TEXT, action TEXT, price REAL, symbol TEXT)")
+    conn.commit()
+    conn.close()
+
+    signal = [{'timestamp': pd.Timestamp('2024-01-01'), 'action': 'buy', 'price': 100}]
+    with pytest.raises(sqlite3.OperationalError):
+        log_signals_to_db(signal, "BTC/USDT", db_path=str(db_file))
+
+def test_timestamp_parsing_failure(tmp_path):
+    """Ensure graceful failure when timestamp cannot be parsed."""
+    db_file = tmp_path / "timestamp.db"
+    conn = sqlite3.connect(db_file)
+    conn.execute("CREATE TABLE IF NOT EXISTS signals (timestamp TEXT, action TEXT, price REAL, symbol TEXT, strategy_id TEXT)")
+    conn.close()
+
+    malformed_signal = [{'timestamp': 'invalid-date', 'action': 'buy', 'price': 50}]
+    with pytest.raises(AttributeError):
+        log_signals_to_db(malformed_signal, "BTC/USDT", db_path=str(db_file))

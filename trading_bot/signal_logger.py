@@ -16,7 +16,7 @@ def create_signals_table(cursor):
         )
     ''')
 
-def log_signals_to_db(signals, symbol, strategy_id='sma'):
+def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
     """
     Log trading signals to SQLite database.
     
@@ -24,11 +24,13 @@ def log_signals_to_db(signals, symbol, strategy_id='sma'):
         signals (list): List of trading signals with timestamp, action, price
         symbol (str): Trading pair symbol
         strategy_id (str): Strategy identifier (default: 'sma')
+        db_path (str, optional): Path to SQLite database file
     """
     if not signals:
         return
     
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+    if db_path is None:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
     
     try:
         with sqlite3.connect(db_path) as conn:
@@ -52,7 +54,7 @@ def log_signals_to_db(signals, symbol, strategy_id='sma'):
         logging.error(f"Error logging signals to database: {e}")
         raise
 
-def get_signals_from_db(symbol=None, strategy_id=None, limit=None):
+def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None):
     """
     Retrieve signals from the database.
     
@@ -60,11 +62,13 @@ def get_signals_from_db(symbol=None, strategy_id=None, limit=None):
         symbol (str, optional): Filter by trading pair symbol
         strategy_id (str, optional): Filter by strategy identifier
         limit (int, optional): Limit number of results
+        db_path (str, optional): Path to SQLite database file
         
     Returns:
         list: List of signal records as tuples
     """
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+    if db_path is None:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
     
     if not os.path.exists(db_path):
         return []
