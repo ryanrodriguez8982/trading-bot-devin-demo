@@ -139,6 +139,8 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
         strategy_fn = STRATEGY_REGISTRY[strategy]
         if strategy == "rsi":
             signals = strategy_fn(data, period=14)
+        elif strategy == "bollinger":
+            signals = strategy_fn(data, window=sma_long, num_std=2)
         else:
             signals = strategy_fn(data, sma_short, sma_long)
         logging.info(f"Generated {len(signals)} trading signals")
@@ -168,6 +170,8 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_
     print(f"Symbol: {symbol}")
     if strategy == "rsi":
         print("Strategy: RSI crossover")
+    elif strategy == "bollinger":
+        print(f"Strategy: Bollinger Bands (window={sma_long})")
     else:
         print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
     print(f"Fetching {live_limit} candles every 60 seconds")
@@ -257,6 +261,8 @@ def main():
             print(f"\n=== Trading Bot Results for {symbol} ===")
             if strategy_choice == "rsi":
                 print("Strategy: RSI crossover")
+            elif strategy_choice == "bollinger":
+                print(f"Strategy: Bollinger Bands (window={sma_long})")
             else:
                 print(f"Strategy: SMA({sma_short}) vs SMA({sma_long}) crossover")
             print(f"Total signals generated: {len(signals)}")

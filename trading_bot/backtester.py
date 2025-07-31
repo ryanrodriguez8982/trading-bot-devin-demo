@@ -125,6 +125,8 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
     strategy_fn = STRATEGY_REGISTRY[strategy]
     if strategy == 'rsi':
         signals = strategy_fn(df, period=14)
+    elif strategy == 'bollinger':
+        signals = strategy_fn(df, window=sma_long, num_std=2)
     else:
         signals = strategy_fn(df, sma_short, sma_long)
 

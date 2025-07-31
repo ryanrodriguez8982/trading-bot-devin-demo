@@ -173,9 +173,13 @@ CLI arguments override config file values. Available parameters:
 - `--live`: Enable live trading simulation mode
 
 ## Strategy
-The bot implements a simple moving average (SMA) crossover strategy:
-- **Buy Signal**: When the short-period SMA crosses above the long-period SMA
-- **Sell Signal**: When the short-period SMA crosses below the long-period SMA
+The bot implements multiple strategies:
+- **SMA Crossover**
+  - **Buy Signal**: When the short-period SMA crosses above the long-period SMA
+  - **Sell Signal**: When the short-period SMA crosses below the long-period SMA
+- **Bollinger Bands**
+  - **Buy Signal**: When price crosses above the lower band (oversold)
+  - **Sell Signal**: When price crosses below the upper band (overbought)
 
 The bot fetches historical candles from Binance and displays the last 5 trading recommendations.
 

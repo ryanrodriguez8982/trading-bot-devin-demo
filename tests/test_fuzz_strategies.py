@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from strategies.sma_strategy import sma_crossover_strategy
 from strategies.rsi_strategy import rsi_crossover_strategy
+from strategies.bollinger_strategy import bollinger_bands_strategy
 
 
 def generate_ohlcv(length=30, constant=False):
@@ -47,7 +48,7 @@ def apply_price_jump(df):
     return df
 
 
-@pytest.mark.parametrize("strategy", [sma_crossover_strategy, rsi_crossover_strategy])
+@pytest.mark.parametrize("strategy", [sma_crossover_strategy, rsi_crossover_strategy, bollinger_bands_strategy])
 def test_random_ohlcv_shapes(strategy):
     for _ in range(5):
         length = np.random.randint(5, 50)
@@ -59,7 +60,7 @@ def test_random_ohlcv_shapes(strategy):
 
 
 @pytest.mark.parametrize("mutator", [inject_nans, inject_infinite, apply_price_jump, lambda df: generate_ohlcv(len(df), constant=True)])
-@pytest.mark.parametrize("strategy", [sma_crossover_strategy, rsi_crossover_strategy])
+@pytest.mark.parametrize("strategy", [sma_crossover_strategy, rsi_crossover_strategy, bollinger_bands_strategy])
 def test_corrupted_inputs_warn_or_raise(strategy, mutator, caplog):
     df = generate_ohlcv(10)  # short to trigger warnings
     df = mutator(df)
@@ -72,7 +73,7 @@ def test_corrupted_inputs_warn_or_raise(strategy, mutator, caplog):
         assert any(rec.levelno == logging.WARNING for rec in caplog.records)
 
 
-@pytest.mark.parametrize("strategy", [sma_crossover_strategy, rsi_crossover_strategy])
+@pytest.mark.parametrize("strategy", [sma_crossover_strategy, rsi_crossover_strategy, bollinger_bands_strategy])
 def test_missing_columns_exception(strategy):
     df = generate_ohlcv(20)
     df = df.drop(columns=['close'])
