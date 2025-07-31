@@ -6,6 +6,11 @@ import time
 import signal as sig
 import sys
 from datetime import datetime
+
+try:
+    from plyer import notification
+except Exception:
+    notification = None
 try:
     from .data_fetch import fetch_btc_usdt_data
     from .strategy import sma_crossover_strategy
@@ -44,6 +49,8 @@ def parse_args():
     parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
     parser.add_argument('--strategy', type=str, default='sma', choices=['sma', 'rsi'],
                         help='Trading strategy to use (sma or rsi)')
+    parser.add_argument('--alert-mode', action='store_true',
+                        help='Enable alert notifications for BUY/SELL signals')
     return parser.parse_args()
 
 def log_signals_to_file(signals, symbol):
@@ -77,6 +84,19 @@ def log_signals_to_file(signals, symbol):
     
     logging.info(f"Logged {len(signals)} signals to {log_path}")
 
+def send_alert(signal):
+    """Send an alert for a trading signal."""
+    timestamp_str = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+    action = signal['action'].upper()
+    price = signal['price']
+    message = f"ALERT: {action} signal at {timestamp_str} price ${price:.2f}"
+    print(message)
+    if notification:
+        try:
+            notification.notify(title="Trading Bot Alert", message=message)
+        except Exception as e:
+            logging.debug(f"Notification error: {e}")
+
 def signal_handler(signum, frame):
     """Handle Ctrl+C gracefully."""
     logging.info("Received interrupt signal. Shutting down live trading mode gracefully...")
@@ -84,7 +104,7 @@ def signal_handler(signum, frame):
     print("Gracefully shutting down. Thank you for using the trading bot!")
     sys.exit(0)
 
-def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma"):
+def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma", alert_mode=False):
     """Run a single analysis cycle and return signals."""
     try:
         data = fetch_btc_usdt_data(symbol, timeframe, limit)
@@ -99,13 +119,16 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
         if signals:
             log_signals_to_file(signals, symbol)
             log_signals_to_db(signals, symbol)
+            if alert_mode:
+                for s in signals:
+                    send_alert(s)
         
         return signals
     except Exception as e:
         logging.error(f"Error in analysis cycle: {e}")
         return []
 
-def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma"):
+def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_mode=False):
     """Run the bot in live trading simulation mode."""
     live_limit = 25
     
@@ -130,7 +153,7 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma"):
         print(f"\n[{current_time}] Iteration #{iteration}")
         logging.info(f"Starting live analysis iteration #{iteration}")
         
-        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy)
+        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode)
         
         if signals:
             print(f"🚨 NEW SIGNALS DETECTED ({len(signals)} signals):")
@@ -161,17 +184,18 @@ def main():
     sma_short = getattr(args, 'sma_short') or config['sma_short']
     sma_long = getattr(args, 'sma_long') or config['sma_long']
     strategy_choice = getattr(args, 'strategy', 'sma')
+    alert_mode = getattr(args, 'alert_mode', False)
     
     try:
         if args.live:
             logging.info(
                 f"Starting live trading mode with {symbol}, {timeframe}, strategy={strategy_choice}" )
-            run_live_mode(symbol, timeframe, sma_short, sma_long, strategy=strategy_choice)
+            run_live_mode(symbol, timeframe, sma_short, sma_long, strategy=strategy_choice, alert_mode=alert_mode)
         else:
             logging.info(
                 f"Starting trading bot with {symbol}, {timeframe}, limit={limit}, strategy={strategy_choice}")
 
-            signals = run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=strategy_choice)
+            signals = run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=strategy_choice, alert_mode=alert_mode)
             
             print(f"\n=== Trading Bot Results for {symbol} ===")
             if strategy_choice == "rsi":
