@@ -29,7 +29,8 @@ def bollinger_bands_strategy(df, window=20, num_std=2):
 
     signals = []
     for i in range(1, len(df)):
-        if pd.isna(df.iloc[i]['lower_band']) or pd.isna(df.iloc[i]['upper_band']):
+        if (pd.isna(df.iloc[i]['lower_band']) or
+                pd.isna(df.iloc[i]['upper_band'])):
             continue
         prev_close = df.iloc[i-1]['close']
         curr_close = df.iloc[i]['close']
