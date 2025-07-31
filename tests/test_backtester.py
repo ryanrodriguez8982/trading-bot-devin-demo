@@ -1,10 +1,7 @@
-import os
-import sys
 import pandas as pd
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
-from backtester import load_csv_data, run_backtest
+from trading_bot.backtester import load_csv_data, run_backtest
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -59,10 +56,12 @@ def test_backtest_different_strategies(tmp_path):
     result_sma = run_backtest(str(csv_file), strategy='sma')
     result_rsi = run_backtest(str(csv_file), strategy='rsi')
     result_macd = run_backtest(str(csv_file), strategy='macd')
+    result_boll = run_backtest(str(csv_file), strategy='bollinger')
 
     assert 'net_pnl' in result_sma
     assert 'net_pnl' in result_rsi
     assert 'net_pnl' in result_macd
+    assert 'net_pnl' in result_boll
 
 
 def test_backtest_saves_outputs(tmp_path):
