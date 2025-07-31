@@ -221,6 +221,16 @@ Press `Ctrl+C` at any time to gracefully shutdown:
 Gracefully shutting down. Thank you for using the trading bot!
 ```
 
+## Historical Backtesting
+
+Run a simulation on CSV price data to evaluate strategy performance:
+
+```bash
+trading-bot --backtest path/to/data.csv --strategy sma
+```
+
+The backtester outputs metrics like net PnL, win rate, and max drawdown. Use `--list-strategies` to see all supported strategies.
+
 ## Dashboard
 
 The project includes a Streamlit dashboard for visualizing trading signals and price data.
