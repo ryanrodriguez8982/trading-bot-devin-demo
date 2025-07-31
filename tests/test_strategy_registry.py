@@ -1,4 +1,4 @@
-from strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
 
 def test_registry_contains_expected_strategies():

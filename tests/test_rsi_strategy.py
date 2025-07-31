@@ -1,9 +1,5 @@
 import pandas as pd
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from strategies.rsi_strategy import rsi_crossover_strategy
+from trading_bot.strategies.rsi_strategy import rsi_crossover_strategy
 
 
 def test_empty_input():

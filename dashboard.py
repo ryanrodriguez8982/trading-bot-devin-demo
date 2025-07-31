@@ -5,12 +5,11 @@ import matplotlib.dates as mdates
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'trading_bot'))
 
-from signal_logger import get_signals_from_db, log_signals_to_db  # noqa: E402
-from data_fetch import fetch_btc_usdt_data  # noqa: E402
-from strategy import sma_crossover_strategy  # noqa: E402
-from strategies import STRATEGY_REGISTRY, list_strategies  # noqa: E402
+from trading_bot.signal_logger import get_signals_from_db, log_signals_to_db  # noqa: E402
+from trading_bot.data_fetch import fetch_btc_usdt_data  # noqa: E402
+from trading_bot.strategy import sma_crossover_strategy  # noqa: E402
+from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies  # noqa: E402
 
 st.set_page_config(
     page_title="Trading Bot Dashboard",
