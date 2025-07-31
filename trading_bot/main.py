@@ -6,6 +6,8 @@ import time
 import signal as sig
 import sys
 from datetime import datetime
+
+from importlib.metadata import PackageNotFoundError, version
 try:
     from .backtester import run_backtest
 except ImportError:  # when running as script without package context
@@ -43,6 +45,19 @@ def load_config():
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Crypto Trading Bot')
+    try:
+        pkg_version = version('trading-bot')
+    except PackageNotFoundError:
+        try:
+            from trading_bot import __version__ as pkg_version
+        except Exception:
+            pkg_version = '0.0.0'
+
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {pkg_version}'
+    )
     parser.add_argument('--symbol', type=str, help='Trading pair symbol (e.g., BTC/USDT)')
     parser.add_argument('--timeframe', type=str, help='Timeframe for candles (e.g., 1m, 5m)')
     parser.add_argument('--limit', type=int, help='Number of candles to fetch')

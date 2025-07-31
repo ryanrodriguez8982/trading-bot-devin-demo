@@ -146,6 +146,23 @@ def test_alert_mode_argument_parsing():
     finally:
         sys.argv = original_argv
 
+
+def test_version_flag(capsys):
+    """Test that --version outputs package version and exits."""
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import parse_args
+
+    original_argv = sys.argv
+    try:
+        sys.argv = ['main.py', '--version']
+        with pytest.raises(SystemExit) as excinfo:
+            parse_args()
+        assert excinfo.value.code == 0
+        captured = capsys.readouterr()
+        assert '1.0.0' in captured.out
+    finally:
+        sys.argv = original_argv
+
 def test_run_single_analysis():
     """Test the run_single_analysis function with mock data."""
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
