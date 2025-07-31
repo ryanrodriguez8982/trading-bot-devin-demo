@@ -3,14 +3,10 @@ import logging
 import os
 import json
 from datetime import datetime
-try:
-    from .signal_logger import log_signals_to_db
-except ImportError:  # when run without package context
-    from signal_logger import log_signals_to_db
-try:
-    from ..strategies import STRATEGY_REGISTRY
-except ImportError:
-    from strategies import STRATEGY_REGISTRY
+
+# ? Absolute import for package compatibility
+from trading_bot.signal_logger import log_signals_to_db
+from trading_bot.strategies import STRATEGY_REGISTRY
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -96,27 +92,7 @@ def simulate_equity(df, signals, initial_capital=10000):
 
 def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
                  equity_out=None, stats_out=None, chart_out=None):
-    """Run backtest on CSV data using specified strategy.
-
-    Parameters
-    ----------
-    csv_path : str
-        Path to historical data CSV.
-    strategy : str
-        Strategy name from STRATEGY_REGISTRY.
-    sma_short : int
-        Short SMA window for SMA strategy.
-    sma_long : int
-        Long SMA window for SMA strategy.
-    plot : bool, optional
-        Whether to generate a matplotlib plot.
-    equity_out : str, optional
-        File path to write equity curve CSV.
-    stats_out : str, optional
-        File path to write summary statistics JSON.
-    chart_out : str, optional
-        File path to save the equity chart PNG when ``plot`` is True.
-    """
+    """Run backtest on CSV data using specified strategy."""
     df = load_csv_data(csv_path)
 
     if strategy not in STRATEGY_REGISTRY:
@@ -125,6 +101,8 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
     strategy_fn = STRATEGY_REGISTRY[strategy]
     if strategy == 'rsi':
         signals = strategy_fn(df, period=14)
+    elif strategy == 'macd':
+        signals = strategy_fn(df)
     elif strategy == 'bollinger':
         signals = strategy_fn(df, window=sma_long, num_std=2)
     else:
