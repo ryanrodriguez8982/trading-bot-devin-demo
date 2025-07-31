@@ -125,6 +125,8 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
     strategy_fn = STRATEGY_REGISTRY[strategy]
     if strategy == 'rsi':
         signals = strategy_fn(df, period=14)
+    elif strategy == 'macd':
+        signals = strategy_fn(df)
     else:
         signals = strategy_fn(df, sma_short, sma_long)
 
