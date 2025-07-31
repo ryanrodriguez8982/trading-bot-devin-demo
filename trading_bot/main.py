@@ -57,6 +57,8 @@ def parse_args():
                         help='Enable alert notifications for BUY/SELL signals')
     parser.add_argument('--backtest', type=str,
                         help='Path to CSV file for historical backtesting')
+    parser.add_argument('--save-chart', action='store_true',
+                        help='Save equity curve CSV/JSON and chart during backtest')
     return parser.parse_args()
 
 def log_signals_to_file(signals, symbol):
@@ -215,8 +217,18 @@ def main():
         if args.backtest:
             logging.info(
                 f"Starting backtest using {args.backtest} with strategy={strategy_choice}")
+            base = os.path.splitext(args.backtest)[0]
+            equity_out = None
+            stats_out = None
+            chart_out = None
+            if getattr(args, 'save_chart', False):
+                equity_out = base + '_equity_curve.csv'
+                stats_out = base + '_summary_stats.json'
+                chart_out = base + '_equity_chart.png'
+
             run_backtest(args.backtest, strategy=strategy_choice,
-                        sma_short=sma_short, sma_long=sma_long, plot=False)
+                        sma_short=sma_short, sma_long=sma_long, plot=bool(chart_out),
+                        equity_out=equity_out, stats_out=stats_out, chart_out=chart_out)
         elif args.live:
             logging.info(
                 f"Starting live trading mode with {symbol}, {timeframe}, strategy={strategy_choice}" )
