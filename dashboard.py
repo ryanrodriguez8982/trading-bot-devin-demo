@@ -7,6 +7,7 @@ from trading_bot.signal_logger import get_signals_from_db, log_signals_to_db
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.strategy import sma_crossover_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.performance import compute_equity_curve
 
 st.set_page_config(
     page_title="Trading Bot Dashboard",
@@ -28,8 +29,18 @@ selected_symbol = st.sidebar.selectbox("Symbol", symbol_options, index=0)
 strategy_options = ["All"] + list_strategies()
 selected_strategy = st.sidebar.selectbox("Strategy", strategy_options, index=0)
 
-limit = st.sidebar.slider("Number of signals to display", min_value=10,
-                          max_value=500, value=50, step=10)
+limit = st.sidebar.slider(
+    "Number of signals to display",
+    min_value=10,
+    max_value=500,
+    value=50,
+    step=10,
+)
+
+# Starting balance for equity curve
+starting_balance = st.sidebar.number_input(
+    "Starting Balance (USDT)", min_value=100.0, value=10000.0, step=100.0
+)
 
 # Strategy specific parameters
 sma_short = sma_long = None
@@ -245,6 +256,57 @@ with col1:
 
             plt.tight_layout()
             st.pyplot(fig)
+
+            # Equity curve based on stored signals
+            db_strategy = (
+                None if selected_strategy == "All" else selected_strategy
+            )
+            db_signals = get_signals_from_db(
+                symbol=selected_symbol, strategy_id=db_strategy, limit=None
+            )
+            eq_df, stats = compute_equity_curve(
+                [
+                    {
+                        "timestamp": pd.to_datetime(s[0]),
+                        "action": s[1],
+                        "price": s[2],
+                    }
+                    for s in reversed(db_signals)
+                ],
+                initial_balance=starting_balance,
+            )
+
+            if not eq_df.empty:
+                fig_eq, ax_eq = plt.subplots(figsize=(12, 4))
+                ax_eq.plot(eq_df["timestamp"], eq_df["equity"], color="purple")
+                ax_eq.set_xlabel("Time")
+                ax_eq.set_ylabel("Equity (USDT)")
+                ax_eq.set_title("Equity Curve")
+                ax_eq.grid(True, alpha=0.3)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                st.pyplot(fig_eq)
+
+                col_a, col_b, col_c, col_d, col_e = st.columns(5)
+                col_a.metric(
+                    "Total PnL",
+                    f"${stats['total_return_abs']:,.2f}",
+                )
+                col_b.metric(
+                    "Return %",
+                    f"{stats['total_return_pct']:.2f}%",
+                )
+                col_c.metric("Trades", stats["num_trades"])
+                col_d.metric(
+                    "Win Rate",
+                    f"{stats['win_rate']:.2f}%",
+                )
+                col_e.metric(
+                    "Max Drawdown",
+                    f"{stats['max_drawdown']:.2f}%",
+                )
+            else:
+                st.info("No signals available for equity curve")
 
             if signals:
                 st.success(f"Generated {len(signals)} signals from current "
