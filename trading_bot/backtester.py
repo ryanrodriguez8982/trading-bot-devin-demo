@@ -90,7 +90,9 @@ def simulate_equity(df, signals, initial_capital=10000):
     }
 
 
-def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
+def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20,
+                 rsi_period=14, macd_fast=12, macd_slow=26, macd_signal=9,
+                 bollinger_window=20, bollinger_std=2, plot=False,
                  equity_out=None, stats_out=None, chart_out=None):
     """Run backtest on CSV data using specified strategy."""
     df = load_csv_data(csv_path)
@@ -100,11 +102,14 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20, plot=False,
 
     strategy_fn = STRATEGY_REGISTRY[strategy]
     if strategy == 'rsi':
-        signals = strategy_fn(df, period=14)
+        signals = strategy_fn(df, period=rsi_period)
     elif strategy == 'macd':
-        signals = strategy_fn(df)
+        signals = strategy_fn(df, fast_period=macd_fast,
+                              slow_period=macd_slow,
+                              signal_period=macd_signal)
     elif strategy == 'bollinger':
-        signals = strategy_fn(df, window=sma_long, num_std=2)
+        signals = strategy_fn(df, window=bollinger_window,
+                              num_std=bollinger_std)
     else:
         signals = strategy_fn(df, sma_short, sma_long)
 
