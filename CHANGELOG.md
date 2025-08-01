@@ -8,6 +8,10 @@
 - Enhanced Streamlit dashboard with strategy selection and visualization
 - Strategy-specific parameter configuration in dashboard sidebar
 - Multi-strategy support in CLI with --strategy flag
+- Parameter tuning module via --tune option
+- Exchange API key support and --live-trade flag for real orders
+- Equity curve and PnL visualization on dashboard
+- Cached price and indicator data for faster dashboard refreshes
 
 ### Changed
 - Updated package description to reflect multiple strategy support
