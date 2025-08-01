@@ -55,6 +55,7 @@ def parse_args():
     parser.add_argument('--list-strategies', action='store_true', help='List available strategies and exit')
     parser.add_argument('--alert-mode', action='store_true', help='Enable alert notifications for BUY/SELL signals')
     parser.add_argument('--backtest', type=str, help='Path to CSV file for historical backtesting')
+    parser.add_argument('--tune', action='store_true', help='Run parameter tuning over a range of values')
     parser.add_argument('--save-chart', action='store_true', help='Save equity curve CSV/JSON and chart during backtest')
     return parser.parse_args()
 
@@ -170,6 +171,19 @@ def main():
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
     try:
+        if getattr(args, 'tune', False):
+            if not args.backtest:
+                raise ValueError("--backtest CSV path required for tuning")
+            from trading_bot.tuner import tune
+            results = tune(args.backtest, strategy=strategy_choice)
+            print("=== Tuning Results ===")
+            for res in results:
+                params_str = ", ".join(f"{k}={v}" for k, v in res['params'].items())
+                print(f"{params_str} -> PnL {res['net_pnl']:.2f}, Win "
+                      f"{res['win_rate']:.2f}%")
+            if results:
+                print(f"Best parameters: {results[0]['params']}")
+            return
         if args.backtest:
             base = os.path.splitext(args.backtest)[0]
             equity_out = base + '_equity_curve.csv' if args.save_chart else None
