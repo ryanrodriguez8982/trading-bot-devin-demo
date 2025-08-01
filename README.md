@@ -93,6 +93,10 @@ trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
 # Stop live mode gracefully with Ctrl+C
 ```
 
+# Real trading example (requires API keys)
+TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
+trading-bot --live --live-trade --symbol BTC/USDT
+
 #### Alternative: Direct Python execution:
 ```bash
 # Basic usage (uses config.json defaults)
@@ -184,15 +188,17 @@ The bot uses a `config.json` file for default parameters:
 
 ### Exchange API Keys
 
-To enable live trading, provide your exchange credentials via environment variables or by updating `config.json`:
+To enable live trading, supply your API credentials **via environment variables** or update `config.json` with placeholder values:
 
 - `TRADING_BOT_API_KEY`
 - `TRADING_BOT_API_SECRET`
 - `TRADING_BOT_API_PASSPHRASE` (if required)
 
-Alternatively, set `api_key`, `api_secret`, and `api_passphrase` keys in the configuration file. Specify a default `trade_amount` to control order size.
+You may also pass them on the command line using `--api-key`, `--api-secret` and `--api-passphrase` flags. Never commit real keys to the repository.
 
-Run the bot with `--live --live-trade` to place real orders.
+`config.json` lets you specify `api_key`, `api_secret`, `api_passphrase` and the default `trade_amount` for each order. Adjust `trade_amount` and the dashboard's **Starting Balance** input to tune PnL calculations.
+
+Run the bot with `--live --live-trade` to place real orders once your keys are configured.
 
 The Bollinger strategy uses the `sma_long`/`bollinger_window` value for its
 moving average window. By default this is set to 20 periods.
@@ -212,7 +218,7 @@ The bot implements several trading strategies:
 - **SMA Crossover**: Buy when the short-period SMA crosses above the long period SMA and sell on the opposite cross.
 - **RSI Crossover**: Buy when the RSI rises above the oversold threshold and sell when it falls below the overbought threshold.
 - **MACD Crossover**: Buy when the MACD line crosses above its signal line and sell when it crosses below.
-- **Bollinger Bands**: Buy when price crosses above the lower band (oversold) and sell when price crosses below the upper band (overbought).
+- **Bollinger Bands**: Buy when price crosses above the lower band (oversold) and sell when it falls below the upper band (overbought). The band period is controlled by `bollinger_window` and the width by `bollinger_std`.
 
 Use the `--strategy` flag with `sma`, `rsi`, `macd`, or `bollinger` to choose a strategy.The bot fetches historical candles from Binance and displays the last 5 trading recommendations.
 
@@ -277,10 +283,29 @@ You can automatically search for optimal parameters using the tuning module:
 
 ```bash
 trading-bot --tune --strategy sma --backtest path/to/data.csv
+
+# Results show the best parameter set
+trading-bot --tune --strategy bollinger --backtest btc.csv
 ```
 
 This runs a grid search over sensible defaults and prints the performance of each
 combination, highlighting the best set of parameters.
+
+### Example Scenarios
+
+Run a Bollinger Bands backtest on BTC data:
+
+```bash
+trading-bot --backtest btc_data.csv --strategy bollinger \
+  --bollinger-window 20 --bollinger-std 2
+```
+
+Connect to Binance for live trading:
+
+```bash
+TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
+trading-bot --live --live-trade
+```
 
 ## Dashboard
 
@@ -296,6 +321,8 @@ streamlit run dashboard.py
 - **Signal Table**: Browse recent trading signals with filtering options
 - **Real-time Filters**: Filter by symbol, strategy, and number of signals
 - **Strategy Configuration**: Adjust parameters for SMA, RSI, MACD, or Bollinger Bands (including period and visualization toggles)
+- **Equity Curve Chart**: Visualize performance over time based on the starting balance
+- **Strategy Filter Dropdown**: Quickly switch between SMA, RSI, MACD or Bollinger views
 
 
 - The dashboard loads signals from the `signals.db` database and displays:
@@ -304,6 +331,8 @@ streamlit run dashboard.py
 - Filterable table showing timestamp, action, price, symbol, and strategy
 - Signal statistics and metrics
 - Cached price and indicator data for snappier updates
+
+The equity curve helps gauge profitability relative to your configured starting balance. Use the strategy filter to compare how each method performs.
 
 **Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bollinger` in the Strategy filter to visualize those indicators.
 
