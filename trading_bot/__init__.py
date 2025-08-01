@@ -1,5 +1,5 @@
 """
-Trading Bot - A cryptocurrency trading signal generator using SMA crossover strategy.
+Trading Bot - A cryptocurrency trading signal generator using multiple strategies.
 
 This package provides tools for:
 - Fetching cryptocurrency price data from Binance
@@ -8,7 +8,7 @@ This package provides tools for:
 - Interactive dashboard for signal visualization
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Trading Bot Team"
 __email__ = "trading-bot@example.com"
 
@@ -19,7 +19,7 @@ from .signal_logger import log_signals_to_db, get_signals_from_db
 
 __all__ = [
     "main",
-    "fetch_btc_usdt_data", 
+    "fetch_btc_usdt_data",
     "sma_crossover_strategy",
     "log_signals_to_db",
     "get_signals_from_db"

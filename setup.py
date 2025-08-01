@@ -23,10 +23,11 @@ def read_readme():
 
 setup(
     name="trading-bot",
-    version="1.0.0",
+    version="1.1.0",
     author="Trading Bot Team",
     author_email="trading-bot@example.com",
-    description="A cryptocurrency trading signal generator using SMA crossover strategy",
+    description="A cryptocurrency trading signal generator with multiple "
+                "strategies (SMA, RSI, MACD, Bollinger Bands)",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/ryanrodriguez8982/trading-bot-devin-demo",
@@ -55,7 +56,8 @@ setup(
     package_data={
         "trading_bot": ["*.json"],
     },
-    keywords="cryptocurrency trading bot sma crossover signals binance",
+    keywords="cryptocurrency trading bot sma rsi macd bollinger crossover "
+             "signals binance",
     project_urls={
         "Bug Reports": "https://github.com/ryanrodriguez8982/trading-bot-devin-demo/issues",
         "Source": "https://github.com/ryanrodriguez8982/trading-bot-devin-demo",
