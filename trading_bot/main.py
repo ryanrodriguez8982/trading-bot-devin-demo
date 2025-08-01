@@ -11,6 +11,7 @@ from importlib.metadata import PackageNotFoundError, version
 # ? Absolute imports for package context
 from trading_bot.backtester import run_backtest
 from trading_bot.data_fetch import fetch_btc_usdt_data
+from trading_bot.exchange import create_exchange, execute_trade
 from trading_bot.signal_logger import log_signals_to_db
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
@@ -51,6 +52,10 @@ def parse_args():
     parser.add_argument('--sma-short', type=int, help='Short-period SMA window')
     parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
     parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
+    parser.add_argument('--live-trade', action='store_true', help='Execute real orders when in live mode')
+    parser.add_argument('--api-key', type=str, help='Exchange API key')
+    parser.add_argument('--api-secret', type=str, help='Exchange API secret')
+    parser.add_argument('--api-passphrase', type=str, help='Exchange API passphrase (if required)')
     parser.add_argument('--strategy', type=str, default='sma', help='Trading strategy to use')
     parser.add_argument('--list-strategies', action='store_true', help='List available strategies and exit')
     parser.add_argument('--alert-mode', action='store_true', help='Enable alert notifications for BUY/SELL signals')
@@ -74,6 +79,21 @@ def log_signals_to_file(signals, symbol):
             f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
     logging.info(f"Logged {len(signals)} signals to {log_path}")
 
+def log_order_to_file(order, symbol):
+    if not order:
+        return
+    logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    os.makedirs(logs_dir, exist_ok=True)
+    log_path = os.path.join(logs_dir, 'orders.log')
+    with open(log_path, 'a') as f:
+        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        order_id = order.get('id', 'N/A')
+        amount = order.get('amount')
+        price = order.get('price')
+        side = order.get('side')
+        f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
+    logging.info(f"Logged order {order_id} to {log_path}")
+
 def send_alert(signal):
     ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
@@ -89,12 +109,15 @@ def signal_handler(signum, frame):
     print("\n=== Live Trading Mode Shutdown ===")
     sys.exit(0)
 
-def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma", alert_mode=False):
+def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma", alert_mode=False, exchange=None):
     try:
         if strategy not in STRATEGY_REGISTRY:
             raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
-        data = fetch_btc_usdt_data(symbol, timeframe, limit)
+        if exchange:
+            data = fetch_btc_usdt_data(symbol, timeframe, limit, exchange=exchange)
+        else:
+            data = fetch_btc_usdt_data(symbol, timeframe, limit)
         logging.info(f"Fetched {len(data)} data points")
 
         strategy_fn = STRATEGY_REGISTRY[strategy]
@@ -119,7 +142,7 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
         logging.error(f"Error in analysis cycle: {e}")
         return []
 
-def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_mode=False):
+def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_mode=False, exchange=None, live_trade=False, trade_amount=0.0):
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
     if strategy not in STRATEGY_REGISTRY:
@@ -136,12 +159,15 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_
     while True:
         iteration += 1
         print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iteration #{iteration}")
-        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode)
+        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode, exchange=exchange)
         if signals:
             print(f"?? NEW SIGNALS ({len(signals)}):")
             for signal in signals[-3:]:
                 ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
                 print(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
+                if live_trade and exchange:
+                    order = execute_trade(exchange, symbol, signal['action'], trade_amount)
+                    log_order_to_file(order, symbol)
         else:
             print("No new signals.")
         print("Next analysis in 60 seconds...")
@@ -159,6 +185,14 @@ def main():
     sma_long = getattr(args, 'sma_long') or config['sma_long']
     strategy_choice = getattr(args, 'strategy', 'sma')
     alert_mode = getattr(args, 'alert_mode', False)
+
+    api_key = args.api_key or os.getenv('TRADING_BOT_API_KEY') or config.get('api_key')
+    api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
+    api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
+    trade_amount = config.get('trade_amount', 0.0)
+    exchange = None
+    if api_key and api_secret:
+        exchange = create_exchange(api_key, api_secret, api_passphrase)
 
     if getattr(args, 'list_strategies', False):
         print("Available strategies:")
@@ -180,7 +214,12 @@ def main():
                          plot=bool(chart_out), equity_out=equity_out,
                          stats_out=stats_out, chart_out=chart_out)
         elif args.live:
-            run_live_mode(symbol, timeframe, sma_short, sma_long, strategy=strategy_choice, alert_mode=alert_mode)
+            run_live_mode(symbol, timeframe, sma_short, sma_long,
+                         strategy=strategy_choice,
+                         alert_mode=alert_mode,
+                         exchange=exchange,
+                         live_trade=args.live_trade,
+                         trade_amount=trade_amount)
         else:
             signals = run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=strategy_choice, alert_mode=alert_mode)
             print(f"\n=== Trading Bot Results for {symbol} ===")
