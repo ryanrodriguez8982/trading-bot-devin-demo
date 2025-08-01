@@ -9,6 +9,54 @@ from trading_bot.strategy import sma_crossover_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
 
+
+@st.cache_data(show_spinner=False)
+def _fetch_price_data(symbol: str):
+    """Fetch candle data and cache the result."""
+    return fetch_btc_usdt_data(symbol=symbol, timeframe="1m", limit=500)
+
+
+@st.cache_data(show_spinner=False)
+def _add_indicators(
+    df: pd.DataFrame,
+    strategy: str,
+    sma_short: int | None = None,
+    sma_long: int | None = None,
+    rsi_period: int | None = None,
+    lower_thresh: int | None = None,
+    upper_thresh: int | None = None,
+    macd_fast: int | None = None,
+    macd_slow: int | None = None,
+    macd_signal: int | None = None,
+    boll_window: int | None = None,
+    boll_std: float | None = None,
+):
+    """Return copy of df with strategy-specific indicator columns."""
+    df = df.copy()
+    if sma_short and sma_long:
+        df[f"sma_{sma_short}"] = df["close"].rolling(window=sma_short).mean()
+        df[f"sma_{sma_long}"] = df["close"].rolling(window=sma_long).mean()
+
+    if strategy == "rsi" and rsi_period:
+        delta = df["close"].diff()
+        gain = delta.clip(lower=0)
+        loss = -delta.clip(upper=0)
+        avg_gain = gain.rolling(window=rsi_period, min_periods=rsi_period).mean()
+        avg_loss = loss.rolling(window=rsi_period, min_periods=rsi_period).mean()
+        rs = avg_gain / avg_loss.replace(0, pd.NA)
+        df["rsi"] = 100 - (100 / (1 + rs))
+    elif strategy == "macd" and all([macd_fast, macd_slow, macd_signal]):
+        df["ema_fast"] = df["close"].ewm(span=macd_fast, adjust=False).mean()
+        df["ema_slow"] = df["close"].ewm(span=macd_slow, adjust=False).mean()
+        df["macd"] = df["ema_fast"] - df["ema_slow"]
+        df["signal_line"] = df["macd"].ewm(span=macd_signal, adjust=False).mean()
+    elif strategy == "bollinger" and all([boll_window, boll_std]):
+        df["middle_band"] = df["close"].rolling(window=boll_window).mean()
+        df["std_dev"] = df["close"].rolling(window=boll_window).std()
+        df["upper_band"] = df["middle_band"] + boll_std * df["std_dev"]
+        df["lower_band"] = df["middle_band"] - boll_std * df["std_dev"]
+    return df
+
 st.set_page_config(
     page_title="Trading Bot Dashboard",
     page_icon="📈",
@@ -110,51 +158,28 @@ with col1:
     try:
         with st.spinner("Fetching price data..."):
             try:
-                df = fetch_btc_usdt_data(symbol=selected_symbol,
-                                         timeframe="1m", limit=500)
+                df = _fetch_price_data(selected_symbol)
             except Exception as api_error:
-                st.warning(f"API unavailable ({str(api_error)[:50]}...), "
-                           f"using mock data for demonstration")
+                st.warning(
+                    f"API unavailable ({str(api_error)[:50]}...), using mock data for demonstration"
+                )
                 df = create_mock_data(selected_symbol, 500)
 
         if not df.empty:
-            df_copy = df.copy()
-
-            if sma_short and sma_long:
-                df_copy[f'sma_{sma_short}'] = df_copy['close'].rolling(
-                    window=sma_short).mean()
-                df_copy[f'sma_{sma_long}'] = df_copy['close'].rolling(
-                    window=sma_long).mean()
-
-            if selected_strategy == "rsi" and rsi_period:
-                delta = df_copy['close'].diff()
-                gain = delta.clip(lower=0)
-                loss = -delta.clip(upper=0)
-                avg_gain = gain.rolling(window=rsi_period,
-                                        min_periods=rsi_period).mean()
-                avg_loss = loss.rolling(window=rsi_period,
-                                        min_periods=rsi_period).mean()
-                rs = avg_gain / avg_loss.replace(0, pd.NA)
-                df_copy['rsi'] = 100 - (100 / (1 + rs))
-            elif (selected_strategy == "macd" and
-                  all([macd_fast, macd_slow, macd_signal])):
-                df_copy['ema_fast'] = df_copy['close'].ewm(
-                    span=macd_fast, adjust=False).mean()
-                df_copy['ema_slow'] = df_copy['close'].ewm(
-                    span=macd_slow, adjust=False).mean()
-                df_copy['macd'] = df_copy['ema_fast'] - df_copy['ema_slow']
-                df_copy['signal_line'] = df_copy['macd'].ewm(
-                    span=macd_signal, adjust=False).mean()
-            elif (selected_strategy == "bollinger" and
-                  all([boll_window, boll_std])):
-                df_copy['middle_band'] = df_copy['close'].rolling(
-                    window=boll_window).mean()
-                df_copy['std_dev'] = df_copy['close'].rolling(
-                    window=boll_window).std()
-                df_copy['upper_band'] = (df_copy['middle_band'] +
-                                         boll_std * df_copy['std_dev'])
-                df_copy['lower_band'] = (df_copy['middle_band'] -
-                                         boll_std * df_copy['std_dev'])
+            df_copy = _add_indicators(
+                df,
+                selected_strategy,
+                sma_short=sma_short,
+                sma_long=sma_long,
+                rsi_period=rsi_period,
+                lower_thresh=lower_thresh,
+                upper_thresh=upper_thresh,
+                macd_fast=macd_fast,
+                macd_slow=macd_slow,
+                macd_signal=macd_signal,
+                boll_window=boll_window,
+                boll_std=boll_std,
+            )
 
             if selected_strategy == "All" or selected_strategy == "sma":
                 if sma_short and sma_long:
