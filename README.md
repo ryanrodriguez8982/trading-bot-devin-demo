@@ -5,7 +5,7 @@ A test repo for Cognition AI's Devin agent to implement a basic crypto trading b
 ## Goal
 Create a trading bot using `ccxt` that:
 - Fetches historical data
-- Applies a moving average crossover strategy
+- Supports multiple strategies (SMA, RSI, MACD, Bollinger Bands)
 - Executes buy/sell logic
 - Logs results and generates reports
 
@@ -74,6 +74,12 @@ trading-bot --limit 1000
 
 # Combine multiple parameters
 trading-bot --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
+
+# Use MACD strategy
+trading-bot --strategy macd
+
+# Use Bollinger Bands strategy
+trading-bot --strategy bollinger
 ```
 
 #### Live Trading Simulation Mode:
@@ -94,6 +100,12 @@ python trading_bot/main.py
 
 # With CLI arguments
 python trading_bot/main.py --symbol ETH/USDT --timeframe 5m
+
+# MACD strategy via Python
+python trading_bot/main.py --strategy macd
+
+# Bollinger Bands strategy via Python
+python trading_bot/main.py --strategy bollinger
 ```
 
 ### Running Tests
@@ -160,9 +172,18 @@ The bot uses a `config.json` file for default parameters:
     "timeframe": "1m",
     "limit": 500,
     "sma_short": 5,
-    "sma_long": 20
+    "sma_long": 20,
+    "rsi_period": 14,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_signal": 9,
+    "bollinger_window": 20,
+"bollinger_std": 2
 }
 ```
+
+The Bollinger strategy uses the `sma_long`/`bollinger_window` value for its
+moving average window. By default this is set to 20 periods.
 
 CLI arguments override config file values. Available parameters:
 - `--symbol`: Trading pair (e.g., BTC/USDT, ETH/USDT)
@@ -252,6 +273,7 @@ streamlit run dashboard.py
 - **Signal Table**: Browse recent trading signals with filtering options
 - **Real-time Filters**: Filter by symbol, strategy, and number of signals
 - **SMA Configuration**: Adjust SMA periods to see different crossover patterns
+- **MACD & Bollinger Bands**: Select these strategies in the sidebar to visualize their signals
 
 The dashboard loads signals from the `signals.db` database and displays:
 - Price charts with configurable SMA crossover visualization
@@ -259,4 +281,11 @@ The dashboard loads signals from the `signals.db` database and displays:
 - Filterable table showing timestamp, action, price, symbol, and strategy
 - Signal statistics and metrics
 
-**Note**: Run the trading bot first to generate signals that will appear in the dashboard.
+**Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bollinger` in the Strategy filter to visualize those indicators.
+
+## Changelog
+
+### Roadmap 1 Complete
+
+- Added MACD and Bollinger Bands strategies
+- Enhanced Streamlit dashboard with strategy selection

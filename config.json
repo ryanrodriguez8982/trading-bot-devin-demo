@@ -3,5 +3,11 @@
     "timeframe": "1m",
     "limit": 500,
     "sma_short": 5,
-    "sma_long": 20
+    "sma_long": 20,
+    "rsi_period": 14,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_signal": 9,
+    "bollinger_window": 20,
+    "bollinger_std": 2
 }
