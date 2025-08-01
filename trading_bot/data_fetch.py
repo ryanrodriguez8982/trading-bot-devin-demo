@@ -1,9 +1,10 @@
-import ccxt
 import pandas as pd
 import logging
 from datetime import datetime
 
-def fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=500):
+from trading_bot.exchange import create_exchange
+
+def fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=500, exchange=None, **creds):
     """
     Fetch historical OHLCV data from Binance.
     
@@ -16,7 +17,11 @@ def fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=500):
         pd.DataFrame: DataFrame with columns: timestamp, open, high, low, close, volume
     """
     try:
-        exchange = ccxt.binance()
+        if exchange is None:
+            if creds:
+                exchange = create_exchange(**creds)
+            else:
+                exchange = create_exchange()
         
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
         

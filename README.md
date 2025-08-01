@@ -182,6 +182,18 @@ The bot uses a `config.json` file for default parameters:
 }
 ```
 
+### Exchange API Keys
+
+To enable live trading, provide your exchange credentials via environment variables or by updating `config.json`:
+
+- `TRADING_BOT_API_KEY`
+- `TRADING_BOT_API_SECRET`
+- `TRADING_BOT_API_PASSPHRASE` (if required)
+
+Alternatively, set `api_key`, `api_secret`, and `api_passphrase` keys in the configuration file. Specify a default `trade_amount` to control order size.
+
+Run the bot with `--live --live-trade` to place real orders.
+
 The Bollinger strategy uses the `sma_long`/`bollinger_window` value for its
 moving average window. By default this is set to 20 periods.
 
