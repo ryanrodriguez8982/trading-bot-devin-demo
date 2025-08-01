@@ -259,6 +259,17 @@ trading-bot --backtest path/to/data.csv --strategy sma
 
 The backtester outputs metrics like net PnL, win rate, and max drawdown. Use `--list-strategies` to see all supported strategies.
 
+### Parameter Tuning
+
+You can automatically search for optimal parameters using the tuning module:
+
+```bash
+trading-bot --tune --strategy sma --backtest path/to/data.csv
+```
+
+This runs a grid search over sensible defaults and prints the performance of each
+combination, highlighting the best set of parameters.
+
 ## Dashboard
 
 The project includes a Streamlit dashboard for visualizing trading signals and price data.
