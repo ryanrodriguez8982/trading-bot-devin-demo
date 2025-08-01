@@ -157,7 +157,7 @@ def test_version_flag(capsys):
             parse_args()
         assert excinfo.value.code == 0
         captured = capsys.readouterr()
-        assert '1.1.0' in captured.out
+        assert '1.2.0' in captured.out
     finally:
         sys.argv = original_argv
 

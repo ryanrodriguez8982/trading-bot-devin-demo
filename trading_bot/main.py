@@ -37,6 +37,12 @@ def load_config():
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Crypto Trading Bot')
+    parser.add_argument(
+    "--exchange",
+    type=str,
+    default=None,
+    help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config.json."
+)
     try:
         pkg_version = version('trading-bot')
     except PackageNotFoundError:
@@ -191,9 +197,13 @@ def main():
     api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
     api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
     trade_amount = config.get('trade_amount', 0.0)
+    exchange_name = args.exchange or config.get("exchange", "binance")
     exchange = None
+
     if api_key and api_secret:
-        exchange = create_exchange(api_key, api_secret, api_passphrase)
+        exchange = create_exchange(exchange_name, api_key, api_secret, api_passphrase)
+    else:
+        exchange = create_exchange(exchange_name)
 
     if getattr(args, 'list_strategies', False):
         print("Available strategies:")
@@ -235,7 +245,13 @@ def main():
                          live_trade=args.live_trade,
                          trade_amount=trade_amount)
         else:
-            signals = run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=strategy_choice, alert_mode=alert_mode)
+            signals = run_single_analysis(
+                symbol, timeframe, limit, sma_short, sma_long,
+                strategy=strategy_choice,
+                alert_mode=alert_mode,
+                exchange=exchange
+            )
+
             print(f"\n=== Trading Bot Results for {symbol} ===")
             print(f"Strategy: {strategy_choice.upper()}")
             print(f"Total signals: {len(signals)}")

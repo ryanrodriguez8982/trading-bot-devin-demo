@@ -2,18 +2,34 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import json
+import os
+from trading_bot.exchange import create_exchange
 
+# Load config.json to determine default exchange
+with open("config.json") as f:
+    config = json.load(f)
+
+exchange_name = config.get("exchange", "binance")
+exchange = create_exchange(exchange_name)
+
+# Optional debug line in sidebar:
+st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
 from trading_bot.signal_logger import get_signals_from_db, log_signals_to_db
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.strategy import sma_crossover_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
 
-
 @st.cache_data(show_spinner=False)
 def _fetch_price_data(symbol: str):
-    """Fetch candle data and cache the result."""
-    return fetch_btc_usdt_data(symbol=symbol, timeframe="1m", limit=500)
+    return fetch_btc_usdt_data(
+        symbol=symbol,
+        timeframe="1m",
+        limit=500,
+        exchange=exchange,
+        exchange_name=exchange_name  # not strictly needed since exchange is passed
+    )
 
 
 @st.cache_data(show_spinner=False)

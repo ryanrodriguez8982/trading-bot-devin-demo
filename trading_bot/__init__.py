@@ -8,7 +8,7 @@ This package provides tools for:
 - Interactive dashboard for signal visualization
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "Trading Bot Team"
 __email__ = "trading-bot@example.com"
 
