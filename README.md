@@ -303,6 +303,7 @@ streamlit run dashboard.py
 - Buy/sell signal markers overlaid on price data
 - Filterable table showing timestamp, action, price, symbol, and strategy
 - Signal statistics and metrics
+- Cached price and indicator data for snappier updates
 
 **Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bollinger` in the Strategy filter to visualize those indicators.
 
