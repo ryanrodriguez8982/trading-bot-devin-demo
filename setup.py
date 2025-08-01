@@ -23,7 +23,7 @@ def read_readme():
 
 setup(
     name="trading-bot",
-    version="1.1.0",
+    version="1.2.0",
     author="Trading Bot Team",
     author_email="trading-bot@example.com",
     description="A cryptocurrency trading signal generator with multiple "
