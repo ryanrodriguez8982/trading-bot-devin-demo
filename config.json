@@ -9,9 +9,10 @@
     "macd_slow": 26,
     "macd_signal": 9,
     "bollinger_window": 20,
-    "bollinger_std": 2
-    ,"api_key": ""
-    ,"api_secret": ""
-    ,"api_passphrase": ""
-    ,"trade_amount": 0.001
+    "bollinger_std": 2,
+    "api_key": "",
+    "api_secret": "",
+    "api_passphrase": "",
+    "trade_amount": 0.001,
+    "exchange": "coinbase"
 }

@@ -1,19 +1,22 @@
 import ccxt
 import logging
 
-
-def create_exchange(api_key=None, api_secret=None, api_passphrase=None):
-    """Create a CCXT Binance exchange instance with optional credentials."""
+def create_exchange(exchange_name="binance", api_key=None, api_secret=None, api_passphrase=None):
+    """Create a CCXT exchange instance with optional credentials."""
     try:
         params = {}
         if api_key and api_secret:
             params.update({"apiKey": api_key, "secret": api_secret})
             if api_passphrase:
                 params["password"] = api_passphrase
-        exchange = ccxt.binance(params)
+
+        # Dynamically get the exchange class by name
+        exchange_class = getattr(ccxt, exchange_name)
+        exchange = exchange_class(params)
         return exchange
+
     except Exception as e:
-        logging.error(f"Failed to initialize exchange: {e}")
+        logging.error(f"Failed to initialize exchange '{exchange_name}': {e}")
         raise
 
 
