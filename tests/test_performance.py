@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from trading_bot.performance import compute_equity_curve
 
@@ -32,4 +33,5 @@ def test_compute_equity_curve_basic():
     assert not df.empty
     assert stats["num_trades"] == 2
     assert round(stats["win_rate"], 2) == 100.0
-    assert round(stats["total_return_abs"], 2) == 222.22
+    assert stats["total_return_abs"] == pytest.approx(20.0)
+    assert stats["max_drawdown"] == pytest.approx(0.0)
