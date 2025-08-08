@@ -48,6 +48,12 @@ def test_equity_multiple_positions():
     expected = p.cash + 1 * 120 + 2 * 40
     assert equity == pytest.approx(expected)
 
+def test_total_position_value():
+    p = Portfolio(cash=1000)
+    p.buy('BTC', 1, 100)
+    value = p.total_position_value({'BTC': 150})
+    assert value == pytest.approx(150)
+
 
 def test_buy_requires_cash():
     p = Portfolio(cash=50)
