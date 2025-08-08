@@ -116,3 +116,12 @@ def test_equity_uses_cached_prices():
     expected = p.cash + 120
     assert p.equity() == pytest.approx(expected)
 
+
+def test_fractional_trades_and_fees():
+    p = Portfolio(cash=1000)
+    p.buy('BTC', 0.5, 100, fee_bps=25)
+    assert p.cash == pytest.approx(1000 - 50 - 0.125)
+    p.sell('BTC', 0.2, 110, fee_bps=25)
+    assert p.cash == pytest.approx(1000 - 50 - 0.125 + 22 - 0.055)
+    assert p.position_qty('BTC') == pytest.approx(0.3)
+    assert p.realized_pnl == pytest.approx(1.82)
