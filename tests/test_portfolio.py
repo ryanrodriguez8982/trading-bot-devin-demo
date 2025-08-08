@@ -7,6 +7,7 @@ def test_buy_reduces_cash_and_increases_position():
     assert p.cash == pytest.approx(1000 - 100 - 0.1)
     assert p.position_qty('BTC') == 1
     assert p.positions['BTC'].avg_cost == 100
+    assert p.realized_pnl == pytest.approx(-0.1)
 
 
 def test_selling_updates_cash_and_realized_pnl():
@@ -15,7 +16,7 @@ def test_selling_updates_cash_and_realized_pnl():
     p.sell('BTC', 1, 110, fee_bps=10)
     assert p.cash == pytest.approx(1000 - 200 + 110 - 0.11)
     assert p.position_qty('BTC') == 1
-    assert p.realized_pnl == pytest.approx(10)
+    assert p.realized_pnl == pytest.approx(9.89)
 
 
 def test_sell_disallows_more_than_held():
@@ -36,6 +37,16 @@ def test_equity_calculation():
     p.buy('BTC', 1, 100)
     equity = p.equity({'BTC': 120})
     assert equity == pytest.approx(p.cash + 120)
+
+
+def test_equity_multiple_positions():
+    p = Portfolio(cash=1000)
+    p.buy('BTC', 1, 100)
+    p.buy('ETH', 2, 50)
+    prices = {'BTC': 120, 'ETH': 40}
+    equity = p.equity(prices)
+    expected = p.cash + 1 * 120 + 2 * 40
+    assert equity == pytest.approx(expected)
 
 
 def test_buy_requires_cash():

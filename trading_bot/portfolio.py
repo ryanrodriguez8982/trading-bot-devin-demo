@@ -32,6 +32,8 @@ class Portfolio:
         if total > self.cash + 1e-12:
             raise ValueError("insufficient cash")
         self.cash -= total
+        # Buying incurs a fee which is realized immediately as a loss
+        self.realized_pnl -= fee
         pos = self.positions.get(symbol)
         if pos:
             new_qty = pos.qty + qty
@@ -49,7 +51,8 @@ class Portfolio:
         proceeds = price * qty
         fee = proceeds * fee_bps / 10_000
         self.cash += proceeds - fee
-        realized = (price - pos.avg_cost) * qty
+        # Realized profit/loss for this sale net of fees
+        realized = (price - pos.avg_cost) * qty - fee
         self.realized_pnl += realized
         pos.qty -= qty
         if pos.qty <= 1e-12:
