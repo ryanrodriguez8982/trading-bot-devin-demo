@@ -40,6 +40,13 @@ class Portfolio:
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
     ) -> None:
+        """Buy ``qty`` of ``symbol`` at ``price`` and deduct fees from cash.
+
+        The purchase increases the position's average cost and quantity and
+        immediately realises the trading fee as a loss.  A ``ValueError`` is
+        raised if there is insufficient cash or non‑positive inputs are
+        provided.
+        """
         if qty <= 0 or price <= 0:
             raise ValueError("qty and price must be positive")
         cost = price * qty
@@ -73,6 +80,12 @@ class Portfolio:
             )
 
     def sell(self, symbol: str, qty: float, price: float, fee_bps: float = 0.0) -> None:
+        """Sell ``qty`` of ``symbol`` at ``price`` and update cash and PnL.
+
+        Fees are deducted from the proceeds and the position quantity is
+        reduced.  Selling more than is held raises ``ValueError`` and the
+        portfolio state remains unchanged.
+        """
         if qty <= 0 or price <= 0:
             raise ValueError("qty and price must be positive")
         pos = self.positions.get(symbol)
