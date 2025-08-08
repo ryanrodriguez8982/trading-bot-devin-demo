@@ -2,10 +2,15 @@ import pandas as pd
 from typing import List, Tuple, Dict
 
 from trading_bot.backtester import compute_drawdown
+from trading_bot.portfolio import Portfolio
 
 
 def compute_equity_curve(
-    signals: List[Dict], initial_balance: float = 10000.0
+    signals: List[Dict],
+    initial_balance: float = 10000.0,
+    trade_size: float = 1.0,
+    fee_bps: float = 0.0,
+    symbol: str = "asset",
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
     """Compute equity curve and performance stats from trading signals.
 
@@ -15,6 +20,12 @@ def compute_equity_curve(
         Signals with ``timestamp``, ``action`` and ``price`` keys.
     initial_balance : float, optional
         Starting portfolio balance in quote currency.
+    trade_size : float, optional
+        Quantity to trade on each signal.
+    fee_bps : float, optional
+        Trading fee in basis points.
+    symbol : str, optional
+        Symbol name used in the portfolio (default ``"asset"``).
 
     Returns
     -------
@@ -37,9 +48,7 @@ def compute_equity_curve(
     # Ensure signals are sorted chronologically
     sorted_signals = sorted(signals, key=lambda x: x["timestamp"])
 
-    balance = float(initial_balance)
-    position = 0.0
-    last_buy_price = None
+    portfolio = Portfolio(cash=initial_balance)
     equity_curve = []
     wins = trades = 0
 
@@ -48,25 +57,27 @@ def compute_equity_curve(
         price = float(sig["price"])
         action = str(sig["action"]).lower()
 
-        if action == "buy" and balance > 0:
-            qty = balance / price
-            position += qty
-            balance -= qty * price
-            last_buy_price = price
-        elif action == "sell" and position > 0:
-            balance += position * price
-            if last_buy_price is not None:
-                trades += 1
-                if price > last_buy_price:
-                    wins += 1
-                last_buy_price = None
-            position = 0.0
+        try:
+            if action == "buy":
+                portfolio.buy(symbol, trade_size, price, fee_bps=fee_bps)
+            elif action == "sell":
+                pos = portfolio.positions.get(symbol)
+                if pos and pos.qty >= trade_size:
+                    avg_cost = pos.avg_cost
+                    portfolio.sell(symbol, trade_size, price, fee_bps=fee_bps)
+                    trades += 1
+                    if price > avg_cost:
+                        wins += 1
+        except ValueError:
+            # Skip trades that violate portfolio constraints
+            pass
 
-        equity = balance + position * price
-        equity_curve.append({"timestamp": ts, "equity": equity})
+        equity_curve.append(
+            {"timestamp": ts, "equity": portfolio.equity({symbol: price})}
+        )
 
     final_price = float(sorted_signals[-1]["price"])
-    final_equity = balance + position * final_price
+    final_equity = portfolio.equity({symbol: final_price})
     total_return_abs = final_equity - initial_balance
     total_return_pct = (total_return_abs / initial_balance) * 100
 

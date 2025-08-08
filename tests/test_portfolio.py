@@ -61,6 +61,7 @@ def test_buy_requires_cash():
         p.buy('BTC', 1, 100)
 
 
+
 def test_positive_price_and_qty_required():
     p = Portfolio(cash=1000)
     with pytest.raises(ValueError):
@@ -72,3 +73,23 @@ def test_positive_price_and_qty_required():
         p.sell('BTC', 0, 110)
     with pytest.raises(ValueError):
         p.sell('BTC', 1, 0)
+
+
+def test_rejects_non_positive_qty_or_price():
+    p = Portfolio(cash=1000)
+    with pytest.raises(ValueError):
+        p.buy('BTC', -1, 100)
+
+def test_buy_sell_positive_qty_price():
+    p = Portfolio(cash=1000)
+    with pytest.raises(ValueError):
+        p.buy('BTC', -1, 100)
+    with pytest.raises(ValueError):
+        p.buy('BTC', 1, -100)
+
+    p.buy('BTC', 1, 100)
+    with pytest.raises(ValueError):
+        p.sell('BTC', -1, 100)
+    with pytest.raises(ValueError):
+        p.sell('BTC', 1, -100)
+
