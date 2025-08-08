@@ -56,12 +56,17 @@ class Portfolio:
             del self.positions[symbol]
 
     def equity(self, prices: Dict[str, float]) -> float:
-        total = self.cash
+        """Return total equity (cash plus market value of positions)."""
+        return self.cash + self.total_position_value(prices)
+
+    def total_position_value(self, prices: Dict[str, float]) -> float:
+        """Return market value of all positions given price quotes."""
+        value = 0.0
         for symbol, pos in self.positions.items():
             price = prices.get(symbol)
             if price is not None:
-                total += pos.market_value(price)
-        return total
+                value += pos.market_value(price)
+        return value
 
     def position_qty(self, symbol: str) -> float:
         pos = self.positions.get(symbol)
