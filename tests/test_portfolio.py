@@ -26,6 +26,16 @@ def test_sell_disallows_more_than_held():
         p.sell('BTC', 2, 110)
 
 
+def test_failed_sell_does_not_change_state():
+    p = Portfolio(cash=1000)
+    p.buy('BTC', 1, 100)
+    with pytest.raises(ValueError):
+        p.sell('BTC', 2, 110)
+    assert p.cash == pytest.approx(900)
+    assert p.position_qty('BTC') == 1
+    assert p.realized_pnl == pytest.approx(0)
+
+
 def test_sell_unowned_disallowed():
     p = Portfolio(cash=1000)
     with pytest.raises(ValueError):
@@ -59,6 +69,8 @@ def test_buy_requires_cash():
     p = Portfolio(cash=50)
     with pytest.raises(ValueError):
         p.buy('BTC', 1, 100)
+    assert p.cash == 50
+    assert p.position_qty('BTC') == 0
 
 
 
