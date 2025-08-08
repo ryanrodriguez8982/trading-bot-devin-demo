@@ -12,6 +12,8 @@ class Position:
     symbol: str
     qty: float = 0.0
     avg_cost: float = 0.0
+    stop_loss: Optional[float] = None
+    take_profit: Optional[float] = None
 
     def market_value(self, price: float) -> float:
         return self.qty * price
@@ -25,7 +27,16 @@ class Portfolio:
     positions: Dict[str, Position] = field(default_factory=dict)
     realized_pnl: float = 0.0
 
-    def buy(self, symbol: str, qty: float, price: float, fee_bps: float = 0.0) -> None:
+    def buy(
+        self,
+        symbol: str,
+        qty: float,
+        price: float,
+        fee_bps: float = 0.0,
+        *,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
+    ) -> None:
         cost = price * qty
         fee = cost * fee_bps / 10_000
         total = cost + fee
@@ -39,8 +50,18 @@ class Portfolio:
                 raise ValueError("resulting position would be non-positive")
             pos.avg_cost = (pos.avg_cost * pos.qty + cost) / new_qty
             pos.qty = new_qty
+            if stop_loss is not None:
+                pos.stop_loss = stop_loss
+            if take_profit is not None:
+                pos.take_profit = take_profit
         else:
-            self.positions[symbol] = Position(symbol=symbol, qty=qty, avg_cost=cost / qty)
+            self.positions[symbol] = Position(
+                symbol=symbol,
+                qty=qty,
+                avg_cost=cost / qty,
+                stop_loss=stop_loss,
+                take_profit=take_profit,
+            )
 
     def sell(self, symbol: str, qty: float, price: float, fee_bps: float = 0.0) -> None:
         pos = self.positions.get(symbol)
