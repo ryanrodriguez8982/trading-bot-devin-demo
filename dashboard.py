@@ -11,7 +11,7 @@ with open("config.json") as f:
     config = json.load(f)
 
 exchange_name = config.get("exchange", "binance")
-exchange = create_exchange(exchange_name)
+exchange = create_exchange(exchange_name=exchange_name)
 
 # Optional debug line in sidebar:
 st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")

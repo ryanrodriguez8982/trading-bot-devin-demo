@@ -17,6 +17,7 @@ from .data_fetch import fetch_btc_usdt_data
 from .strategy import sma_crossover_strategy
 from .signal_logger import log_signals_to_db, get_signals_from_db
 from .performance import compute_equity_curve
+from .risk_config import get_risk_config, RiskConfig
 
 __all__ = [
     "main",
@@ -25,4 +26,6 @@ __all__ = [
     "log_signals_to_db",
     "get_signals_from_db",
     "compute_equity_curve",
+    "get_risk_config",
+    "RiskConfig",
 ]

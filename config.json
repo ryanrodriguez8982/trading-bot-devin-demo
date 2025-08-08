@@ -14,5 +14,24 @@
     "api_secret": "",
     "api_passphrase": "",
     "trade_amount": 0.001,
-    "exchange": "coinbase"
+    "exchange": "coinbase",
+    "risk": {
+        "fees_bps": 10,
+        "slippage_bps": 5,
+        "position_sizing": {
+            "mode": "fixed_fraction",
+            "fraction_of_equity": 0.10,
+            "fixed_cash_amount": 100.0,
+            "risk_pct": 0.01
+        },
+        "stops": {
+            "stop_loss": {"type": "percent", "value": 0.02},
+            "take_profit": {"type": "rr", "rr": 2.0},
+            "trailing": {"enabled": true, "trail_pct": 0.02}
+        },
+        "max_drawdown": {
+            "monthly_pct": 0.10,
+            "cooldown_bars": 0
+        }
+    }
 }

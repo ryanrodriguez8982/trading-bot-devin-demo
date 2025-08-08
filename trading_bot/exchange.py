@@ -1,8 +1,15 @@
 import ccxt
 import logging
 
-def create_exchange(exchange_name="binance", api_key=None, api_secret=None, api_passphrase=None):
-    """Create a CCXT exchange instance with optional credentials."""
+
+def create_exchange(api_key=None, api_secret=None, api_passphrase=None, exchange_name="binance"):
+    """Create a CCXT exchange instance with optional credentials.
+
+    The function signature places credential arguments first so callers may
+    provide only API keys without specifying the exchange name. This aligns
+    with tests that call ``create_exchange('key', 'secret', 'pass')`` and
+    expect the default exchange (binance) to be used.
+    """
     try:
         params = {}
         if api_key and api_secret:
