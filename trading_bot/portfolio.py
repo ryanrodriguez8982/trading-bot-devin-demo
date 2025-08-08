@@ -26,6 +26,9 @@ class Portfolio:
     cash: float
     positions: Dict[str, Position] = field(default_factory=dict)
     realized_pnl: float = 0.0
+    # Last known prices for symbols to allow equity calculation without
+    # always passing in a price dictionary.
+    last_prices: Dict[str, float] = field(default_factory=dict)
 
     def buy(
         self,
@@ -47,6 +50,8 @@ class Portfolio:
         self.cash -= total
         # Buying incurs a fee which is realized immediately as a loss
         self.realized_pnl -= fee
+        # track last trade price
+        self.last_prices[symbol] = price
         pos = self.positions.get(symbol)
         if pos:
             new_qty = pos.qty + qty
@@ -79,19 +84,34 @@ class Portfolio:
         # Realized profit/loss for this sale net of fees
         realized = (price - pos.avg_cost) * qty - fee
         self.realized_pnl += realized
+        # update last traded price
+        self.last_prices[symbol] = price
         pos.qty -= qty
         if pos.qty <= 1e-12:
             del self.positions[symbol]
+            self.last_prices.pop(symbol, None)
 
-    def equity(self, prices: Dict[str, float]) -> float:
-        """Return total equity (cash plus market value of positions)."""
-        return self.cash + self.total_position_value(prices)
+    def equity(self, prices: Optional[Dict[str, float]] = None) -> float:
+        """Return total equity (cash plus market value of positions).
 
-    def total_position_value(self, prices: Dict[str, float]) -> float:
-        """Return market value of all positions given price quotes."""
+        If ``prices`` is provided the internal price cache is updated and
+        used for the valuation.  This allows callers to fetch equity once
+        with prices and subsequently without needing to supply them again.
+        """
+        if prices:
+            self.last_prices.update(prices)
+        return self.cash + self.total_position_value()
+
+    def total_position_value(self, prices: Optional[Dict[str, float]] = None) -> float:
+        """Return market value of all positions.
+
+        If ``prices`` is given they will update the cached last prices.
+        """
+        if prices:
+            self.last_prices.update(prices)
         value = 0.0
         for symbol, pos in self.positions.items():
-            price = prices.get(symbol)
+            price = self.last_prices.get(symbol)
             if price is not None:
                 value += pos.market_value(price)
         return value

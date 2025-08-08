@@ -93,3 +93,14 @@ def test_buy_sell_positive_qty_price():
     with pytest.raises(ValueError):
         p.sell('BTC', 1, -100)
 
+
+def test_equity_uses_cached_prices():
+    """Equity should use last known prices if none are provided."""
+    p = Portfolio(cash=1000)
+    p.buy('BTC', 1, 100)
+    # first call updates cached price
+    p.equity({'BTC': 120})
+    # subsequent call without prices uses cached value
+    expected = p.cash + 120
+    assert p.equity() == pytest.approx(expected)
+
