@@ -83,6 +83,8 @@ trading-bot --strategy bollinger
 
 # Configure trade size and fees
 trading-bot --trade-size 0.5 --fee-bps 10
+# ``--trade-size`` specifies the quantity of the base asset for each trade.
+# ``--fee-bps`` applies a fee in basis points (10 bps = 0.10%).
 ```
 
 #### Live Trading Simulation Mode:
