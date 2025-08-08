@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 import logging
 import os
@@ -48,38 +50,76 @@ def compute_drawdown(equity_curve):
 def simulate_equity(
     df,
     signals,
-    initial_capital=10000,
-    trade_size=1.0,
-    fee_bps=0.0,
-    symbol="asset",
+    initial_capital: float = 10000,
+    trade_size: float = 1.0,
+    fee_bps: float = 0.0,
+    slippage_bps: float = 0.0,
+    stop_loss_pct: float | None = None,
+    take_profit_rr: float | None = None,
+    symbol: str = "asset",
 ):
     portfolio = Portfolio(cash=initial_capital)
-    equity_history = []
-    trade_profits = []
+    equity_history: list[float] = []
+    trade_profits: list[float] = []
 
     signal_iter = iter(sorted(signals, key=lambda x: x['timestamp']))
     current_signal = next(signal_iter, None)
 
     for _, row in df.iterrows():
         ts = row['timestamp']
-        price = row['close']
+        close_price = row['close']
+
+        # Check for stop-loss / take-profit before new signals
+        pos = portfolio.positions.get(symbol)
+        if pos and pos.qty > 0:
+            stop_hit = pos.stop_loss is not None and row['low'] <= pos.stop_loss
+            tp_hit = pos.take_profit is not None and row['high'] >= pos.take_profit
+            exit_price = None
+            if stop_hit and tp_hit:
+                exit_price = pos.stop_loss
+            elif stop_hit:
+                exit_price = pos.stop_loss
+            elif tp_hit:
+                exit_price = pos.take_profit
+            if exit_price is not None:
+                exec_price = exit_price * (1 - slippage_bps / 10_000)
+                avg_cost = pos.avg_cost
+                qty = pos.qty
+                portfolio.sell(symbol, qty, exec_price, fee_bps=fee_bps)
+                trade_profits.append((exec_price - avg_cost) * qty)
 
         while current_signal is not None and current_signal['timestamp'] <= ts:
             action = current_signal['action']
             try:
                 if action == 'buy':
-                    portfolio.buy(symbol, trade_size, price, fee_bps=fee_bps)
+                    buy_price = close_price * (1 + slippage_bps / 10_000)
+                    stop_price = None
+                    take_price = None
+                    if stop_loss_pct:
+                        stop_price = buy_price * (1 - stop_loss_pct)
+                        if take_profit_rr:
+                            risk = buy_price - stop_price
+                            take_price = buy_price + risk * take_profit_rr
+                    portfolio.buy(
+                        symbol,
+                        trade_size,
+                        buy_price,
+                        fee_bps=fee_bps,
+                        stop_loss=stop_price,
+                        take_profit=take_price,
+                    )
                 elif action == 'sell':
+                    sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
                     avg_cost = pos.avg_cost if pos and pos.qty >= trade_size else None
-                    portfolio.sell(symbol, trade_size, price, fee_bps=fee_bps)
+                    portfolio.sell(symbol, trade_size, sell_price, fee_bps=fee_bps)
                     if avg_cost is not None:
-                        trade_profits.append((price - avg_cost) * trade_size)
+                        trade_profits.append((sell_price - avg_cost) * trade_size)
             except ValueError:
                 pass
             current_signal = next(signal_iter, None)
 
-        equity = portfolio.equity({symbol: price})
+        equity = portfolio.equity({symbol: close_price})
         equity_history.append(equity)
 
     final_equity = portfolio.equity({symbol: df.iloc[-1]['close']})
@@ -114,6 +154,9 @@ def run_backtest(
     chart_out=None,
     trade_size=1.0,
     fee_bps=0.0,
+    slippage_bps: float = 0.0,
+    stop_loss_pct: float | None = None,
+    take_profit_rr: float | None = None,
 ):
     """Run backtest on CSV data using specified strategy."""
     df = load_csv_data(csv_path)
@@ -139,6 +182,9 @@ def run_backtest(
         signals,
         trade_size=trade_size,
         fee_bps=fee_bps,
+        slippage_bps=slippage_bps,
+        stop_loss_pct=stop_loss_pct,
+        take_profit_rr=take_profit_rr,
     )
 
     eq_df = pd.DataFrame({
