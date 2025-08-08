@@ -7,6 +7,7 @@ import signal as sig
 import sys
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
+from typing import Dict
 
 # ? Absolute imports for package context
 from trading_bot.backtester import run_backtest
@@ -35,14 +36,15 @@ def load_config():
             "sma_long": 20
         }
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Crypto Trading Bot')
     parser.add_argument(
-    "--exchange",
-    type=str,
-    default=None,
-    help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config.json."
-)
+        "--exchange",
+        type=str,
+        default=None,
+        help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config.json.",
+    )
     try:
         pkg_version = version('trading-bot')
     except PackageNotFoundError:
@@ -68,7 +70,20 @@ def parse_args():
     parser.add_argument('--backtest', type=str, help='Path to CSV file for historical backtesting')
     parser.add_argument('--tune', action='store_true', help='Run parameter tuning over a range of values')
     parser.add_argument('--save-chart', action='store_true', help='Save equity curve CSV/JSON and chart during backtest')
-    return parser.parse_args()
+    args, unknown = parser.parse_known_args()
+
+    risk_overrides = {}
+    it = iter(unknown)
+    for token in it:
+        if token.startswith('--risk.'):
+            key = token[2 + len('risk.') :]
+            value = next(it, None)
+            if value is None:
+                raise SystemExit(f"Missing value for {token}")
+            risk_overrides[key] = value
+    setattr(args, 'risk_overrides', risk_overrides)
+    return args
+
 
 def log_signals_to_file(signals, symbol):
     if not signals:
@@ -184,6 +199,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     config = load_config()
     args = parse_args()
+    risk_config = get_risk_config(config.get('risk'), getattr(args, 'risk_overrides', {}))
 
     symbol = args.symbol or config['symbol']
     timeframe = args.timeframe or config['timeframe']
@@ -201,9 +217,9 @@ def main():
     exchange = None
 
     if api_key and api_secret:
-        exchange = create_exchange(exchange_name, api_key, api_secret, api_passphrase)
+        exchange = create_exchange(api_key, api_secret, api_passphrase, exchange_name)
     else:
-        exchange = create_exchange(exchange_name)
+        exchange = create_exchange(exchange_name=exchange_name)
 
     if getattr(args, 'list_strategies', False):
         print("Available strategies:")

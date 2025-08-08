@@ -22,7 +22,7 @@ def fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=500, exchange=N
     try:
         if exchange is None:
             if exchange_name:
-                exchange = create_exchange(exchange_name, **creds)
+                exchange = create_exchange(**creds, exchange_name=exchange_name)
             elif creds:
                 exchange = create_exchange(**creds)
             else:
