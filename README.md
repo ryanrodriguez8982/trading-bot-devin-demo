@@ -80,6 +80,9 @@ trading-bot --strategy macd
 
 # Use Bollinger Bands strategy
 trading-bot --strategy bollinger
+
+# Configure trade size and fees
+trading-bot --trade-size 0.5 --fee-bps 10
 ```
 
 #### Live Trading Simulation Mode:
@@ -182,7 +185,9 @@ The bot uses a `config.json` file for default parameters:
     "macd_slow": 26,
     "macd_signal": 9,
     "bollinger_window": 20,
-"bollinger_std": 2
+    "bollinger_std": 2,
+    "trade_size": 1.0,
+    "fee_bps": 0
 }
 ```
 
@@ -196,7 +201,7 @@ To enable live trading, supply your API credentials **via environment variables*
 
 You may also pass them on the command line using `--api-key`, `--api-secret` and `--api-passphrase` flags. Never commit real keys to the repository.
 
-`config.json` lets you specify `api_key`, `api_secret`, `api_passphrase` and the default `trade_amount` for each order. Adjust `trade_amount` and the dashboard's **Starting Balance** input to tune PnL calculations.
+`config.json` lets you specify `api_key`, `api_secret`, `api_passphrase` and the default `trade_size` for each order along with `fee_bps`. Adjust these and the dashboard's **Starting Balance** input to tune PnL calculations.
 
 Run the bot with `--live --live-trade` to place real orders once your keys are configured.
 

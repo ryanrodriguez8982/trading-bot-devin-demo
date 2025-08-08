@@ -7,6 +7,7 @@ from datetime import datetime
 # ? Absolute import for package compatibility
 from trading_bot.signal_logger import log_signals_to_db
 from trading_bot.strategies import STRATEGY_REGISTRY
+from trading_bot.portfolio import Portfolio
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -44,11 +45,16 @@ def compute_drawdown(equity_curve):
     return max_drawdown * 100
 
 
-def simulate_equity(df, signals, initial_capital=10000):
-    cash = initial_capital
-    position = 0
+def simulate_equity(
+    df,
+    signals,
+    initial_capital=10000,
+    trade_size=1.0,
+    fee_bps=0.0,
+    symbol="asset",
+):
+    portfolio = Portfolio(cash=initial_capital)
     equity_history = []
-    open_price = None
     trade_profits = []
 
     signal_iter = iter(sorted(signals, key=lambda x: x['timestamp']))
@@ -60,22 +66,23 @@ def simulate_equity(df, signals, initial_capital=10000):
 
         while current_signal is not None and current_signal['timestamp'] <= ts:
             action = current_signal['action']
-            if action == 'buy' and cash >= price:
-                cash -= price
-                position += 1
-                open_price = price
-            elif action == 'sell' and position > 0:
-                cash += price
-                position -= 1
-                if open_price is not None:
-                    trade_profits.append(price - open_price)
-                    open_price = None
+            try:
+                if action == 'buy':
+                    portfolio.buy(symbol, trade_size, price, fee_bps=fee_bps)
+                elif action == 'sell':
+                    pos = portfolio.positions.get(symbol)
+                    avg_cost = pos.avg_cost if pos and pos.qty >= trade_size else None
+                    portfolio.sell(symbol, trade_size, price, fee_bps=fee_bps)
+                    if avg_cost is not None:
+                        trade_profits.append((price - avg_cost) * trade_size)
+            except ValueError:
+                pass
             current_signal = next(signal_iter, None)
 
-        equity = cash + position * price
+        equity = portfolio.equity({symbol: price})
         equity_history.append(equity)
 
-    final_equity = cash + position * df.iloc[-1]['close']
+    final_equity = portfolio.equity({symbol: df.iloc[-1]['close']})
     net_pnl = final_equity - initial_capital
     win_rate = 0.0
     if trade_profits:
@@ -90,10 +97,24 @@ def simulate_equity(df, signals, initial_capital=10000):
     }
 
 
-def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20,
-                 rsi_period=14, macd_fast=12, macd_slow=26, macd_signal=9,
-                 bollinger_window=20, bollinger_std=2, plot=False,
-                 equity_out=None, stats_out=None, chart_out=None):
+def run_backtest(
+    csv_path,
+    strategy='sma',
+    sma_short=5,
+    sma_long=20,
+    rsi_period=14,
+    macd_fast=12,
+    macd_slow=26,
+    macd_signal=9,
+    bollinger_window=20,
+    bollinger_std=2,
+    plot=False,
+    equity_out=None,
+    stats_out=None,
+    chart_out=None,
+    trade_size=1.0,
+    fee_bps=0.0,
+):
     """Run backtest on CSV data using specified strategy."""
     df = load_csv_data(csv_path)
 
@@ -113,7 +134,12 @@ def run_backtest(csv_path, strategy='sma', sma_short=5, sma_long=20,
     else:
         signals = strategy_fn(df, sma_short, sma_long)
 
-    equity_curve, stats = simulate_equity(df, signals)
+    equity_curve, stats = simulate_equity(
+        df,
+        signals,
+        trade_size=trade_size,
+        fee_bps=fee_bps,
+    )
 
     eq_df = pd.DataFrame({
         'timestamp': df['timestamp'],

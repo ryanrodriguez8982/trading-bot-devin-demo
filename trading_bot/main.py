@@ -14,6 +14,7 @@ from trading_bot.backtester import run_backtest
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.exchange import create_exchange, execute_trade
 from trading_bot.signal_logger import log_signals_to_db
+from trading_bot.portfolio import Portfolio
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
 try:
@@ -70,6 +71,10 @@ def parse_args():
     parser.add_argument('--backtest', type=str, help='Path to CSV file for historical backtesting')
     parser.add_argument('--tune', action='store_true', help='Run parameter tuning over a range of values')
     parser.add_argument('--save-chart', action='store_true', help='Save equity curve CSV/JSON and chart during backtest')
+    parser.add_argument('--trade-size', type=float, default=None,
+                        help='Default trade size in asset units')
+    parser.add_argument('--fee-bps', type=float, default=None,
+                        help='Trading fee in basis points')
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
@@ -164,7 +169,18 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
         logging.error(f"Error in analysis cycle: {e}")
         return []
 
-def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_mode=False, exchange=None, live_trade=False, trade_amount=0.0):
+def run_live_mode(
+    symbol,
+    timeframe,
+    sma_short,
+    sma_long,
+    strategy="sma",
+    alert_mode=False,
+    exchange=None,
+    live_trade=False,
+    trade_amount=0.0,
+    fee_bps=0.0,
+):
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
     if strategy not in STRATEGY_REGISTRY:
@@ -178,10 +194,14 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_
     print("=" * 50)
 
     iteration = 0
+    portfolio = Portfolio(cash=trade_amount * 100 if trade_amount else 0)
+
     while True:
         iteration += 1
         print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iteration #{iteration}")
-        signals = run_single_analysis(symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode, exchange=exchange)
+        signals = run_single_analysis(
+            symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode, exchange=exchange
+        )
         if signals:
             print(f"?? NEW SIGNALS ({len(signals)}):")
             for signal in signals[-3:]:
@@ -190,6 +210,14 @@ def run_live_mode(symbol, timeframe, sma_short, sma_long, strategy="sma", alert_
                 if live_trade and exchange:
                     order = execute_trade(exchange, symbol, signal['action'], trade_amount)
                     log_order_to_file(order, symbol)
+                else:
+                    try:
+                        if signal['action'] == 'buy':
+                            portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                        else:
+                            portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                    except ValueError:
+                        logging.debug("Trade skipped due to portfolio constraints")
         else:
             print("No new signals.")
         print("Next analysis in 60 seconds...")
@@ -212,7 +240,8 @@ def main():
     api_key = args.api_key or os.getenv('TRADING_BOT_API_KEY') or config.get('api_key')
     api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
     api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
-    trade_amount = config.get('trade_amount', 0.0)
+    trade_size = args.trade_size if args.trade_size is not None else config.get('trade_size', 1.0)
+    fee_bps = args.fee_bps if args.fee_bps is not None else config.get('fee_bps', 0.0)
     exchange_name = args.exchange or config.get("exchange", "binance")
     exchange = None
 
@@ -249,17 +278,31 @@ def main():
             equity_out = base + '_equity_curve.csv' if args.save_chart else None
             stats_out = base + '_summary_stats.json' if args.save_chart else None
             chart_out = base + '_equity_chart.png' if args.save_chart else None
-            run_backtest(args.backtest, strategy=strategy_choice,
-                         sma_short=sma_short, sma_long=sma_long,
-                         plot=bool(chart_out), equity_out=equity_out,
-                         stats_out=stats_out, chart_out=chart_out)
+            run_backtest(
+                args.backtest,
+                strategy=strategy_choice,
+                sma_short=sma_short,
+                sma_long=sma_long,
+                plot=bool(chart_out),
+                equity_out=equity_out,
+                stats_out=stats_out,
+                chart_out=chart_out,
+                trade_size=trade_size,
+                fee_bps=fee_bps,
+            )
         elif args.live:
-            run_live_mode(symbol, timeframe, sma_short, sma_long,
-                         strategy=strategy_choice,
-                         alert_mode=alert_mode,
-                         exchange=exchange,
-                         live_trade=args.live_trade,
-                         trade_amount=trade_amount)
+            run_live_mode(
+                symbol,
+                timeframe,
+                sma_short,
+                sma_long,
+                strategy=strategy_choice,
+                alert_mode=alert_mode,
+                exchange=exchange,
+                live_trade=args.live_trade,
+                trade_amount=trade_size,
+                fee_bps=fee_bps,
+            )
         else:
             signals = run_single_analysis(
                 symbol, timeframe, limit, sma_short, sma_long,
