@@ -37,6 +37,8 @@ class Portfolio:
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
     ) -> None:
+        if qty <= 0 or price <= 0:
+            raise ValueError("qty and price must be positive")
         cost = price * qty
         fee = cost * fee_bps / 10_000
         total = cost + fee
@@ -66,6 +68,8 @@ class Portfolio:
             )
 
     def sell(self, symbol: str, qty: float, price: float, fee_bps: float = 0.0) -> None:
+        if qty <= 0 or price <= 0:
+            raise ValueError("qty and price must be positive")
         pos = self.positions.get(symbol)
         if not pos or qty > pos.qty + 1e-12:
             raise ValueError("insufficient position")
