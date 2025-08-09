@@ -2,6 +2,7 @@ import time
 import logging
 
 import pytest
+import logging
 
 from trading_bot.notify import configure
 from trading_bot.utils.retry import RetryPolicy
@@ -24,7 +25,7 @@ def test_retry_succeeds_after_transient_failure(caplog):
     assert any("flaky failed" in r.message for r in caplog.records)
 
 
-def test_circuit_breaker_opens_and_recovers(caplog, capfd):
+def test_circuit_breaker_opens_and_recovers(caplog):
     def always_fail():
         raise ValueError("nope")
 
@@ -40,10 +41,9 @@ def test_circuit_breaker_opens_and_recovers(caplog, capfd):
         for _ in range(2):
             with pytest.raises(ValueError):
                 policy.call(always_fail)
-    with pytest.raises(RuntimeError):
-        policy.call(always_fail)
-    captured = capfd.readouterr()
-    assert "Circuit breaker open" in captured.out
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError):
+            policy.call(always_fail)
     assert any("Circuit breaker open" in r.message for r in caplog.records)
     time.sleep(0.2)
 

@@ -1,4 +1,5 @@
 import pytest
+import logging
 
 from trading_bot.broker import CcxtSpotBroker
 
@@ -80,13 +81,13 @@ def test_rate_limiter_called():
     assert limiter.calls == 3
 
 
-def test_dry_run_skips_network_call(capsys):
+def test_dry_run_skips_network_call(caplog):
     ex = DummyExchange()
     broker = CcxtSpotBroker(exchange=ex, dry_run=True)
-    broker.create_order('buy', 'BTC/USDT', 0.5)
+    with caplog.at_level(logging.INFO):
+        broker.create_order('buy', 'BTC/USDT', 0.5)
     assert not ex.orders
-    out, _ = capsys.readouterr()
-    assert 'DRY-RUN' in out
+    assert any('DRY-RUN' in r.message for r in caplog.records)
 
 
 def test_retries_on_failure():

@@ -14,6 +14,9 @@ from trading_bot.utils.precision import round_to_increment
 from trading_bot.utils.rate_limit import RateLimiter
 
 
+logger = logging.getLogger(__name__)
+
+
 class CcxtSpotBroker(Broker):
     """Minimal CCXT spot broker.
 
@@ -112,7 +115,7 @@ class CcxtSpotBroker(Broker):
         if min_amt:
             qty = round_to_increment(qty, float(min_amt), side)
         if qty != original:
-            logging.debug(
+            logger.debug(
                 "rounded qty", extra={"symbol": symbol, "side": side, "from": original, "to": qty}
             )
         return qty
@@ -147,12 +150,12 @@ class CcxtSpotBroker(Broker):
         for attempt in range(self.retries):
             try:
                 if self.dry_run:
-                    print(f"[DRY-RUN] {order_payload}")
+                    logger.info(f"[DRY-RUN] {order_payload}")
                     return order_payload
                 self._wait_rate_limit()
                 return self.exchange.create_order(symbol, type, side, qty)
             except Exception as exc:  # pragma: no cover - defensive
-                logging.exception(
+                logger.exception(
                     "ccxt order failed", extra={"payload": order_payload}
                 )
                 if attempt == self.retries - 1:
