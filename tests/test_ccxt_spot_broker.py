@@ -42,6 +42,14 @@ class FlakyExchange(DummyExchange):
         return super().create_order(symbol, type, side, amount)
 
 
+class DummyLimiter:
+    def __init__(self):
+        self.calls = 0
+
+    def wait(self):
+        self.calls += 1
+
+
 def test_buy_respects_precision_and_balance():
     ex = DummyExchange()
     broker = CcxtSpotBroker(exchange=ex)
@@ -55,6 +63,21 @@ def test_sell_raises_on_insufficient_balance():
     broker = CcxtSpotBroker(exchange=ex)
     with pytest.raises(ValueError):
         broker.create_order('sell', 'BTC/USDT', 2)
+
+
+def test_sell_rounds_up():
+    ex = DummyExchange()
+    broker = CcxtSpotBroker(exchange=ex)
+    order = broker.create_order('sell', 'BTC/USDT', 0.123456)
+    assert order['amount'] == pytest.approx(0.124)
+
+
+def test_rate_limiter_called():
+    ex = DummyExchange()
+    limiter = DummyLimiter()
+    broker = CcxtSpotBroker(exchange=ex, rate_limiter=limiter)
+    broker.create_order('buy', 'BTC/USDT', 0.5)
+    assert limiter.calls == 3
 
 
 def test_dry_run_skips_network_call(capsys):
