@@ -386,6 +386,20 @@ with col2:
         else:
             st.metric("Last Trade", "No trades")
 
+        status_file = "status.json"
+        if os.path.exists(status_file):
+            try:
+                with open(status_file) as sf:
+                    status = json.load(sf)
+                hb = status.get("heartbeat")
+                last_loop = status.get("last_loop")
+                if hb:
+                    st.metric("Heartbeat", hb)
+                if last_loop:
+                    st.metric("Last Loop", last_loop)
+            except Exception:
+                pass
+
         risk_cfg = config.get("risk", {})
         md = risk_cfg.get("max_drawdown", {}).get("monthly_pct", 0.0)
         cooldown = risk_cfg.get("max_drawdown", {}).get("cooldown_bars", 0)
