@@ -1,0 +1,21 @@
+name: PR Body Lint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-body:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR body has required sections
+        uses: actions-ecosystem/action-regex-match@v2
+        id: match
+        with:
+          text: ${{ github.event.pull_request.body }}
+          regex: '(?s)## What.*## Why.*## How.*## Tests'
+      - name: Fail if missing sections
+        if: ${{ steps.match.outputs.match != 'true' }}
+        run: |
+          echo "PR body must include ## What / ## Why / ## How / ## Tests"
+          exit 1
