@@ -17,9 +17,9 @@ DEFAULT_GRIDS = {
         "macd_slow": [26, 30],
         "macd_signal": [9],
     },
-    "bollinger": {
-        "bollinger_window": [20, 30],
-        "bollinger_std": [2, 3],
+    "bbands": {
+        "bbands_window": [20, 30],
+        "bbands_std": [2, 3],
     },
 }
 

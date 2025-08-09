@@ -56,7 +56,7 @@ setup(
     package_data={
         "trading_bot": ["*.json"],
     },
-    keywords="cryptocurrency trading bot sma rsi macd bollinger crossover "
+    keywords="cryptocurrency trading bot sma rsi macd bbands crossover "
              "signals binance",
     project_urls={
         "Bug Reports": "https://github.com/ryanrodriguez8982/trading-bot-devin-demo/issues",

@@ -180,7 +180,7 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
             signals = strategy_fn(data, period=14)
         elif strategy == "macd":
             signals = strategy_fn(data)
-        elif strategy == "bollinger":
+        elif strategy == "bbands":
             signals = strategy_fn(data, window=sma_long, num_std=2)
         else:
             signals = strategy_fn(data, sma_short, sma_long)
