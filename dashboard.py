@@ -151,11 +151,13 @@ with col1:
 
     def create_mock_data(symbol, limit=500):
         import numpy as np
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         base_price = 50000 if 'BTC' in symbol else 3000
-        timestamps = [datetime.now() - timedelta(minutes=i)
-                      for i in range(limit, 0, -1)]
+        timestamps = [
+            datetime.now(timezone.utc) - timedelta(minutes=i)
+            for i in range(limit, 0, -1)
+        ]
 
         prices = []
         current_price = base_price
@@ -313,7 +315,7 @@ with col1:
             eq_df, stats = compute_equity_curve(
                 [
                     {
-                        "timestamp": pd.to_datetime(s[0]),
+                        "timestamp": pd.to_datetime(s[0], utc=True),
                         "action": s[1],
                         "price": s[2],
                     }
@@ -381,8 +383,8 @@ with col2:
     try:
         latest_trade = get_trades_from_db(limit=1)
         if latest_trade:
-            last_ts = pd.to_datetime(latest_trade[0][0])
-            st.metric("Last Trade", last_ts.strftime("%Y-%m-%d %H:%M:%S"))
+            last_ts = pd.to_datetime(latest_trade[0][0], utc=True)
+            st.metric("Last Trade", last_ts.strftime("%Y-%m-%d %H:%M:%S%z"))
         else:
             st.metric("Last Trade", "No trades")
 
@@ -431,9 +433,9 @@ with col2:
             signals_df["Price"] = signals_df["Price"].apply(
                 lambda x: f"${x:,.2f}"
             )
-            signals_df["Timestamp"] = pd.to_datetime(signals_df["Timestamp"])
+            signals_df["Timestamp"] = pd.to_datetime(signals_df["Timestamp"], utc=True)
             signals_df["Timestamp"] = signals_df["Timestamp"].dt.strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%S%z"
             )
 
             def highlight_action(row):
@@ -489,13 +491,13 @@ with col2:
                     "Broker",
                 ],
             )
-            trades_df["Timestamp"] = pd.to_datetime(trades_df["Timestamp"])
+            trades_df["Timestamp"] = pd.to_datetime(trades_df["Timestamp"], utc=True)
             display_df = trades_df.copy()
             display_df["Price"] = display_df["Price"].apply(
                 lambda x: f"${x:,.2f}"
             )
             display_df["Timestamp"] = display_df["Timestamp"].dt.strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%S%z"
             )
             st.dataframe(display_df, use_container_width=True, height=300)
 

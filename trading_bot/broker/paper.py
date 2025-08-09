@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from .base import Broker
@@ -48,7 +48,7 @@ class PaperBroker(Broker):
         slip = self.slippage_bps / 10_000
         exec_price = price * (1 + slip) if side == "buy" else price * (1 - slip)
         fee = exec_price * qty * self.fees_bps / 10_000
-        ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.now(timezone.utc).isoformat()
         if side == "buy":
             self.portfolio.buy(symbol, qty, exec_price, fee_bps=self.fees_bps)
         else:

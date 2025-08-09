@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from trading_bot.risk.guardrails import Guardrails
 from trading_bot.notify import configure
@@ -13,7 +13,7 @@ def test_halt_when_drawdown_exceeded():
 
 def test_cooldown_after_consecutive_losses():
     g = Guardrails(max_dd_pct=1.0, cooldown_minutes=5)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     g.record_trade(-1, now=now)
     g.record_trade(-1, now=now + timedelta(minutes=1))
@@ -30,7 +30,7 @@ def test_allow_trade_combines_checks():
     assert g.allow_trade(95)
     assert not g.allow_trade(80)  # drawdown breach
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     g.reset_month(100)
     g.record_trade(-1, now=now)
     g.record_trade(-1, now=now + timedelta(minutes=1))
