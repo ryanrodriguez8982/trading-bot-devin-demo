@@ -1,0 +1,74 @@
+import pytest
+
+from trading_bot.broker import CcxtSpotBroker
+
+
+class DummyExchange:
+    def __init__(self):
+        self.balance = {'free': {'USDT': 1000, 'BTC': 1}}
+        self.price = 10.0
+        self.orders = []
+        self.markets = {
+            'BTC/USDT': {
+                'precision': {'amount': 3},
+                'limits': {'amount': {'min': 0.001}},
+            }
+        }
+
+    def fetch_balance(self):
+        return self.balance
+
+    def market(self, symbol):
+        return self.markets[symbol]
+
+    def fetch_ticker(self, symbol):
+        return {'last': self.price}
+
+    def create_order(self, symbol, type, side, amount):
+        payload = {'symbol': symbol, 'type': type, 'side': side, 'amount': amount}
+        self.orders.append(payload)
+        return payload
+
+
+class FlakyExchange(DummyExchange):
+    def __init__(self):
+        super().__init__()
+        self.calls = 0
+
+    def create_order(self, symbol, type, side, amount):
+        self.calls += 1
+        if self.calls == 1:
+            raise Exception('temporary failure')
+        return super().create_order(symbol, type, side, amount)
+
+
+def test_buy_respects_precision_and_balance():
+    ex = DummyExchange()
+    broker = CcxtSpotBroker(exchange=ex)
+    order = broker.create_order('buy', 'BTC/USDT', 0.123456)
+    assert order['amount'] == pytest.approx(0.123)
+    assert ex.orders[0]['amount'] == 0.123
+
+
+def test_sell_raises_on_insufficient_balance():
+    ex = DummyExchange()
+    broker = CcxtSpotBroker(exchange=ex)
+    with pytest.raises(ValueError):
+        broker.create_order('sell', 'BTC/USDT', 2)
+
+
+def test_dry_run_skips_network_call(capsys):
+    ex = DummyExchange()
+    broker = CcxtSpotBroker(exchange=ex, dry_run=True)
+    broker.create_order('buy', 'BTC/USDT', 0.5)
+    assert not ex.orders
+    out, _ = capsys.readouterr()
+    assert 'DRY-RUN' in out
+
+
+def test_retries_on_failure():
+    ex = FlakyExchange()
+    broker = CcxtSpotBroker(exchange=ex)
+    order = broker.create_order('buy', 'BTC/USDT', 0.5)
+    assert order['side'] == 'buy'
+    assert ex.calls == 2
