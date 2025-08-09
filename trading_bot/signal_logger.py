@@ -156,3 +156,58 @@ def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None)
     except Exception as e:
         logging.error(f"Error retrieving signals from database: {e}")
         return []
+
+
+def _create_processed_table(cursor):
+    """Ensure table for processed signals exists."""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS processed_signals (
+            strategy_id TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            timeframe TEXT NOT NULL,
+            signal_ts TEXT NOT NULL,
+            action TEXT NOT NULL,
+            PRIMARY KEY (strategy_id, symbol, timeframe, signal_ts, action)
+        )
+        """
+    )
+
+
+def mark_signal_handled(
+    symbol: str,
+    strategy_id: str,
+    timeframe: str,
+    signal_ts: str,
+    action: str,
+    db_path: str | None = None,
+) -> bool:
+    """Record a signal and return True if it was already processed.
+
+    The unique key ``(strategy_id, symbol, timeframe, signal_ts, action)``
+    is stored in ``processed_signals``.  Subsequent calls with the same key
+    return ``True`` without modifying state, allowing callers to skip
+    duplicate work.
+    """
+    if db_path is None:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "signals.db")
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            _create_processed_table(cursor)
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO processed_signals(strategy_id, symbol, timeframe, signal_ts, action)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (strategy_id, symbol, timeframe, signal_ts, action),
+                )
+                conn.commit()
+                return False
+            except sqlite3.IntegrityError:
+                return True
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {e}")
+        raise
