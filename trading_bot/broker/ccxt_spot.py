@@ -5,11 +5,13 @@ import logging
 import math
 import os
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import ccxt
 
 from .base import Broker
+from trading_bot.utils.precision import round_to_increment
+from trading_bot.utils.rate_limit import RateLimiter
 
 
 class CcxtSpotBroker(Broker):
@@ -43,6 +45,8 @@ class CcxtSpotBroker(Broker):
         dry_run: bool = False,
         retries: int = 3,
         backoff: float = 0.5,
+        rate_limit: Optional[float] = None,
+        rate_limiter: Optional[RateLimiter] = None,
     ) -> None:
         super().__init__(fees_bps=fees_bps)
         if exchange is not None:
@@ -61,6 +65,9 @@ class CcxtSpotBroker(Broker):
         self.backoff = backoff
         self.prices: Dict[str, float] = {}
         self.name = "ccxt"
+        self._rate_limiter = rate_limiter or (
+            RateLimiter(rate_limit) if rate_limit else None
+        )
 
     # ------------------------------------------------------------------
     def set_price(self, symbol: str, price: float) -> None:
@@ -70,6 +77,7 @@ class CcxtSpotBroker(Broker):
         price = self.prices.get(symbol)
         if price is not None:
             return price
+        self._wait_rate_limit()
         ticker = self.exchange.fetch_ticker(symbol)
         price = ticker.get("last") or ticker.get("close")
         if price is None:
@@ -78,6 +86,7 @@ class CcxtSpotBroker(Broker):
         return float(price)
 
     def get_balances(self) -> Dict[str, float]:
+        self._wait_rate_limit()
         data = self.exchange.fetch_balance()
         free = data.get("free") or {}
         return {k: float(v) for k, v in free.items() if isinstance(v, (int, float))}
@@ -87,17 +96,25 @@ class CcxtSpotBroker(Broker):
         return {k: v for k, v in balances.items() if v}
 
     # ------------------------------------------------------------------
-    def _round_qty(self, symbol: str, qty: float) -> float:
+    def _wait_rate_limit(self) -> None:
+        if self._rate_limiter:
+            self._rate_limiter.wait()
+
+    def _round_qty(self, symbol: str, qty: float, side: str) -> float:
         market = self.exchange.market(symbol)
         precision = market.get("precision", {}).get("amount")
         limits = market.get("limits", {}).get("amount", {})
         min_amt = limits.get("min")
+        original = qty
         if precision is not None:
-            factor = 10 ** precision
-            qty = math.floor(qty * factor) / factor
+            step = 10 ** (-precision)
+            qty = round_to_increment(qty, step, side)
         if min_amt:
-            steps = math.floor(qty / min_amt)
-            qty = steps * min_amt
+            qty = round_to_increment(qty, float(min_amt), side)
+        if qty != original:
+            logging.debug(
+                "rounded qty", extra={"symbol": symbol, "side": side, "from": original, "to": qty}
+            )
         return qty
 
     def create_order(
@@ -106,7 +123,7 @@ class CcxtSpotBroker(Broker):
         if type != "market":
             raise NotImplementedError("CcxtSpotBroker only supports market orders")
 
-        qty = self._round_qty(symbol, float(qty))
+        qty = self._round_qty(symbol, float(qty), side)
         if qty <= 0:
             raise ValueError("quantity too small after rounding")
 
@@ -132,6 +149,7 @@ class CcxtSpotBroker(Broker):
                 if self.dry_run:
                     print(f"[DRY-RUN] {order_payload}")
                     return order_payload
+                self._wait_rate_limit()
                 return self.exchange.create_order(symbol, type, side, qty)
             except Exception as exc:  # pragma: no cover - defensive
                 logging.error(
