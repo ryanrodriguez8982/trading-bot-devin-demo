@@ -52,7 +52,7 @@ def simulate_equity(
     signals,
     initial_capital: float = 10000,
     trade_size: float = 1.0,
-    fee_bps: float = 0.0,
+    fees_bps: float = 0.0,
     slippage_bps: float = 0.0,
     stop_loss_pct: float | None = None,
     take_profit_rr: float | None = None,
@@ -94,7 +94,7 @@ def simulate_equity(
                 exec_price = exit_price * (1 - slippage_bps / 10_000)
                 avg_cost = pos.avg_cost
                 qty = pos.qty
-                portfolio.sell(symbol, qty, exec_price, fee_bps=fee_bps)
+                portfolio.sell(symbol, qty, exec_price, fee_bps=fees_bps)
                 trade_profits.append((exec_price - avg_cost) * qty)
                 highest_prices.pop(symbol, None)
 
@@ -118,7 +118,7 @@ def simulate_equity(
                         symbol,
                         trade_size,
                         buy_price,
-                        fee_bps=fee_bps,
+                        fee_bps=fees_bps,
                         stop_loss=stop_price,
                         take_profit=take_price,
                     )
@@ -126,7 +126,7 @@ def simulate_equity(
                     sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
                     avg_cost = pos.avg_cost if pos and pos.qty >= trade_size else None
-                    portfolio.sell(symbol, trade_size, sell_price, fee_bps=fee_bps)
+                    portfolio.sell(symbol, trade_size, sell_price, fee_bps=fees_bps)
                     highest_prices.pop(symbol, None)
                     if avg_cost is not None:
                         trade_profits.append((sell_price - avg_cost) * trade_size)
@@ -168,7 +168,7 @@ def run_backtest(
     stats_out=None,
     chart_out=None,
     trade_size=1.0,
-    fee_bps=0.0,
+    fees_bps=0.0,
     slippage_bps: float = 0.0,
     stop_loss_pct: float | None = None,
     take_profit_rr: float | None = None,
@@ -207,7 +207,7 @@ def run_backtest(
         df,
         signals,
         trade_size=trade_size,
-        fee_bps=fee_bps,
+        fees_bps=fees_bps,
         slippage_bps=slippage_bps,
         stop_loss_pct=stop_loss_pct,
         take_profit_rr=take_profit_rr,

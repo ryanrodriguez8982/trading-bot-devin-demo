@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from trading_bot.backtester import load_csv_data, run_backtest
+from trading_bot.backtester import load_csv_data, run_backtest, simulate_equity
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -88,4 +88,34 @@ def test_backtest_saves_outputs(tmp_path):
     assert equity_out.exists()
     assert stats_out.exists()
     assert chart_out.exists()
+
+
+def test_fees_slippage_pnl_consistency():
+    timestamps = pd.date_range('2024-01-01', periods=2, freq='1min')
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'open': [100, 110],
+        'high': [100, 110],
+        'low': [100, 110],
+        'close': [100, 110],
+        'volume': [1000, 1000],
+    })
+    signals = [
+        {'timestamp': timestamps[0], 'action': 'buy'},
+        {'timestamp': timestamps[1], 'action': 'sell'},
+    ]
+    _, stats = simulate_equity(
+        df,
+        signals,
+        initial_capital=1000,
+        trade_size=1,
+        fees_bps=10,
+        slippage_bps=25,
+    )
+    buy_exec = 100 * (1 + 25 / 10_000)
+    sell_exec = 110 * (1 - 25 / 10_000)
+    fee_buy = buy_exec * 10 / 10_000
+    fee_sell = sell_exec * 10 / 10_000
+    expected = (sell_exec - buy_exec) - (fee_buy + fee_sell)
+    assert stats['net_pnl'] == pytest.approx(expected)
 
