@@ -96,7 +96,6 @@ def parse_args():
         type=str,
         help='Comma-separated list of trading symbols for live mode',
     )
-    parser.add_argument('--broker', type=str, help='Broker identifier for live trading')
     parser.add_argument('--risk-profile', type=str, help='Risk profile name')
     args, unknown = parser.parse_known_args()
 
@@ -230,8 +229,28 @@ def run_live_mode(
     if broker is None:
         portfolio = Portfolio(cash=trade_amount * 100 if trade_amount else 0)
 
+    guardrails = None
+    if risk_config is not None:
+        md_cfg = getattr(risk_config, "max_drawdown", None)
+        if md_cfg and (md_cfg.monthly_pct > 0 or md_cfg.cooldown_bars > 0):
+            from trading_bot.risk.guardrails import Guardrails
+
+            guardrails = Guardrails(
+                max_dd_pct=md_cfg.monthly_pct,
+                cooldown_minutes=md_cfg.cooldown_bars,
+            )
+            if portfolio:
+                guardrails.reset_month(portfolio.equity())
+
     while True:
         iteration += 1
+        if guardrails and portfolio and not guardrails.allow_trade(
+            portfolio.equity()
+        ):
+            logging.info("Guardrails active - skipping iteration")
+            time.sleep(interval_seconds)
+            continue
+
         print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iteration #{iteration}")
         for symbol in symbols:
             signals = run_single_analysis(
