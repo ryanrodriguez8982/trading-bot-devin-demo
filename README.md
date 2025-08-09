@@ -174,7 +174,12 @@ sma_signals = get_signals_from_db(strategy_id="sma")
 
 ## Configuration
 
-The bot uses a `config.json` file for default parameters:
+The bot uses a `config.json` file for default parameters. You can create a
+`config.local.json` alongside it to override any of those defaults without
+committing sensitive values. Command line flags take precedence over both
+files.
+
+Example `config.json`:
 ```json
 {
     "symbol": "BTC/USDT",
@@ -210,7 +215,8 @@ Run the bot with `--live --live-trade` to place real orders once your keys are c
 The Bollinger Bands strategy uses the `sma_long`/`bbands_window` value for its
 moving average window. By default this is set to 20 periods.
 
-CLI arguments override config file values. Available parameters:
+CLI arguments override config file values (`config.json` and `config.local.json`).
+Available parameters:
 - `--symbol`: Trading pair (e.g., BTC/USDT, ETH/USDT)
 - `--timeframe`: Candle timeframe (e.g., 1m, 5m, 1h)
 - `--limit`: Number of candles to fetch (ignored in live mode)

@@ -26,29 +26,68 @@ try:
 except Exception:
     notification = None
 
-def load_config():
-    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+def _deep_update(base: Dict, override: Dict) -> Dict:
+    """Recursively merge ``override`` into ``base``."""
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _deep_update(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def load_config(config_dir: str | None = None) -> Dict:
+    """Load configuration with optional local overrides.
+
+    Parameters
+    ----------
+    config_dir:
+        Directory to load config files from. Defaults to the package root.
+
+    Returns
+    -------
+    dict
+        Merged configuration dictionary.
+    """
+    base_dir = config_dir or os.path.join(os.path.dirname(os.path.dirname(__file__)))
+    config_path = os.path.join(base_dir, 'config.json')
     try:
         with open(config_path, 'r') as f:
-            return json.load(f)
+            config = json.load(f)
     except FileNotFoundError:
         logging.warning("config.json not found, using default values")
-        return {
+        config = {
             "symbol": "BTC/USDT",
             "timeframe": "1m",
             "limit": 500,
             "sma_short": 5,
-            "sma_long": 20
+            "sma_long": 20,
         }
+
+    local_path = os.path.join(base_dir, 'config.local.json')
+    if os.path.exists(local_path):
+        try:
+            with open(local_path, 'r') as f:
+                local_cfg = json.load(f)
+            config = _deep_update(config, local_cfg)
+        except Exception as e:  # noqa: BLE001
+            logging.warning(f"Failed loading config.local.json: {e}")
+
+    return config
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Crypto Trading Bot')
+    parser = argparse.ArgumentParser(
+        description=(
+            "Crypto Trading Bot. Defaults come from config.json, overridden by "
+            "config.local.json and finally by CLI flags."
+        )
+    )
     parser.add_argument(
         "--exchange",
         type=str,
         default=None,
-        help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config.json.",
+        help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config files.",
     )
     try:
         pkg_version = version('trading-bot')
@@ -59,11 +98,11 @@ def parse_args():
             pkg_version = '0.0.0'
 
     parser.add_argument('--version', action='version', version=f'%(prog)s {pkg_version}')
-    parser.add_argument('--symbol', type=str, help='Trading pair symbol (e.g., BTC/USDT)')
-    parser.add_argument('--timeframe', type=str, help='Timeframe for candles (e.g., 1m, 5m)')
-    parser.add_argument('--limit', type=int, help='Number of candles to fetch')
-    parser.add_argument('--sma-short', type=int, help='Short-period SMA window')
-    parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
+    parser.add_argument('--symbol', type=str, help='Trading pair symbol (e.g., BTC/USDT). Overrides config files.')
+    parser.add_argument('--timeframe', type=str, help='Timeframe for candles (e.g., 1m, 5m). Overrides config files.')
+    parser.add_argument('--limit', type=int, help='Number of candles to fetch. Overrides config files.')
+    parser.add_argument('--sma-short', type=int, help='Short-period SMA window. Overrides config files.')
+    parser.add_argument('--sma-long', type=int, help='Long-period SMA window. Overrides config files.')
     parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
     parser.add_argument('--live-trade', action='store_true', help='Execute real orders when in live mode')
     parser.add_argument('--dry-run', action='store_true', help='Print order payload without executing')
@@ -79,15 +118,15 @@ def parse_args():
     parser.add_argument('--optimize', nargs='*', help='Run grid search optimization with validation split')
     parser.add_argument('--save-chart', action='store_true', help='Save equity curve CSV/JSON and chart during backtest')
     parser.add_argument('--trade-size', type=float, default=None,
-                        help='Default trade size in asset units')
+                        help='Default trade size in asset units. Overrides config files.')
     parser.add_argument('--fee-bps', type=float, default=None,
-                        help='Trading fee in basis points')
+                        help='Trading fee in basis points. Overrides config files.')
     parser.add_argument('--position-sizing', type=str, choices=['fixed_fraction', 'fixed_cash'],
-                        help='Position sizing mode')
+                        help='Position sizing mode. Overrides config files.')
     parser.add_argument('--fixed-fraction', type=float,
-                        help='Fraction of equity to use per trade')
+                        help='Fraction of equity to use per trade. Overrides config files.')
     parser.add_argument('--fixed-cash', type=float,
-                        help='Fixed cash amount to use per trade')
+                        help='Fixed cash amount to use per trade. Overrides config files.')
     parser.add_argument(
         '--interval-seconds',
         type=int,
@@ -99,7 +138,7 @@ def parse_args():
         type=str,
         help='Comma-separated list of trading symbols for live mode',
     )
-    parser.add_argument('--risk-profile', type=str, help='Risk profile name')
+    parser.add_argument('--risk-profile', type=str, help='Risk profile name. Overrides config files.')
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
