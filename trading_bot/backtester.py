@@ -173,6 +173,8 @@ def run_backtest(
     stop_loss_pct: float | None = None,
     take_profit_rr: float | None = None,
     trailing_stop_pct: float | None = None,
+    confluence_members=None,
+    confluence_required=2,
 ):
     """Run backtest on CSV data using specified strategy."""
     df = load_csv_data(csv_path)
@@ -184,12 +186,20 @@ def run_backtest(
     if strategy == 'rsi':
         signals = strategy_fn(df, period=rsi_period)
     elif strategy == 'macd':
-        signals = strategy_fn(df, fast_period=macd_fast,
-                              slow_period=macd_slow,
-                              signal_period=macd_signal)
+        signals = strategy_fn(
+            df,
+            fast_period=macd_fast,
+            slow_period=macd_slow,
+            signal_period=macd_signal,
+        )
     elif strategy == 'bbands':
-        signals = strategy_fn(df, window=bbands_window,
-                              num_std=bbands_std)
+        signals = strategy_fn(df, window=bbands_window, num_std=bbands_std)
+    elif strategy == 'confluence':
+        signals = strategy_fn(
+            df,
+            members=confluence_members,
+            required=confluence_required,
+        )
     else:
         signals = strategy_fn(df, sma_short, sma_long)
 

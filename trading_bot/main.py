@@ -165,7 +165,18 @@ def signal_handler(signum, frame):
     print("\n=== Live Trading Mode Shutdown ===")
     sys.exit(0)
 
-def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy="sma", alert_mode=False, exchange=None):
+def run_single_analysis(
+    symbol,
+    timeframe,
+    limit,
+    sma_short,
+    sma_long,
+    strategy="sma",
+    alert_mode=False,
+    exchange=None,
+    confluence_members=None,
+    confluence_required=2,
+):
     try:
         if strategy not in STRATEGY_REGISTRY:
             raise ValueError("Unknown strategy. Use --list-strategies to view options.")
@@ -183,6 +194,12 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
             signals = strategy_fn(data)
         elif strategy == "bbands":
             signals = strategy_fn(data, window=sma_long, num_std=2)
+        elif strategy == "confluence":
+            signals = strategy_fn(
+                data,
+                members=confluence_members,
+                required=confluence_required,
+            )
         else:
             signals = strategy_fn(data, sma_short, sma_long)
 
@@ -212,6 +229,8 @@ def run_live_mode(
     risk_config=None,
     interval_seconds=60,
     broker=None,
+    confluence_members=None,
+    confluence_required=2,
 ):
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
@@ -263,6 +282,8 @@ def run_live_mode(
                 strategy=strategy,
                 alert_mode=alert_mode,
                 exchange=exchange,
+                confluence_members=confluence_members,
+                confluence_required=confluence_required,
             )
             if signals:
                 print(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
@@ -325,7 +346,16 @@ def run_live_mode(
         print(f"Next analysis in {interval_seconds} seconds...")
         time.sleep(interval_seconds)
         signals = run_single_analysis(
-            symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode, exchange=exchange
+            symbol,
+            timeframe,
+            live_limit,
+            sma_short,
+            sma_long,
+            strategy=strategy,
+            alert_mode=alert_mode,
+            exchange=exchange,
+            confluence_members=confluence_members,
+            confluence_required=confluence_required,
         )
         if signals:
             print(f"?? NEW SIGNALS ({len(signals)}):")
@@ -385,6 +415,10 @@ def main():
     strategy_choice = getattr(args, 'strategy', 'sma')
     alert_mode = getattr(args, 'alert_mode', False)
     interval_seconds = getattr(args, 'interval_seconds', 60)
+
+    confluence_cfg = config.get("confluence", {})
+    confluence_members = confluence_cfg.get("members", ["sma", "rsi", "macd"])
+    confluence_required = confluence_cfg.get("required", 2)
 
     api_key = args.api_key or os.getenv('TRADING_BOT_API_KEY') or config.get('api_key')
     api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
@@ -482,13 +516,21 @@ def main():
                 risk_config=risk_config,
                 interval_seconds=interval_seconds,
                 broker=broker,
+                confluence_members=confluence_members,
+                confluence_required=confluence_required,
             )
         else:
             signals = run_single_analysis(
-                symbol, timeframe, limit, sma_short, sma_long,
+                symbol,
+                timeframe,
+                limit,
+                sma_short,
+                sma_long,
                 strategy=strategy_choice,
                 alert_mode=alert_mode,
-                exchange=exchange
+                exchange=exchange,
+                confluence_members=confluence_members,
+                confluence_required=confluence_required,
             )
 
             print(f"\n=== Trading Bot Results for {symbol} ===")
