@@ -35,6 +35,21 @@ def run_scenario(bars):
     return stats['net_pnl']
 
 
+def run_trailing(bars):
+    df = make_df(bars)
+    signals = [{'timestamp': df['timestamp'].iloc[0], 'action': 'buy'}]
+    _, stats = simulate_equity(
+        df,
+        signals,
+        initial_capital=100,
+        trade_size=1,
+        fee_bps=0,
+        slippage_bps=0,
+        trailing_stop_pct=0.05,
+    )
+    return stats['net_pnl']
+
+
 def test_stop_loss_hit():
     net = run_scenario([
         {'open': 100, 'high': 100, 'low': 100, 'close': 100},
@@ -69,4 +84,13 @@ def test_neither_hit():
         {'open': 105, 'high': 105, 'low': 105, 'close': 105},
     ])
     assert net == pytest.approx(5)
+
+
+def test_trailing_stop_hit():
+    net = run_trailing([
+        {'open': 100, 'high': 100, 'low': 100, 'close': 100},
+        {'open': 115, 'high': 120, 'low': 115, 'close': 119},
+        {'open': 119, 'high': 119, 'low': 113, 'close': 115},
+    ])
+    assert net == pytest.approx(14)
 
