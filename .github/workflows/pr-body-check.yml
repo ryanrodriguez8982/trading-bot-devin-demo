@@ -13,7 +13,7 @@ jobs:
         id: match
         with:
           text: ${{ github.event.pull_request.body }}
-          regex: '(?s)## What.*## Why.*## How.*## Tests'
+          regex: '## What[\s\S]*## Why[\s\S]*## How[\s\S]*## Tests'
       - name: Fail if missing sections
         if: ${{ steps.match.outputs.match != 'true' }}
         run: |

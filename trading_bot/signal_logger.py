@@ -16,6 +16,23 @@ def create_signals_table(cursor):
         )
     ''')
 
+
+def create_trades_table(cursor):
+    """Create the trades table if it doesn't exist."""
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS trades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            side TEXT NOT NULL,
+            qty REAL NOT NULL,
+            price REAL NOT NULL,
+            fee REAL NOT NULL,
+            strategy TEXT NOT NULL,
+            broker TEXT NOT NULL
+        )
+    ''')
+
 def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
     """
     Log trading signals to SQLite database.
@@ -50,8 +67,40 @@ def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
         raise
+
+
+def log_trade_to_db(trade, db_path=None):
+    """Log a single trade execution to the trades table."""
+    if db_path is None:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            create_trades_table(cursor)
+            cursor.execute(
+                '''
+                INSERT INTO trades (timestamp, symbol, side, qty, price, fee, strategy, broker)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (
+                    trade['timestamp'],
+                    trade['symbol'],
+                    trade['side'],
+                    float(trade['qty']),
+                    float(trade['price']),
+                    float(trade.get('fee', 0.0)),
+                    trade.get('strategy', ''),
+                    trade.get('broker', ''),
+                ),
+            )
+            conn.commit()
+            logging.info(f"Logged trade {trade['side']} {trade['symbol']} to database {db_path}")
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {e}")
+        raise
     except Exception as e:
-        logging.error(f"Error logging signals to database: {e}")
+        logging.error(f"Error logging trade to database: {e}")
         raise
 
 def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None):
@@ -107,3 +156,58 @@ def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None)
     except Exception as e:
         logging.error(f"Error retrieving signals from database: {e}")
         return []
+
+
+def _create_processed_table(cursor):
+    """Ensure table for processed signals exists."""
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS processed_signals (
+            strategy_id TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            timeframe TEXT NOT NULL,
+            signal_ts TEXT NOT NULL,
+            action TEXT NOT NULL,
+            PRIMARY KEY (strategy_id, symbol, timeframe, signal_ts, action)
+        )
+        """
+    )
+
+
+def mark_signal_handled(
+    symbol: str,
+    strategy_id: str,
+    timeframe: str,
+    signal_ts: str,
+    action: str,
+    db_path: str | None = None,
+) -> bool:
+    """Record a signal and return True if it was already processed.
+
+    The unique key ``(strategy_id, symbol, timeframe, signal_ts, action)``
+    is stored in ``processed_signals``.  Subsequent calls with the same key
+    return ``True`` without modifying state, allowing callers to skip
+    duplicate work.
+    """
+    if db_path is None:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "signals.db")
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            _create_processed_table(cursor)
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO processed_signals(strategy_id, symbol, timeframe, signal_ts, action)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (strategy_id, symbol, timeframe, signal_ts, action),
+                )
+                conn.commit()
+                return False
+            except sqlite3.IntegrityError:
+                return True
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {e}")
+        raise
