@@ -12,6 +12,8 @@ HEARTBEAT_LAPSE: int = 0
 MAX_DD_PCT: float = 0.0
 
 
+logger = logging.getLogger(__name__)
+
 def configure(config: Optional[dict]) -> None:
     """Configure alert settings from ``config`` dictionary."""
     global ALERTS_ENABLED, HEARTBEAT_LAPSE, MAX_DD_PCT
@@ -27,13 +29,12 @@ def send(message: str, channels: Optional[Iterable[str]] = None) -> None:
         return
     channels = list(channels or ["console"])
     if "console" in channels:
-        print(f"ALERT: {message}")
-        logging.error(message)
+        logger.error(f"ALERT: {message}")
     if "desktop" in channels and desktop_notify:
         try:  # pragma: no cover - desktop notifications not testable
             desktop_notify.notify(title="Trading Bot Alert", message=message)
         except Exception as exc:  # pragma: no cover
-            logging.exception("Notification error: %s", exc)
+            logger.exception("Notification error: %s", exc)
     if "email" in channels:
         pass  # Stub for future email integration
     if "webhook" in channels:

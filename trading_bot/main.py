@@ -26,6 +26,9 @@ try:
 except ImportError:
     notification = None
 
+
+logger = logging.getLogger(__name__)
+
 def _deep_update(base: Dict, override: Dict) -> Dict:
     """Recursively merge ``override`` into ``base``."""
     for key, value in override.items():
@@ -194,16 +197,16 @@ def log_order_to_file(order, symbol):
 def send_alert(signal):
     ts = signal['timestamp'].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
-    print(message)
+    logger.info(message)
     if notification:
         try:
             notification.notify(title="Trading Bot Alert", message=message)
         except Exception as e:
-            logging.exception("Notification error: %s", e)
+            logger.exception("Notification error: %s", e)
 
 def signal_handler(signum, frame):
     logging.info("Received interrupt signal. Shutting down live trading mode gracefully...")
-    print("\n=== Live Trading Mode Shutdown ===")
+    logger.info("=== Live Trading Mode Shutdown ===")
     sys.exit(0)
 
 def run_single_analysis(
@@ -278,12 +281,12 @@ def run_live_mode(
     if strategy not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
-    print(f"\n=== Live Trading Mode Started ===")
-    print(f"Symbols: {', '.join(symbols)}")
-    print(f"Strategy: {strategy.upper()}")
-    print(f"Fetching {live_limit} candles every {interval_seconds} seconds")
-    print("Press Ctrl+C to stop gracefully")
-    print("=" * 50)
+    logger.info("=== Live Trading Mode Started ===")
+    logger.info(f"Symbols: {', '.join(symbols)}")
+    logger.info(f"Strategy: {strategy.upper()}")
+    logger.info(f"Fetching {live_limit} candles every {interval_seconds} seconds")
+    logger.info("Press Ctrl+C to stop gracefully")
+    logger.info("=" * 50)
 
     iteration = 0
     portfolio = None
@@ -315,7 +318,7 @@ def run_live_mode(
                 time.sleep(interval_seconds)
                 continue
 
-        print(f"\n[{datetime.now(timezone.utc).isoformat()}] Iteration #{iteration}")
+        logger.info(f"[{datetime.now(timezone.utc).isoformat()}] Iteration #{iteration}")
         for symbol in symbols:
             signals = run_single_analysis(
                 symbol,
@@ -330,7 +333,7 @@ def run_live_mode(
                 confluence_required=confluence_required,
             )
             if signals:
-                print(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
+                logger.info(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
                 for signal in signals[-3:]:
                     ts = signal["timestamp"].isoformat()
                     if mark_signal_handled(
@@ -351,8 +354,8 @@ def run_live_mode(
                             )
                         )
                         continue
-                    print(
-                      f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}"
+                    logger.info(
+                        f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}"
                     )
                     if live_trade and exchange:
                         order = execute_trade(exchange, symbol, signal["action"], trade_amount)
@@ -386,8 +389,8 @@ def run_live_mode(
                         except ValueError:
                             logging.debug("Trade skipped due to portfolio constraints")
             else:
-                print(f"No new signals for {symbol}.")
-        print(f"Next analysis in {interval_seconds} seconds...")
+                logger.info(f"No new signals for {symbol}.")
+        logger.info(f"Next analysis in {interval_seconds} seconds...")
         time.sleep(interval_seconds)
         signals = run_single_analysis(
             symbol,
@@ -402,10 +405,10 @@ def run_live_mode(
             confluence_required=confluence_required,
         )
         if signals:
-            print(f"?? NEW SIGNALS ({len(signals)}):")
+            logger.info(f"?? NEW SIGNALS ({len(signals)}):")
             for signal in signals[-3:]:
                 ts = signal['timestamp'].isoformat()
-                print(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
+                logger.info(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
                 price = signal['price']
                 if trade_amount:
                     qty = trade_amount
@@ -440,15 +443,15 @@ def run_live_mode(
                     except ValueError:
                         logging.debug("Trade skipped due to portfolio/broker constraints")
         else:
-            print("No new signals.")
-        print("Next analysis in 60 seconds...")
+            logger.info("No new signals.")
+        logger.info("Next analysis in 60 seconds...")
         time.sleep(60)
 
 def main():
     logging.Formatter.converter = time.gmtime
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format='%(asctime)s [%(levelname)s] %(message)s',
         datefmt='%Y-%m-%dT%H:%M:%S%z',
     )
     config = load_config()
@@ -494,9 +497,9 @@ def main():
         broker = CcxtSpotBroker(exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, 'dry_run', False))
 
     if getattr(args, 'list_strategies', False):
-        print("Available strategies:")
+        logger.info("Available strategies:")
         for name in list_strategies():
-            print(f"- {name}")
+            logger.info(f"- {name}")
         return
 
     if strategy_choice not in STRATEGY_REGISTRY:
@@ -520,21 +523,22 @@ def main():
                 results_csv=results_csv,
                 best_json=best_json,
             )
-            print(f"Optimization results saved to {results_csv}")
-            print(f"Best parameters saved to {best_json}")
+            logger.info(f"Optimization results saved to {results_csv}")
+            logger.info(f"Best parameters saved to {best_json}")
             return
         if getattr(args, 'tune', False):
             if not args.backtest:
                 raise ValueError("--backtest CSV path required for tuning")
             from trading_bot.tuner import tune
             results = tune(args.backtest, strategy=strategy_choice)
-            print("=== Tuning Results ===")
+            logger.info("=== Tuning Results ===")
             for res in results:
                 params_str = ", ".join(f"{k}={v}" for k, v in res['params'].items())
-                print(f"{params_str} -> PnL {res['net_pnl']:.2f}, Win "
-                      f"{res['win_rate']:.2f}%")
+                logger.info(
+                    f"{params_str} -> PnL {res['net_pnl']:.2f}, Win {res['win_rate']:.2f}%"
+                )
             if results:
-                print(f"Best parameters: {results[0]['params']}")
+                logger.info(f"Best parameters: {results[0]['params']}")
             return
         if args.backtest:
             base = os.path.splitext(args.backtest)[0]
@@ -585,16 +589,16 @@ def main():
                 confluence_required=confluence_required,
             )
 
-            print(f"\n=== Trading Bot Results for {symbol} ===")
-            print(f"Strategy: {strategy_choice.upper()}")
-            print(f"Total signals: {len(signals)}")
+            logger.info(f"=== Trading Bot Results for {symbol} ===")
+            logger.info(f"Strategy: {strategy_choice.upper()}")
+            logger.info(f"Total signals: {len(signals)}")
             if signals:
-                print("\nLast 5 signals:")
+                logger.info("Last 5 signals:")
                 for i, s in enumerate(signals[-5:], 1):
                     ts = s['timestamp'].isoformat()
-                    print(f"{i}. {ts} - {s['action'].upper()} @ ${s['price']:.2f}")
+                    logger.info(f"{i}. {ts} - {s['action'].upper()} @ ${s['price']:.2f}")
             else:
-                print("No trading signals generated.")
+                logger.info("No trading signals generated.")
     except Exception as e:
         logging.exception("Error in main")
         raise
