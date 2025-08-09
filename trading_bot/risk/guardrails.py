@@ -17,6 +17,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+from trading_bot.notify import send as notify_send
+
 
 @dataclass
 class Guardrails:
@@ -62,7 +64,11 @@ class Guardrails:
         """Return ``True`` if trading should halt due to drawdown."""
         if self.max_dd_pct <= 0:
             return False
-        return self._drawdown(equity) > self.max_dd_pct
+        dd = self._drawdown(equity)
+        if dd > self.max_dd_pct:
+            notify_send("Max drawdown exceeded")
+            return True
+        return False
 
     # ------------------------------------------------------------------
     # Cooldown checks

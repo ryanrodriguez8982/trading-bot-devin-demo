@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from trading_bot.risk.guardrails import Guardrails
+from trading_bot.notify import configure
 
 
 def test_halt_when_drawdown_exceeded():
@@ -36,4 +37,13 @@ def test_allow_trade_combines_checks():
     g.record_trade(-1, now=now + timedelta(minutes=2))
     assert not g.allow_trade(95, now=now + timedelta(minutes=2))
     assert g.allow_trade(95, now=now + timedelta(minutes=10))
+
+
+def test_alert_emitted_on_drawdown(capfd):
+    configure({"alerts": {"enabled": True}})
+    g = Guardrails(max_dd_pct=0.1)
+    g.reset_month(1000)
+    assert g.should_halt(880)
+    captured = capfd.readouterr()
+    assert "Max drawdown exceeded" in captured.out
 

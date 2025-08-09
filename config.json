@@ -39,8 +39,12 @@
             "monthly_pct": 0.10,
             "cooldown_bars": 0
         }
-    }
-    ,
+    },
+    "alerts": {
+        "enabled": false,
+        "heartbeat_lapse": 0,
+        "max_dd_pct": 0.0
+    },
     "confluence": {
         "required": 2,
         "members": ["sma", "rsi", "macd"]
