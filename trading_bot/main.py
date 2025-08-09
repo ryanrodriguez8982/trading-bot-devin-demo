@@ -15,6 +15,7 @@ from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.exchange import create_exchange, execute_trade
 from trading_bot.signal_logger import log_signals_to_db
 from trading_bot.portfolio import Portfolio
+from trading_bot.risk.position_sizing import calculate_position_size
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
 try:
@@ -75,6 +76,12 @@ def parse_args():
                         help='Default trade size in asset units')
     parser.add_argument('--fee-bps', type=float, default=None,
                         help='Trading fee in basis points')
+    parser.add_argument('--position-sizing', type=str, choices=['fixed_fraction', 'fixed_cash'],
+                        help='Position sizing mode')
+    parser.add_argument('--fixed-fraction', type=float,
+                        help='Fraction of equity to use per trade')
+    parser.add_argument('--fixed-cash', type=float,
+                        help='Fixed cash amount to use per trade')
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
@@ -86,6 +93,12 @@ def parse_args():
             if value is None:
                 raise SystemExit(f"Missing value for {token}")
             risk_overrides[key] = value
+    if getattr(args, 'position_sizing', None):
+        risk_overrides['position_sizing.mode'] = args.position_sizing
+    if getattr(args, 'fixed_fraction', None) is not None:
+        risk_overrides['position_sizing.fraction_of_equity'] = args.fixed_fraction
+    if getattr(args, 'fixed_cash', None) is not None:
+        risk_overrides['position_sizing.fixed_cash_amount'] = args.fixed_cash
     setattr(args, 'risk_overrides', risk_overrides)
     return args
 
@@ -180,6 +193,7 @@ def run_live_mode(
     live_trade=False,
     trade_amount=0.0,
     fee_bps=0.0,
+    risk_config=None,
 ):
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
@@ -207,15 +221,27 @@ def run_live_mode(
             for signal in signals[-3:]:
                 ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
                 print(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
+                price = signal['price']
+                if trade_amount:
+                    qty = trade_amount
+                elif risk_config:
+                    equity = portfolio.equity({symbol: price})
+                    qty = calculate_position_size(
+                        risk_config.position_sizing, price, equity
+                    )
+                else:
+                    qty = 0
+                if qty <= 0:
+                    continue
                 if live_trade and exchange:
-                    order = execute_trade(exchange, symbol, signal['action'], trade_amount)
+                    order = execute_trade(exchange, symbol, signal['action'], qty)
                     log_order_to_file(order, symbol)
                 else:
                     try:
                         if signal['action'] == 'buy':
-                            portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                            portfolio.buy(symbol, qty, price, fee_bps=fee_bps)
                         else:
-                            portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                            portfolio.sell(symbol, qty, price, fee_bps=fee_bps)
                     except ValueError:
                         logging.debug("Trade skipped due to portfolio constraints")
         else:
@@ -302,6 +328,7 @@ def main():
                 live_trade=args.live_trade,
                 trade_amount=trade_size,
                 fee_bps=fee_bps,
+                risk_config=risk_config,
             )
         else:
             signals = run_single_analysis(
