@@ -103,6 +103,64 @@ def log_trade_to_db(trade, db_path=None):
         logging.error(f"Error logging trade to database: {e}")
         raise
 
+
+def get_trades_from_db(symbol=None, limit=None, db_path=None):
+    """Retrieve executed trades from the database.
+
+    Parameters
+    ----------
+    symbol: str, optional
+        Filter by trading pair symbol.
+    limit: int, optional
+        Maximum number of records to return.
+    db_path: str, optional
+        Path to the SQLite database file.
+
+    Returns
+    -------
+    list
+        List of trade tuples ordered by newest first.
+    """
+    if db_path is None:
+        db_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "signals.db"
+        )
+
+    if not os.path.exists(db_path):
+        return []
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            query = (
+                "SELECT timestamp, symbol, side, qty, price, fee, strategy, broker FROM trades"
+            )
+            params = []
+            conditions = []
+
+            if symbol:
+                conditions.append("symbol = ?")
+                params.append(symbol)
+
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+
+            query += " ORDER BY timestamp DESC"
+
+            if limit:
+                query += " LIMIT ?"
+                params.append(limit)
+
+            cursor.execute(query, params)
+            return cursor.fetchall()
+
+    except sqlite3.Error as e:
+        logging.error(f"Database error: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Error retrieving trades from database: {e}")
+        return []
+
 def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None):
     """
     Retrieve signals from the database.
