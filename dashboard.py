@@ -509,9 +509,9 @@ with col2:
                 sym = row.Symbol
                 try:
                     if side == "buy":
-                        portfolio.buy(sym, qty, price, fee_bps=config.get("fee_bps", 0))
+                        portfolio.buy(sym, qty, price, fee_bps=config.get("fees_bps", 0))
                     else:
-                        portfolio.sell(sym, qty, price, fee_bps=config.get("fee_bps", 0))
+                        portfolio.sell(sym, qty, price, fee_bps=config.get("fees_bps", 0))
                 except Exception:
                     pass
                 history.append({"timestamp": ts, "equity": portfolio.equity({sym: price})})

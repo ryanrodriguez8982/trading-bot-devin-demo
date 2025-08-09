@@ -9,7 +9,7 @@ def compute_equity_curve(
     signals: List[Dict],
     initial_balance: float = 10000.0,
     trade_size: float = 1.0,
-    fee_bps: float = 0.0,
+    fees_bps: float = 0.0,
     symbol: str = "asset",
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
     """Compute equity curve and performance stats from trading signals.
@@ -22,7 +22,7 @@ def compute_equity_curve(
         Starting portfolio balance in quote currency.
     trade_size : float, optional
         Quantity to trade on each signal.
-    fee_bps : float, optional
+    fees_bps : float, optional
         Trading fee in basis points.
     symbol : str, optional
         Symbol name used in the portfolio (default ``"asset"``).
@@ -59,12 +59,12 @@ def compute_equity_curve(
 
         try:
             if action == "buy":
-                portfolio.buy(symbol, trade_size, price, fee_bps=fee_bps)
+                portfolio.buy(symbol, trade_size, price, fee_bps=fees_bps)
             elif action == "sell":
                 pos = portfolio.positions.get(symbol)
                 if pos and pos.qty >= trade_size:
                     avg_cost = pos.avg_cost
-                    portfolio.sell(symbol, trade_size, price, fee_bps=fee_bps)
+                    portfolio.sell(symbol, trade_size, price, fee_bps=fees_bps)
                     trades += 1
                     if price > avg_cost:
                         wins += 1

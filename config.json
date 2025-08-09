@@ -14,7 +14,7 @@
     "api_secret": "",
     "api_passphrase": "",
     "trade_size": 0.001,
-    "fee_bps": 10,
+    "fees_bps": 10,
     "exchange": "coinbase",
     "broker": {
         "type": "paper",

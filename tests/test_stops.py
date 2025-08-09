@@ -27,7 +27,7 @@ def run_scenario(bars):
         signals,
         initial_capital=100,
         trade_size=1,
-        fee_bps=0,
+        fees_bps=0,
         slippage_bps=0,
         stop_loss_pct=0.10,
         take_profit_rr=2.0,
@@ -43,7 +43,7 @@ def run_trailing(bars):
         signals,
         initial_capital=100,
         trade_size=1,
-        fee_bps=0,
+        fees_bps=0,
         slippage_bps=0,
         trailing_stop_pct=0.05,
     )

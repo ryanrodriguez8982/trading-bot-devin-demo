@@ -425,7 +425,7 @@ def main():
     api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
     trade_size = args.trade_size if args.trade_size is not None else config.get('trade_size', 1.0)
     broker_cfg = config.get('broker', {})
-    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get('fees_bps', config.get('fee_bps', 0.0))
+    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get('fees_bps', config.get('fees_bps', 0.0))
     slippage_bps = broker_cfg.get('slippage_bps', 5.0)
     broker_type = getattr(args, 'broker', None) or broker_cfg.get('type', 'paper')
     exchange_name = args.exchange or config.get("exchange", "binance")
@@ -499,7 +499,7 @@ def main():
                 stats_out=stats_out,
                 chart_out=chart_out,
                 trade_size=trade_size,
-                fee_bps=fee_bps,
+                fees_bps=fee_bps,
             )
         elif args.live:
             run_live_mode(
