@@ -13,8 +13,9 @@ from typing import Dict
 from trading_bot.backtester import run_backtest
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.exchange import create_exchange, execute_trade
-from trading_bot.signal_logger import log_signals_to_db
+from trading_bot.signal_logger import log_signals_to_db, log_trade_to_db
 from trading_bot.portfolio import Portfolio
+from trading_bot.broker import PaperBroker
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
 try:
@@ -65,6 +66,7 @@ def parse_args():
     parser.add_argument('--api-key', type=str, help='Exchange API key')
     parser.add_argument('--api-secret', type=str, help='Exchange API secret')
     parser.add_argument('--api-passphrase', type=str, help='Exchange API passphrase (if required)')
+    parser.add_argument('--broker', type=str, help='Broker type to use (paper or ccxt)')
     parser.add_argument('--strategy', type=str, default='sma', help='Trading strategy to use')
     parser.add_argument('--list-strategies', action='store_true', help='List available strategies and exit')
     parser.add_argument('--alert-mode', action='store_true', help='Enable alert notifications for BUY/SELL signals')
@@ -180,6 +182,7 @@ def run_live_mode(
     live_trade=False,
     trade_amount=0.0,
     fee_bps=0.0,
+    broker=None,
 ):
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
@@ -194,7 +197,9 @@ def run_live_mode(
     print("=" * 50)
 
     iteration = 0
-    portfolio = Portfolio(cash=trade_amount * 100 if trade_amount else 0)
+    portfolio = None
+    if broker is None:
+        portfolio = Portfolio(cash=trade_amount * 100 if trade_amount else 0)
 
     while True:
         iteration += 1
@@ -212,12 +217,18 @@ def run_live_mode(
                     log_order_to_file(order, symbol)
                 else:
                     try:
-                        if signal['action'] == 'buy':
-                            portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                        if broker:
+                            broker.set_price(symbol, signal['price'])
+                            trade = broker.create_order(signal['action'], symbol, trade_amount)
+                            trade['strategy'] = strategy
+                            log_trade_to_db(trade)
                         else:
-                            portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                            if signal['action'] == 'buy':
+                                portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                            else:
+                                portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
                     except ValueError:
-                        logging.debug("Trade skipped due to portfolio constraints")
+                        logging.debug("Trade skipped due to portfolio/broker constraints")
         else:
             print("No new signals.")
         print("Next analysis in 60 seconds...")
@@ -241,7 +252,10 @@ def main():
     api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
     api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
     trade_size = args.trade_size if args.trade_size is not None else config.get('trade_size', 1.0)
-    fee_bps = args.fee_bps if args.fee_bps is not None else config.get('fee_bps', 0.0)
+    broker_cfg = config.get('broker', {})
+    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get('fees_bps', config.get('fee_bps', 0.0))
+    slippage_bps = broker_cfg.get('slippage_bps', 5.0)
+    broker_type = getattr(args, 'broker', None) or broker_cfg.get('type', 'paper')
     exchange_name = args.exchange or config.get("exchange", "binance")
     exchange = None
 
@@ -249,6 +263,11 @@ def main():
         exchange = create_exchange(api_key, api_secret, api_passphrase, exchange_name)
     else:
         exchange = create_exchange(exchange_name=exchange_name)
+    broker = None
+    if broker_type == 'paper':
+        broker = PaperBroker(starting_cash=trade_size * 100 if trade_size else 0,
+                             fees_bps=fee_bps,
+                             slippage_bps=slippage_bps)
 
     if getattr(args, 'list_strategies', False):
         print("Available strategies:")
@@ -302,6 +321,7 @@ def main():
                 live_trade=args.live_trade,
                 trade_amount=trade_size,
                 fee_bps=fee_bps,
+                broker=broker,
             )
         else:
             signals = run_single_analysis(
