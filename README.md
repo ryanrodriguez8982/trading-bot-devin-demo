@@ -47,6 +47,10 @@ trading-bot --help
 For development or if you prefer not to install:
 
 ```bash
+# Create and activate a virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # On Windows use `.venv\\Scripts\\activate`
+
 # Install core dependencies only
 pip install -r requirements.txt
 
