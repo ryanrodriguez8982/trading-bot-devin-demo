@@ -40,4 +40,9 @@
             "cooldown_bars": 0
         }
     }
+    ,
+    "confluence": {
+        "required": 2,
+        "members": ["sma", "rsi", "macd"]
+    }
 }
