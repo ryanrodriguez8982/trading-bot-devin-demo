@@ -1,6 +1,5 @@
 ccxt
 pandas
-pytest
 streamlit
 matplotlib
 plyer

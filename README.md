@@ -47,8 +47,11 @@ trading-bot --help
 For development or if you prefer not to install:
 
 ```bash
-# Install dependencies
+# Install core dependencies only
 pip install -r requirements.txt
+
+# Or install with development tools
+pip install -r requirements-dev.txt
 
 # Run directly
 python trading_bot/main.py --symbol BTC/USDT
@@ -121,6 +124,7 @@ python trading_bot/main.py --strategy bbands
 
 ### Running Tests
 ```bash
+pip install -r requirements-dev.txt
 pytest tests/
 ```
 
