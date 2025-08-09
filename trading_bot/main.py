@@ -13,7 +13,7 @@ from typing import Dict
 from trading_bot.backtester import run_backtest
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.exchange import create_exchange, execute_trade
-from trading_bot.signal_logger import log_signals_to_db
+from trading_bot.signal_logger import log_signals_to_db, mark_signal_handled
 from trading_bot.portfolio import Portfolio
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
@@ -75,6 +75,19 @@ def parse_args():
                         help='Default trade size in asset units')
     parser.add_argument('--fee-bps', type=float, default=None,
                         help='Trading fee in basis points')
+    parser.add_argument(
+        '--interval-seconds',
+        type=int,
+        default=60,
+        help='Polling interval for live mode in seconds',
+    )
+    parser.add_argument(
+        '--symbols',
+        type=str,
+        help='Comma-separated list of trading symbols for live mode',
+    )
+    parser.add_argument('--broker', type=str, help='Broker identifier for live trading')
+    parser.add_argument('--risk-profile', type=str, help='Risk profile name')
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
@@ -170,7 +183,7 @@ def run_single_analysis(symbol, timeframe, limit, sma_short, sma_long, strategy=
         return []
 
 def run_live_mode(
-    symbol,
+    symbols,
     timeframe,
     sma_short,
     sma_long,
@@ -180,6 +193,7 @@ def run_live_mode(
     live_trade=False,
     trade_amount=0.0,
     fee_bps=0.0,
+    interval_seconds=60,
 ):
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
@@ -187,9 +201,9 @@ def run_live_mode(
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
     print(f"\n=== Live Trading Mode Started ===")
-    print(f"Symbol: {symbol}")
+    print(f"Symbols: {', '.join(symbols)}")
     print(f"Strategy: {strategy.upper()}")
-    print(f"Fetching {live_limit} candles every 60 seconds")
+    print(f"Fetching {live_limit} candles every {interval_seconds} seconds")
     print("Press Ctrl+C to stop gracefully")
     print("=" * 50)
 
@@ -199,29 +213,77 @@ def run_live_mode(
     while True:
         iteration += 1
         print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iteration #{iteration}")
-        signals = run_single_analysis(
-            symbol, timeframe, live_limit, sma_short, sma_long, strategy=strategy, alert_mode=alert_mode, exchange=exchange
-        )
-        if signals:
-            print(f"?? NEW SIGNALS ({len(signals)}):")
-            for signal in signals[-3:]:
-                ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-                print(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
-                if live_trade and exchange:
-                    order = execute_trade(exchange, symbol, signal['action'], trade_amount)
-                    log_order_to_file(order, symbol)
-                else:
-                    try:
-                        if signal['action'] == 'buy':
-                            portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
-                        else:
-                            portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
-                    except ValueError:
-                        logging.debug("Trade skipped due to portfolio constraints")
-        else:
-            print("No new signals.")
-        print("Next analysis in 60 seconds...")
-        time.sleep(60)
+        for symbol in symbols:
+            signals = run_single_analysis(
+                symbol,
+                timeframe,
+                live_limit,
+                sma_short,
+                sma_long,
+                strategy=strategy,
+                alert_mode=alert_mode,
+                exchange=exchange,
+            )
+            if signals:
+                print(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
+                for signal in signals[-3:]:
+                    ts = signal["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
+                    if mark_signal_handled(
+                        symbol,
+                        strategy,
+                        timeframe,
+                        signal["timestamp"].isoformat(),
+                        signal["action"],
+                    ):
+                        logging.info(
+                            json.dumps(
+                                {
+                                    "symbol": symbol,
+                                    "action": signal["action"],
+                                    "timestamp": signal["timestamp"].isoformat(),
+                                    "status": "duplicate",
+                                }
+                            )
+                        )
+                        continue
+                    print(
+                        f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}"
+                    )
+                    if live_trade and exchange:
+                        order = execute_trade(exchange, symbol, signal["action"], trade_amount)
+                        log_order_to_file(order, symbol)
+                        logging.info(
+                            json.dumps(
+                                {
+                                    "symbol": symbol,
+                                    "action": signal["action"],
+                                    "timestamp": signal["timestamp"].isoformat(),
+                                    "status": "placed",
+                                }
+                            )
+                        )
+                    else:
+                        try:
+                            if signal["action"] == "buy":
+                                portfolio.buy(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
+                            else:
+                                portfolio.sell(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
+                            logging.info(
+                                json.dumps(
+                                    {
+                                        "symbol": symbol,
+                                        "action": signal["action"],
+                                        "timestamp": signal["timestamp"].isoformat(),
+                                        "status": "executed",
+                                    }
+                                )
+                            )
+                        except ValueError:
+                            logging.debug("Trade skipped due to portfolio constraints")
+            else:
+                print(f"No new signals for {symbol}.")
+        print(f"Next analysis in {interval_seconds} seconds...")
+        time.sleep(interval_seconds)
 
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -230,12 +292,14 @@ def main():
     risk_config = get_risk_config(config.get('risk'), getattr(args, 'risk_overrides', {}))
 
     symbol = args.symbol or config['symbol']
+    symbols = args.symbols.split(',') if getattr(args, 'symbols', None) else [symbol]
     timeframe = args.timeframe or config['timeframe']
     limit = args.limit or config['limit']
     sma_short = getattr(args, 'sma_short') or config['sma_short']
     sma_long = getattr(args, 'sma_long') or config['sma_long']
     strategy_choice = getattr(args, 'strategy', 'sma')
     alert_mode = getattr(args, 'alert_mode', False)
+    interval_seconds = getattr(args, 'interval_seconds', 60)
 
     api_key = args.api_key or os.getenv('TRADING_BOT_API_KEY') or config.get('api_key')
     api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
@@ -292,7 +356,7 @@ def main():
             )
         elif args.live:
             run_live_mode(
-                symbol,
+                symbols,
                 timeframe,
                 sma_short,
                 sma_long,
@@ -302,6 +366,7 @@ def main():
                 live_trade=args.live_trade,
                 trade_amount=trade_size,
                 fee_bps=fee_bps,
+                interval_seconds=interval_seconds,
             )
         else:
             signals = run_single_analysis(
