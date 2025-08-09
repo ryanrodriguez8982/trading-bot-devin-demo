@@ -65,7 +65,7 @@ def test_corrupted_inputs_warn_or_raise(strategy, mutator, caplog):
         try:
             signals = strategy(df)
             assert isinstance(signals, list)
-        except Exception as e:
+        except (ValueError, KeyError) as e:
             assert isinstance(e, (ValueError, KeyError))
         assert any(rec.levelno == logging.WARNING for rec in caplog.records)
 

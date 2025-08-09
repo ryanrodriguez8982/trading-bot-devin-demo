@@ -54,10 +54,13 @@ class RetryPolicy:
                 attempt += 1
                 self._record_failure()
                 logging.warning(
-                    f"{func.__name__} failed on attempt {attempt}: {e}")
+                    f"{func.__name__} failed on attempt {attempt}: {e}", exc_info=True
+                )
                 if attempt > self.retries:
                     logging.error(
-                        f"{func.__name__} failed after {self.retries} retries: {e}")
+                        f"{func.__name__} failed after {self.retries} retries: {e}",
+                        exc_info=True,
+                    )
                     raise
                 sleep = self.backoff * (2 ** (attempt - 1))
                 sleep += random.uniform(0, self.jitter)

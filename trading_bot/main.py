@@ -23,7 +23,7 @@ from trading_bot.notify import configure as configure_alerts
 
 try:
     from plyer import notification
-except Exception:
+except ImportError:
     notification = None
 
 def _deep_update(base: Dict, override: Dict) -> Dict:
@@ -70,7 +70,7 @@ def load_config(config_dir: str | None = None) -> Dict:
             with open(local_path, 'r') as f:
                 local_cfg = json.load(f)
             config = _deep_update(config, local_cfg)
-        except Exception as e:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError) as e:  # noqa: BLE001
             logging.warning(f"Failed loading config.local.json: {e}")
 
     return config
@@ -94,7 +94,7 @@ def parse_args():
     except PackageNotFoundError:
         try:
             from trading_bot import __version__ as pkg_version
-        except Exception:
+        except ImportError:
             pkg_version = '0.0.0'
 
     parser.add_argument('--version', action='version', version=f'%(prog)s {pkg_version}')
@@ -199,7 +199,7 @@ def send_alert(signal):
         try:
             notification.notify(title="Trading Bot Alert", message=message)
         except Exception as e:
-            logging.debug(f"Notification error: {e}")
+            logging.exception("Notification error: %s", e)
 
 def signal_handler(signum, frame):
     logging.info("Received interrupt signal. Shutting down live trading mode gracefully...")
@@ -253,7 +253,7 @@ def run_single_analysis(
                     send_alert(s)
         return signals
     except Exception as e:
-        logging.error(f"Error in analysis cycle: {e}")
+        logging.exception("Error in analysis cycle")
         return []
 
 def run_live_mode(
@@ -596,7 +596,7 @@ def main():
             else:
                 print("No trading signals generated.")
     except Exception as e:
-        logging.error(f"Error in main: {e}")
+        logging.exception("Error in main")
         raise
 
 if __name__ == "__main__":

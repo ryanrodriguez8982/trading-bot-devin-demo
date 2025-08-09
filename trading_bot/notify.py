@@ -4,7 +4,7 @@ from typing import Iterable, Optional
 
 try:  # pragma: no cover - optional dependency
     from plyer import notification as desktop_notify
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
     desktop_notify = None
 
 ALERTS_ENABLED = False
@@ -33,7 +33,7 @@ def send(message: str, channels: Optional[Iterable[str]] = None) -> None:
         try:  # pragma: no cover - desktop notifications not testable
             desktop_notify.notify(title="Trading Bot Alert", message=message)
         except Exception as exc:  # pragma: no cover
-            logging.debug(f"Notification error: {exc}")
+            logging.exception("Notification error: %s", exc)
     if "email" in channels:
         pass  # Stub for future email integration
     if "webhook" in channels:

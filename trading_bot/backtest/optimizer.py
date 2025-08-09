@@ -51,7 +51,7 @@ def parse_optimize_args(tokens: List[str]) -> Dict:
                 train_frac = float(train) / 100.0
                 valid_frac = float(valid) / 100.0
                 options["split"] = (train_frac, valid_frac)
-            except Exception as exc:
+            except ValueError as exc:
                 raise ValueError(f"Invalid split: {value}") from exc
         elif key == "metric":
             options["metric"] = value
