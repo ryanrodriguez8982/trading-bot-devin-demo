@@ -102,6 +102,8 @@ trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
 TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
 trading-bot --live --live-trade --symbol BTC/USDT
 
+For a step-by-step safety checklist before enabling real trades, see [Live Trading Guide & Safety Checklist](docs/live_trading.md).
+
 #### Alternative: Direct Python execution:
 ```bash
 # Basic usage (uses config.json defaults)
