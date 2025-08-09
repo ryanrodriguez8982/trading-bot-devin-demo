@@ -125,3 +125,10 @@ def test_fractional_trades_and_fees():
     assert p.cash == pytest.approx(1000 - 50 - 0.125 + 22 - 0.055)
     assert p.position_qty('BTC') == pytest.approx(0.3)
     assert p.realized_pnl == pytest.approx(1.82)
+
+def test_sell_closes_position_and_clears_price():
+    p = Portfolio(cash=1000)
+    p.buy('BTC', 1, 100)
+    p.sell('BTC', 1, 110, fee_bps=0)
+    assert 'BTC' not in p.positions
+    assert 'BTC' not in p.last_prices
