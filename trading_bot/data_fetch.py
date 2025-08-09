@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Optional
 
 import pandas as pd
@@ -43,7 +42,7 @@ def fetch_btc_usdt_data(
         ohlcv = policy.call(exchange.fetch_ohlcv, symbol, timeframe, limit=limit)
         
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
         
         logging.info(f"Successfully fetched {len(df)} candles for {symbol} from {exchange.id}")
         return df

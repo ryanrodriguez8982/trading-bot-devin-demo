@@ -1,7 +1,6 @@
 import sqlite3
 import logging
 import os
-from datetime import datetime
 
 def create_signals_table(cursor):
     """Create the signals table if it doesn't exist."""
@@ -55,11 +54,14 @@ def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
             create_signals_table(cursor)
             
             for signal in signals:
-                timestamp_str = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-                cursor.execute('''
+                timestamp_str = signal['timestamp'].isoformat()
+                cursor.execute(
+                    '''
                     INSERT INTO signals (timestamp, action, price, symbol, strategy_id)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (timestamp_str, signal['action'], float(signal['price']), symbol, strategy_id))
+                    ''',
+                    (timestamp_str, signal['action'], float(signal['price']), symbol, strategy_id),
+                )
             
             conn.commit()
             logging.info(f"Logged {len(signals)} signals to database {db_path}")

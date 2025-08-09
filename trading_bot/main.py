@@ -5,7 +5,7 @@ import os
 import time
 import signal as sig
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from typing import Dict
 
@@ -165,14 +165,14 @@ def log_signals_to_file(signals, symbol):
         return
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
     os.makedirs(logs_dir, exist_ok=True)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     log_path = os.path.join(logs_dir, f"{timestamp}_signals.log")
     with open(log_path, 'w') as f:
         f.write(f"Trading Signals Log - {symbol}\n")
-        f.write(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()}\n")
         f.write("=" * 50 + "\n")
         for signal in signals:
-            ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+            ts = signal['timestamp'].isoformat()
             f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
     logging.info(f"Logged {len(signals)} signals to {log_path}")
 
@@ -183,7 +183,7 @@ def log_order_to_file(order, symbol):
     os.makedirs(logs_dir, exist_ok=True)
     log_path = os.path.join(logs_dir, 'orders.log')
     with open(log_path, 'a') as f:
-        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        ts = datetime.now(timezone.utc).isoformat()
         order_id = order.get('id', 'N/A')
         amount = order.get('amount')
         price = order.get('price')
@@ -192,7 +192,7 @@ def log_order_to_file(order, symbol):
     logging.info(f"Logged order {order_id} to {log_path}")
 
 def send_alert(signal):
-    ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+    ts = signal['timestamp'].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
     print(message)
     if notification:
@@ -315,7 +315,7 @@ def run_live_mode(
                 time.sleep(interval_seconds)
                 continue
 
-        print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iteration #{iteration}")
+        print(f"\n[{datetime.now(timezone.utc).isoformat()}] Iteration #{iteration}")
         for symbol in symbols:
             signals = run_single_analysis(
                 symbol,
@@ -332,7 +332,7 @@ def run_live_mode(
             if signals:
                 print(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
                 for signal in signals[-3:]:
-                    ts = signal["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
+                    ts = signal["timestamp"].isoformat()
                     if mark_signal_handled(
                         symbol,
                         strategy,
@@ -352,7 +352,7 @@ def run_live_mode(
                         )
                         continue
                     print(
-                        f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}"
+                      f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}"
                     )
                     if live_trade and exchange:
                         order = execute_trade(exchange, symbol, signal["action"], trade_amount)
@@ -404,7 +404,7 @@ def run_live_mode(
         if signals:
             print(f"?? NEW SIGNALS ({len(signals)}):")
             for signal in signals[-3:]:
-                ts = signal['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                ts = signal['timestamp'].isoformat()
                 print(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
                 price = signal['price']
                 if trade_amount:
@@ -445,7 +445,12 @@ def run_live_mode(
         time.sleep(60)
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.Formatter.converter = time.gmtime
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%dT%H:%M:%S%z',
+    )
     config = load_config()
     configure_alerts(config)
     args = parse_args()
@@ -586,7 +591,7 @@ def main():
             if signals:
                 print("\nLast 5 signals:")
                 for i, s in enumerate(signals[-5:], 1):
-                    ts = s['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                    ts = s['timestamp'].isoformat()
                     print(f"{i}. {ts} - {s['action'].upper()} @ ${s['price']:.2f}")
             else:
                 print("No trading signals generated.")

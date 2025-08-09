@@ -4,7 +4,6 @@ import pandas as pd
 import logging
 import os
 import json
-from datetime import datetime
 
 # ? Absolute import for package compatibility
 from trading_bot.signal_logger import log_signals_to_db
@@ -28,7 +27,7 @@ def load_csv_data(csv_path):
     if df.empty:
         raise ValueError("CSV file contains no rows")
 
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     if not df['timestamp'].is_monotonic_increasing:
         raise ValueError("Timestamps must be strictly increasing")
 

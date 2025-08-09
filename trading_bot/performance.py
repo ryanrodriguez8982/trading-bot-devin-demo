@@ -53,7 +53,7 @@ def compute_equity_curve(
     wins = trades = 0
 
     for sig in sorted_signals:
-        ts = pd.to_datetime(sig["timestamp"])
+        ts = pd.to_datetime(sig["timestamp"], utc=True)
         price = float(sig["price"])
         action = str(sig["action"]).lower()
 

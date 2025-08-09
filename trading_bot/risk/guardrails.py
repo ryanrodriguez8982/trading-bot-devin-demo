@@ -15,7 +15,7 @@ the live trading loop and in unit tests where behaviour is simulated.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from trading_bot.notify import send as notify_send
 
@@ -79,7 +79,7 @@ class Guardrails:
         period after ``loss_limit`` consecutive losses.
         """
 
-        now = now or datetime.utcnow()
+        now = now or datetime.now(timezone.utc)
         if pnl < 0:
             self.consecutive_losses += 1
             if (
@@ -94,7 +94,7 @@ class Guardrails:
         """Return ``True`` if currently in a cooldown period."""
         if self.cooldown_until is None:
             return False
-        now = now or datetime.utcnow()
+        now = now or datetime.now(timezone.utc)
         return now < self.cooldown_until
 
     # ------------------------------------------------------------------
