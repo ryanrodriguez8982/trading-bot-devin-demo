@@ -4,6 +4,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional, TypeVar
 
+from trading_bot.notify import send as notify_send
+
 T = TypeVar("T")
 
 
@@ -42,6 +44,7 @@ class RetryPolicy:
         while True:
             if self._circuit_open():
                 logging.error(f"Circuit breaker open for {func.__name__}")
+                notify_send(f"Circuit breaker open for {func.__name__}")
                 raise RuntimeError("circuit breaker open")
             try:
                 result = func(*args, **kwargs)

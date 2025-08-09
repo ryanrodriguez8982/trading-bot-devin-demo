@@ -19,6 +19,7 @@ from trading_bot.portfolio import Portfolio
 from trading_bot.risk.position_sizing import calculate_position_size
 from trading_bot.broker import PaperBroker, CcxtSpotBroker
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.notify import configure as configure_alerts
 
 try:
     from plyer import notification
@@ -265,12 +266,15 @@ def run_live_mode(
 
     while True:
         iteration += 1
-        if guardrails and portfolio and not guardrails.allow_trade(
-            portfolio.equity()
-        ):
-            logging.info("Guardrails active - skipping iteration")
-            time.sleep(interval_seconds)
-            continue
+        if guardrails and portfolio:
+            eq = portfolio.equity()
+            if guardrails.should_halt(eq):
+                logging.warning("Guardrails triggered - halting trading")
+                break
+            if guardrails.cooling_down():
+                logging.info("Guardrails active - skipping iteration")
+                time.sleep(interval_seconds)
+                continue
 
         print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Iteration #{iteration}")
         for symbol in symbols:
@@ -404,6 +408,7 @@ def run_live_mode(
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     config = load_config()
+    configure_alerts(config)
     args = parse_args()
     risk_config = get_risk_config(config.get('risk'), getattr(args, 'risk_overrides', {}))
 
