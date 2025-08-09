@@ -21,7 +21,7 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
 
     try:
         from trading_bot.strategies import STRATEGY_REGISTRY  # avoid circular import
-    except Exception as e:
+    except ImportError as e:
         logging.error(f"Failed to import STRATEGY_REGISTRY: {e}")
         return []
 
@@ -35,7 +35,7 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
         try:
             signals = strategy_fn(df)
         except Exception as exc:
-            logging.error(f"Error executing strategy '{name}': {exc}")
+            logging.exception(f"Error executing strategy '{name}': {exc}")
             continue
         for sig in signals:
             ts = sig["timestamp"]

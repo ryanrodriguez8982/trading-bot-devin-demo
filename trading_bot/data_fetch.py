@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import pandas as pd
+import ccxt
 
 from trading_bot.exchange import create_exchange
 from trading_bot.utils.retry import RetryPolicy, default_retry
@@ -40,13 +41,13 @@ def fetch_btc_usdt_data(
                 exchange = create_exchange()
         policy = retry_policy or default_retry()
         ohlcv = policy.call(exchange.fetch_ohlcv, symbol, timeframe, limit=limit)
-        
+
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
-        
+
         logging.info(f"Successfully fetched {len(df)} candles for {symbol} from {exchange.id}")
         return df
-        
-    except Exception as e:
+
+    except (ccxt.BaseError, RuntimeError) as e:
         logging.error(f"Error fetching data: {e}")
         raise

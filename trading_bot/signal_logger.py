@@ -101,7 +101,7 @@ def log_trade_to_db(trade, db_path=None):
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
         raise
-    except Exception as e:
+    except (KeyError, ValueError, TypeError) as e:
         logging.error(f"Error logging trade to database: {e}")
         raise
 
@@ -159,9 +159,6 @@ def get_trades_from_db(symbol=None, limit=None, db_path=None):
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
         return []
-    except Exception as e:
-        logging.error(f"Error retrieving trades from database: {e}")
-        return []
 
 def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None):
     """
@@ -212,9 +209,6 @@ def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None)
             
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
-        return []
-    except Exception as e:
-        logging.error(f"Error retrieving signals from database: {e}")
         return []
 
 

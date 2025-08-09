@@ -156,7 +156,8 @@ def _apply_overrides(config: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[
             value = float(value)
             if value.is_integer():
                 value = int(value)
-        except Exception:
+        except (ValueError, TypeError):
+            # Leave ``value`` as-is when it cannot be converted to a number
             pass
         d[parts[-1]] = value
     return config

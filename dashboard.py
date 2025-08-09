@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import json
 import os
+import logging
+import sqlite3
+import ccxt
 from trading_bot.exchange import create_exchange
 
 # Load config.json to determine default exchange
@@ -182,7 +185,8 @@ with col1:
         with st.spinner("Fetching price data..."):
             try:
                 df = _fetch_price_data(selected_symbol)
-            except Exception as api_error:
+            except (ccxt.BaseError, RuntimeError) as api_error:
+                logging.exception("Price data fetch failed")
                 st.warning(
                     f"API unavailable ({str(api_error)[:50]}...), using mock data for demonstration"
                 )
@@ -361,21 +365,23 @@ with col1:
                            f"data")
                 if st.button("Save Signals to Database"):
                     try:
-                        strategy_id = (selected_strategy
-                                       if selected_strategy != "All"
-                                       else 'sma')
-                        log_signals_to_db(signals, selected_symbol,
-                                          strategy_id)
-                        st.success(f"Saved {len(signals)} signals to "
-                                   "database!")
+                        strategy_id = (
+                            selected_strategy if selected_strategy != "All" else "sma"
+                        )
+                        log_signals_to_db(signals, selected_symbol, strategy_id)
+                        st.success(
+                            f"Saved {len(signals)} signals to database!"
+                        )
                         st.rerun()
-                    except Exception as e:
+                    except sqlite3.Error as e:
+                        logging.exception("Error saving signals to database")
                         st.error(f"Error saving signals: {str(e)}")
             else:
                 st.info("No crossover signals detected in current data")
         else:
             st.error("Failed to fetch price data")
-    except Exception as e:
+    except Exception as e:  # Catch-all to prevent dashboard crash
+        logging.exception("Error fetching or processing data")
         st.error(f"Error fetching or processing data: {str(e)}")
 
 with col2:
@@ -387,36 +393,37 @@ with col2:
             st.metric("Last Trade", last_ts.strftime("%Y-%m-%d %H:%M:%S%z"))
         else:
             st.metric("Last Trade", "No trades")
+    except sqlite3.Error as e:
+        logging.exception("Error loading last trade")
+        st.error(f"Error loading last trade: {str(e)}")
 
-        status_file = "status.json"
-        if os.path.exists(status_file):
-            try:
-                with open(status_file) as sf:
-                    status = json.load(sf)
-                hb = status.get("heartbeat")
-                last_loop = status.get("last_loop")
-                if hb:
-                    st.metric("Heartbeat", hb)
-                if last_loop:
-                    st.metric("Last Loop", last_loop)
-            except Exception:
-                pass
+    status_file = "status.json"
+    if os.path.exists(status_file):
+        try:
+            with open(status_file) as sf:
+                status = json.load(sf)
+            hb = status.get("heartbeat")
+            last_loop = status.get("last_loop")
+            if hb:
+                st.metric("Heartbeat", hb)
+            if last_loop:
+                st.metric("Last Loop", last_loop)
+        except (OSError, json.JSONDecodeError) as exc:
+            logging.warning("Error reading status file: %s", exc)
 
-        risk_cfg = config.get("risk", {})
-        md = risk_cfg.get("max_drawdown", {}).get("monthly_pct", 0.0)
-        cooldown = risk_cfg.get("max_drawdown", {}).get("cooldown_bars", 0)
-        if md or cooldown:
-            st.info(
-                f"Guardrails active: max DD {md*100:.1f}% | cooldown {cooldown}"
-            )
-        else:
-            st.info("Guardrails disabled")
-    except Exception as e:
-        st.error(f"Error loading status: {str(e)}")
+    risk_cfg = config.get("risk", {})
+    md = risk_cfg.get("max_drawdown", {}).get("monthly_pct", 0.0)
+    cooldown = risk_cfg.get("max_drawdown", {}).get("cooldown_bars", 0)
+    if md or cooldown:
+        st.info(
+            f"Guardrails active: max DD {md*100:.1f}% | cooldown {cooldown}"
+        )
+    else:
+        st.info("Guardrails disabled")
 
     st.subheader("Recent Signals")
     try:
-        strategy_filter = (None if selected_strategy == "All" else selected_strategy)
+        strategy_filter = None if selected_strategy == "All" else selected_strategy
 
         signals_data = get_signals_from_db(
             symbol=selected_symbol,
@@ -430,9 +437,7 @@ with col2:
                 columns=["Timestamp", "Action", "Price", "Symbol", "Strategy"],
             )
 
-            signals_df["Price"] = signals_df["Price"].apply(
-                lambda x: f"${x:,.2f}"
-            )
+            signals_df["Price"] = signals_df["Price"].apply(lambda x: f"${x:,.2f}")
             signals_df["Timestamp"] = pd.to_datetime(signals_df["Timestamp"], utc=True)
             signals_df["Timestamp"] = signals_df["Timestamp"].dt.strftime(
                 "%Y-%m-%d %H:%M:%S%z"
@@ -471,7 +476,8 @@ with col2:
             st.markdown("**To generate signals:**")
             st.code("python trading_bot/main.py", language="bash")
 
-    except Exception as e:
+    except sqlite3.Error as e:
+        logging.exception("Error loading signals from database")
         st.error(f"Error loading signals: {str(e)}")
 
     st.subheader("Recent Trades")
@@ -514,8 +520,8 @@ with col2:
                         portfolio.buy(sym, qty, price, fee_bps=config.get("fees_bps", 0))
                     else:
                         portfolio.sell(sym, qty, price, fee_bps=config.get("fees_bps", 0))
-                except Exception:
-                    pass
+                except ValueError as exc:
+                    logging.warning("Skipping trade %s %s due to error: %s", side, sym, exc)
                 history.append({"timestamp": ts, "equity": portfolio.equity({sym: price})})
 
             if history:
@@ -538,7 +544,8 @@ with col2:
                 st.dataframe(pd.DataFrame(pos_rows), use_container_width=True)
         else:
             st.info("No trades found in database")
-    except Exception as e:
+    except sqlite3.Error as e:
+        logging.exception("Error loading trades from database")
         st.error(f"Error loading trades: {str(e)}")
 
     st.subheader("Error Log")

@@ -152,8 +152,8 @@ class CcxtSpotBroker(Broker):
                 self._wait_rate_limit()
                 return self.exchange.create_order(symbol, type, side, qty)
             except Exception as exc:  # pragma: no cover - defensive
-                logging.error(
-                    "ccxt order failed", extra={"payload": order_payload, "error": str(exc)}
+                logging.exception(
+                    "ccxt order failed", extra={"payload": order_payload}
                 )
                 if attempt == self.retries - 1:
                     raise

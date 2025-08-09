@@ -25,7 +25,7 @@ def create_exchange(api_key=None, api_secret=None, api_passphrase=None, exchange
         exchange = exchange_class(params)
         return exchange
 
-    except Exception as e:
+    except (AttributeError, ccxt.BaseError) as e:
         logging.error(f"Failed to initialize exchange '{exchange_name}': {e}")
         raise
 
@@ -44,7 +44,7 @@ def execute_trade(
         logging.info(
             f"Executed {side} order for {amount} {symbol}: id={order.get('id')}")
         return order
-    except Exception as e:
+    except ccxt.BaseError as e:
         logging.error(f"Order execution failed: {e}")
         return None
 

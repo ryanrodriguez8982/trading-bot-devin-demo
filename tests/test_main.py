@@ -3,6 +3,7 @@ import pytest
 import pandas as pd
 import sys
 import os
+import ccxt
 
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.strategy import sma_crossover_strategy
@@ -11,19 +12,19 @@ def test_data_fetch_structure():
     """Test that data fetch returns correct structure."""
     try:
         df = fetch_btc_usdt_data()
-        
+
         assert isinstance(df, pd.DataFrame), "Should return a pandas DataFrame"
-        
+
         expected_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
         assert list(df.columns) == expected_columns, f"Should have columns: {expected_columns}"
-        
+
         assert len(df) > 0, "Should return non-empty DataFrame"
         assert len(df) <= 500, "Should not exceed 500 candles limit"
-        
+
         assert df['open'].dtype in ['float64', 'int64'], "Open prices should be numeric"
         assert df['close'].dtype in ['float64', 'int64'], "Close prices should be numeric"
-        
-    except Exception as e:
+
+    except (ccxt.BaseError, RuntimeError) as e:
         pytest.skip(f"Skipping data fetch test due to API error: {e}")
 
 def test_strategy_with_sample_data():
@@ -77,11 +78,11 @@ def test_data_fetch_with_parameters():
     """Test that data fetch accepts custom parameters."""
     try:
         df = fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=100)
-        
+
         assert isinstance(df, pd.DataFrame), "Should return a pandas DataFrame"
         assert len(df) <= 100, "Should respect limit parameter"
-        
-    except Exception as e:
+
+    except (ccxt.BaseError, RuntimeError) as e:
         pytest.skip(f"Skipping data fetch test due to API error: {e}")
 
 def test_signal_logging():
@@ -166,8 +167,5 @@ def test_run_single_analysis():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
     from main import run_single_analysis
     
-    try:
-        signals = run_single_analysis("BTC/USDT", "1m", 100, 5, 20)
-        assert isinstance(signals, list), "Should return a list of signals"
-    except Exception:
-        pass
+    signals = run_single_analysis("BTC/USDT", "1m", 100, 5, 20)
+    assert isinstance(signals, list), "Should return a list of signals"
