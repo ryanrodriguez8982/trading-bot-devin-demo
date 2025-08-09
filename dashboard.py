@@ -15,11 +15,16 @@ exchange = create_exchange(exchange_name=exchange_name)
 
 # Optional debug line in sidebar:
 st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
-from trading_bot.signal_logger import get_signals_from_db, log_signals_to_db
+from trading_bot.signal_logger import (
+    get_signals_from_db,
+    log_signals_to_db,
+    get_trades_from_db,
+)
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.strategy import sma_crossover_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
+from trading_bot.portfolio import Portfolio
 
 @st.cache_data(show_spinner=False)
 def _fetch_price_data(symbol: str):
@@ -372,55 +377,71 @@ with col1:
         st.error(f"Error fetching or processing data: {str(e)}")
 
 with col2:
+    st.subheader("Live Status")
+    try:
+        latest_trade = get_trades_from_db(limit=1)
+        if latest_trade:
+            last_ts = pd.to_datetime(latest_trade[0][0])
+            st.metric("Last Trade", last_ts.strftime("%Y-%m-%d %H:%M:%S"))
+        else:
+            st.metric("Last Trade", "No trades")
+
+        risk_cfg = config.get("risk", {})
+        md = risk_cfg.get("max_drawdown", {}).get("monthly_pct", 0.0)
+        cooldown = risk_cfg.get("max_drawdown", {}).get("cooldown_bars", 0)
+        if md or cooldown:
+            st.info(
+                f"Guardrails active: max DD {md*100:.1f}% | cooldown {cooldown}"
+            )
+        else:
+            st.info("Guardrails disabled")
+    except Exception as e:
+        st.error(f"Error loading status: {str(e)}")
+
     st.subheader("Recent Signals")
     try:
-        strategy_filter = (None if selected_strategy == "All"
-                           else selected_strategy)
+        strategy_filter = (None if selected_strategy == "All" else selected_strategy)
 
         signals_data = get_signals_from_db(
             symbol=selected_symbol,
             strategy_id=strategy_filter,
-            limit=limit
+            limit=limit,
         )
 
         if signals_data:
-            signals_df = pd.DataFrame(signals_data,
-                                      columns=['Timestamp', 'Action', 'Price',
-                                               'Symbol', 'Strategy'])
+            signals_df = pd.DataFrame(
+                signals_data,
+                columns=["Timestamp", "Action", "Price", "Symbol", "Strategy"],
+            )
 
-            signals_df['Price'] = signals_df['Price'].apply(
-                lambda x: f"${x:,.2f}")
-            signals_df['Timestamp'] = pd.to_datetime(
-                signals_df['Timestamp'])
-            signals_df['Timestamp'] = signals_df['Timestamp'].dt.strftime(
-                '%Y-%m-%d %H:%M:%S')
-
-            def color_action(val):
-                color = 'green' if val.lower() == 'buy' else 'red'
-                return f'color: {color}; font-weight: bold'
-
-            signals_df_display = signals_df.copy()
+            signals_df["Price"] = signals_df["Price"].apply(
+                lambda x: f"${x:,.2f}"
+            )
+            signals_df["Timestamp"] = pd.to_datetime(signals_df["Timestamp"])
+            signals_df["Timestamp"] = signals_df["Timestamp"].dt.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
 
             def highlight_action(row):
-                if row['Action'].lower() == 'buy':
-                    return ['background-color: lightgreen'
-                            if col == 'Action' else '' for col in row.index]
-                elif row['Action'].lower() == 'sell':
-                    return ['background-color: lightcoral'
-                            if col == 'Action' else '' for col in row.index]
-                else:
-                    return ['' for col in row.index]
+                if row["Action"].lower() == "buy":
+                    return [
+                        "background-color: lightgreen" if col == "Action" else ""
+                        for col in row.index
+                    ]
+                elif row["Action"].lower() == "sell":
+                    return [
+                        "background-color: lightcoral" if col == "Action" else ""
+                        for col in row.index
+                    ]
+                return ["" for col in row.index]
 
-            styled_df = signals_df_display.style.apply(highlight_action,
-                                                       axis=1)
+            styled_df = signals_df.style.apply(highlight_action, axis=1)
 
-            st.dataframe(styled_df, use_container_width=True,
-                         height=400)
+            st.dataframe(styled_df, use_container_width=True, height=400)
 
             st.metric("Total Signals", len(signals_data))
 
-            buy_signals = sum(1 for signal in signals_data
-                              if signal[1] == 'buy')
+            buy_signals = sum(1 for signal in signals_data if signal[1] == "buy")
             sell_signals = len(signals_data) - buy_signals
 
             col_buy, col_sell = st.columns(2)
@@ -437,7 +458,84 @@ with col2:
     except Exception as e:
         st.error(f"Error loading signals: {str(e)}")
 
+    st.subheader("Recent Trades")
+    try:
+        trades_data = get_trades_from_db(symbol=selected_symbol, limit=limit)
+        if trades_data:
+            trades_df = pd.DataFrame(
+                trades_data,
+                columns=[
+                    "Timestamp",
+                    "Symbol",
+                    "Side",
+                    "Qty",
+                    "Price",
+                    "Fee",
+                    "Strategy",
+                    "Broker",
+                ],
+            )
+            trades_df["Timestamp"] = pd.to_datetime(trades_df["Timestamp"])
+            display_df = trades_df.copy()
+            display_df["Price"] = display_df["Price"].apply(
+                lambda x: f"${x:,.2f}"
+            )
+            display_df["Timestamp"] = display_df["Timestamp"].dt.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            st.dataframe(display_df, use_container_width=True, height=300)
+
+            portfolio = Portfolio(cash=starting_balance)
+            history = []
+            for row in trades_df.sort_values("Timestamp").itertuples():
+                price = float(row.Price)
+                qty = float(row.Qty)
+                ts = row.Timestamp
+                side = row.Side.lower()
+                sym = row.Symbol
+                try:
+                    if side == "buy":
+                        portfolio.buy(sym, qty, price, fee_bps=config.get("fee_bps", 0))
+                    else:
+                        portfolio.sell(sym, qty, price, fee_bps=config.get("fee_bps", 0))
+                except Exception:
+                    pass
+                history.append({"timestamp": ts, "equity": portfolio.equity({sym: price})})
+
+            if history:
+                eq_df = pd.DataFrame(history)
+                st.line_chart(eq_df.set_index("timestamp")["equity"])
+
+            if portfolio.positions:
+                pos_rows = []
+                for sym, pos in portfolio.positions.items():
+                    pos_rows.append(
+                        {
+                            "Symbol": sym,
+                            "Qty": pos.qty,
+                            "Avg Cost": pos.avg_cost,
+                            "Stop Loss": pos.stop_loss,
+                            "Take Profit": pos.take_profit,
+                        }
+                    )
+                st.subheader("Open Positions")
+                st.dataframe(pd.DataFrame(pos_rows), use_container_width=True)
+        else:
+            st.info("No trades found in database")
+    except Exception as e:
+        st.error(f"Error loading trades: {str(e)}")
+
+    st.subheader("Error Log")
+    log_path = "trading_bot.log"
+    if os.path.exists(log_path):
+        with open(log_path) as f:
+            lines = f.readlines()[-50:]
+        st.text("".join(lines))
+    else:
+        st.info("No log file found")
+
 st.markdown("---")
-st.markdown("**Note:** Run the trading bot to generate signals that will "
-            "appear in this dashboard.")
+st.markdown(
+    "**Note:** Run the trading bot to generate signals that will appear in this dashboard."
+)
 st.code("python trading_bot/main.py --symbol BTC/USDT", language="bash")
