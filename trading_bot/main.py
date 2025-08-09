@@ -17,7 +17,7 @@ from trading_bot.signal_logger import log_signals_to_db, mark_signal_handled
 from trading_bot.signal_logger import log_signals_to_db, log_trade_to_db
 from trading_bot.portfolio import Portfolio
 from trading_bot.risk.position_sizing import calculate_position_size
-from trading_bot.broker import PaperBroker
+from trading_bot.broker import PaperBroker, CcxtSpotBroker
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 
 try:
@@ -65,6 +65,7 @@ def parse_args():
     parser.add_argument('--sma-long', type=int, help='Long-period SMA window')
     parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
     parser.add_argument('--live-trade', action='store_true', help='Execute real orders when in live mode')
+    parser.add_argument('--dry-run', action='store_true', help='Print order payload without executing')
     parser.add_argument('--api-key', type=str, help='Exchange API key')
     parser.add_argument('--api-secret', type=str, help='Exchange API secret')
     parser.add_argument('--api-passphrase', type=str, help='Exchange API passphrase (if required)')
@@ -440,6 +441,8 @@ def main():
         broker = PaperBroker(starting_cash=trade_size * 100 if trade_size else 0,
                              fees_bps=fee_bps,
                              slippage_bps=slippage_bps)
+    elif broker_type == 'ccxt':
+        broker = CcxtSpotBroker(exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, 'dry_run', False))
 
     if getattr(args, 'list_strategies', False):
         print("Available strategies:")
