@@ -1,5 +1,8 @@
 import ccxt
 import logging
+from typing import Optional
+
+from trading_bot.utils.retry import RetryPolicy, default_retry
 
 
 def create_exchange(api_key=None, api_secret=None, api_passphrase=None, exchange_name="binance"):
@@ -26,12 +29,18 @@ def create_exchange(api_key=None, api_secret=None, api_passphrase=None, exchange
         logging.error(f"Failed to initialize exchange '{exchange_name}': {e}")
         raise
 
-
-def execute_trade(exchange, symbol, action, amount):
+def execute_trade(
+    exchange,
+    symbol,
+    action,
+    amount,
+    retry_policy: Optional[RetryPolicy] = None,
+):
     """Execute a market order and return the order info."""
     side = 'buy' if action.lower() == 'buy' else 'sell'
+    policy = retry_policy or default_retry()
     try:
-        order = exchange.create_market_order(symbol, side, amount)
+        order = policy.call(exchange.create_market_order, symbol, side, amount)
         logging.info(
             f"Executed {side} order for {amount} {symbol}: id={order.get('id')}")
         return order
