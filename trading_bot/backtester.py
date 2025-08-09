@@ -161,8 +161,8 @@ def run_backtest(
     macd_fast=12,
     macd_slow=26,
     macd_signal=9,
-    bollinger_window=20,
-    bollinger_std=2,
+    bbands_window=20,
+    bbands_std=2,
     plot=False,
     equity_out=None,
     stats_out=None,
@@ -187,9 +187,9 @@ def run_backtest(
         signals = strategy_fn(df, fast_period=macd_fast,
                               slow_period=macd_slow,
                               signal_period=macd_signal)
-    elif strategy == 'bollinger':
-        signals = strategy_fn(df, window=bollinger_window,
-                              num_std=bollinger_std)
+    elif strategy == 'bbands':
+        signals = strategy_fn(df, window=bbands_window,
+                              num_std=bbands_std)
     else:
         signals = strategy_fn(df, sma_short, sma_long)
 

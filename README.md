@@ -79,7 +79,7 @@ trading-bot --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
 trading-bot --strategy macd
 
 # Use Bollinger Bands strategy
-trading-bot --strategy bollinger
+trading-bot --strategy bbands
 
 # Configure trade size and fees
 trading-bot --trade-size 0.5 --fee-bps 10
@@ -114,7 +114,7 @@ python trading_bot/main.py --symbol ETH/USDT --timeframe 5m
 python trading_bot/main.py --strategy macd
 
 # Bollinger Bands strategy via Python
-python trading_bot/main.py --strategy bollinger
+python trading_bot/main.py --strategy bbands
 ```
 
 ### Running Tests
@@ -186,8 +186,8 @@ The bot uses a `config.json` file for default parameters:
     "macd_fast": 12,
     "macd_slow": 26,
     "macd_signal": 9,
-    "bollinger_window": 20,
-    "bollinger_std": 2,
+    "bbands_window": 20,
+    "bbands_std": 2,
     "trade_size": 1.0,
     "fee_bps": 0
 }
@@ -207,7 +207,7 @@ You may also pass them on the command line using `--api-key`, `--api-secret` and
 
 Run the bot with `--live --live-trade` to place real orders once your keys are configured.
 
-The Bollinger strategy uses the `sma_long`/`bollinger_window` value for its
+The Bollinger Bands strategy uses the `sma_long`/`bbands_window` value for its
 moving average window. By default this is set to 20 periods.
 
 CLI arguments override config file values. Available parameters:
@@ -225,9 +225,9 @@ The bot implements several trading strategies:
 - **SMA Crossover**: Buy when the short-period SMA crosses above the long period SMA and sell on the opposite cross.
 - **RSI Crossover**: Buy when the RSI rises above the oversold threshold and sell when it falls below the overbought threshold.
 - **MACD Crossover**: Buy when the MACD line crosses above its signal line and sell when it crosses below.
-- **Bollinger Bands**: Buy when price crosses above the lower band (oversold) and sell when it falls below the upper band (overbought). The band period is controlled by `bollinger_window` and the width by `bollinger_std`.
+- **Bollinger Bands**: Buy when price crosses above the lower band (oversold) and sell when it falls below the upper band (overbought). The band period is controlled by `bbands_window` and the width by `bbands_std`.
 
-Use the `--strategy` flag with `sma`, `rsi`, `macd`, or `bollinger` to choose a strategy.The bot fetches historical candles from Binance and displays the last 5 trading recommendations.
+Use the `--strategy` flag with `sma`, `rsi`, `macd`, or `bbands` to choose a strategy. The bot fetches historical candles from Binance and displays the last 5 trading recommendations.
 
 ## Live Trading Simulation Mode
 
@@ -292,7 +292,7 @@ You can automatically search for optimal parameters using the tuning module:
 trading-bot --tune --strategy sma --backtest path/to/data.csv
 
 # Results show the best parameter set
-trading-bot --tune --strategy bollinger --backtest btc.csv
+trading-bot --tune --strategy bbands --backtest btc.csv
 ```
 
 This runs a grid search over sensible defaults and prints the performance of each
@@ -303,8 +303,8 @@ combination, highlighting the best set of parameters.
 Run a Bollinger Bands backtest on BTC data:
 
 ```bash
-trading-bot --backtest btc_data.csv --strategy bollinger \
-  --bollinger-window 20 --bollinger-std 2
+trading-bot --backtest btc_data.csv --strategy bbands \
+  --bbands-window 20 --bbands-std 2
 ```
 
 Connect to Binance for live trading:
@@ -324,12 +324,12 @@ streamlit run dashboard.py
 ```
 
 ### Dashboard Features
-- **Interactive Price Charts**: View price data with SMA, RSI, MACD and Bollinger indicators
+- **Interactive Price Charts**: View price data with SMA, RSI, MACD and Bollinger Bands indicators
 - **Signal Table**: Browse recent trading signals with filtering options
 - **Real-time Filters**: Filter by symbol, strategy, and number of signals
 - **Strategy Configuration**: Adjust parameters for SMA, RSI, MACD, or Bollinger Bands (including period and visualization toggles)
 - **Equity Curve Chart**: Visualize performance over time based on the starting balance
-- **Strategy Filter Dropdown**: Quickly switch between SMA, RSI, MACD or Bollinger views
+- **Strategy Filter Dropdown**: Quickly switch between SMA, RSI, MACD or BBands views
 
 
 - The dashboard loads signals from the `signals.db` database and displays:
@@ -341,7 +341,7 @@ streamlit run dashboard.py
 
 The equity curve helps gauge profitability relative to your configured starting balance. Use the strategy filter to compare how each method performs.
 
-**Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bollinger` in the Strategy filter to visualize those indicators.
+**Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bbands` in the Strategy filter to visualize those indicators.
 
 ## Changelog
 

@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 
 
-def bollinger_bands_strategy(df, window=20, num_std=2):
+def bbands_strategy(df, window=20, num_std=2):
     """Generate trading signals based on Bollinger Bands.
 
     Args:

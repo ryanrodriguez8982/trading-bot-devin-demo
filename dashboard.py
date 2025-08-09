@@ -66,7 +66,7 @@ def _add_indicators(
         df["ema_slow"] = df["close"].ewm(span=macd_slow, adjust=False).mean()
         df["macd"] = df["ema_fast"] - df["ema_slow"]
         df["signal_line"] = df["macd"].ewm(span=macd_signal, adjust=False).mean()
-    elif strategy == "bollinger" and all([boll_window, boll_std]):
+    elif strategy == "bbands" and all([boll_window, boll_std]):
         df["middle_band"] = df["close"].rolling(window=boll_window).mean()
         df["std_dev"] = df["close"].rolling(window=boll_window).std()
         df["upper_band"] = df["middle_band"] + boll_std * df["std_dev"]
@@ -82,7 +82,7 @@ st.set_page_config(
 st.title("📈 Trading Bot Dashboard")
 st.markdown(
     "Visualize trading signals and price data using SMA, RSI, MACD and "
-    "Bollinger strategies"
+    "Bollinger Bands strategies"
 )
 
 st.sidebar.header("Filters")
@@ -131,7 +131,7 @@ elif selected_strategy == "macd":
         "MACD Slow Period", min_value=1, max_value=200, value=26)
     macd_signal = st.sidebar.number_input(
         "MACD Signal Period", min_value=1, max_value=100, value=9)
-elif selected_strategy == "bollinger":
+elif selected_strategy == "bbands":
     boll_window = st.sidebar.number_input(
         "Bollinger Window", min_value=1, max_value=200, value=20)
     boll_std = st.sidebar.number_input(
@@ -218,7 +218,7 @@ with col1:
                     signals = strategy_fn(df_copy, fast_period=macd_fast,
                                           slow_period=macd_slow,
                                           signal_period=macd_signal)
-                elif (selected_strategy == "bollinger" and
+                elif (selected_strategy == "bbands" and
                       all([boll_window, boll_std])):
                     signals = strategy_fn(df_copy, window=boll_window,
                                           num_std=boll_std)
@@ -265,7 +265,7 @@ with col1:
                 ax.plot(df_copy['timestamp'], df_copy[f'sma_{sma_long}'],
                         label=f'SMA {sma_long}', color='red', alpha=0.7)
 
-            if selected_strategy == "bollinger":
+            if selected_strategy == "bbands":
                 ax.plot(df_copy['timestamp'], df_copy['upper_band'],
                         label='Upper Band', color='orange', alpha=0.6)
                 ax.plot(df_copy['timestamp'], df_copy['middle_band'],
