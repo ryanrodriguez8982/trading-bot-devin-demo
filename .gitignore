@@ -212,3 +212,5 @@ __marimo__/
 
 # Local config overlay
 config.local.json
+signals.db
+logs/

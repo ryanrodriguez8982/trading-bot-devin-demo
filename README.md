@@ -134,10 +134,10 @@ pytest tests/
 
 ## Logging
 
-The bot automatically logs all trading signals to both files and a SQLite database:
+The bot automatically logs all trading signals to both files and a SQLite database located in a state directory. By default this directory is `~/.local/state/trading-bot` on Unix-like systems or `%APPDATA%/trading-bot` on Windows. You can override the location with the `--state-dir` option:
 
 ### File Logging
-- **Log Location**: `logs/{timestamp}_signals.log`
+- **Log Location**: `<state_dir>/logs/{timestamp}_signals.log`
 - **Log Format**: Each line contains timestamp, action, symbol, and price
 - **Example**: `2024-01-01 10:30:00 | BUY | BTC/USDT | $50000.00`
 
@@ -153,7 +153,7 @@ Generated at: 2024-01-01 10:30:00
 ```
 
 ### Database Logging
-- **Database Location**: `signals.db` (SQLite database in project root)
+- **Database Location**: `signals.db` within the state directory
 - **Table Schema**: `signals(timestamp TEXT, action TEXT, price REAL, symbol TEXT, strategy_id TEXT)`
 - **Strategy ID**: Defaults to 'sma' for the SMA crossover strategy
 
@@ -348,7 +348,7 @@ streamlit run dashboard.py
 - **Strategy Filter Dropdown**: Quickly switch between SMA, RSI, MACD or BBands views
 
 
-- The dashboard loads signals from the `signals.db` database and displays:
+- The dashboard loads signals from the `signals.db` database in the state directory and displays:
 - Price charts with strategy-specific indicators
 - Buy/sell signal markers overlaid on price data
 - Filterable table showing timestamp, action, price, symbol, and strategy
