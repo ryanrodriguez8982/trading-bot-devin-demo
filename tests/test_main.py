@@ -166,6 +166,17 @@ def test_run_single_analysis():
     """Test the run_single_analysis function with mock data."""
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
     from main import run_single_analysis
-    
+
     signals = run_single_analysis("BTC/USDT", "1m", 100, 5, 20)
     assert isinstance(signals, list), "Should return a list of signals"
+
+
+def test_log_order_to_file(tmp_path):
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import log_order_to_file
+
+    order = {"id": "1", "amount": 1, "price": 100.0, "side": "buy"}
+    log_order_to_file(order, "BTC/USDT", state_dir=str(tmp_path))
+    log_file = tmp_path / "logs" / "orders.log"
+    assert log_file.exists()
+    assert "BTC/USDT" in log_file.read_text()
