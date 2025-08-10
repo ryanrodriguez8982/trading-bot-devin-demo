@@ -26,3 +26,7 @@ class Broker(ABC):
     @abstractmethod
     def get_open_positions(self) -> Dict[str, float]:
         """Return open positions keyed by symbol."""
+
+    @abstractmethod
+    def set_price(self, symbol: str, price: float) -> None:
+        """Cache price for ``symbol`` if supported."""

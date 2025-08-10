@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from typing import Optional
 
 from trading_bot.risk_config import PositionSizingConfig
 
@@ -16,8 +17,8 @@ def calculate_position_size(
     price: float,
     equity: float,
     *,
-    lot_size: float | None = None,
-    precision: int | None = None,
+    lot_size: Optional[float] = None,
+    precision: Optional[int] = None,
 ) -> float:
     """Return the trade quantity for a given price and account equity.
 
@@ -29,10 +30,10 @@ def calculate_position_size(
         Current asset price.
     equity: float
         Current portfolio equity in quote currency (e.g., USD).
-    lot_size: float | None
+    lot_size: float or None
         Minimum tradable increment.  If provided the result is floored to a
         multiple of ``lot_size``.
-    precision: int | None
+    precision: int or None
         Optional decimal precision.  If given, the result is rounded down to
         this number of decimal places.
     """

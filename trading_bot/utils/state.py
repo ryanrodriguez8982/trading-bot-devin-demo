@@ -7,9 +7,9 @@ def default_state_dir() -> str:
     if os.name == "nt":
         base = os.environ.get("APPDATA")
         if not base:
-            base = Path.home() / "AppData" / "Roaming"
-        return os.path.join(str(base), "trading-bot")
+            base = str(Path.home() / "AppData" / "Roaming")
+        return os.path.join(base, "trading-bot")
     base = os.environ.get("XDG_STATE_HOME")
     if not base:
-        base = Path.home() / ".local" / "state"
-    return os.path.join(str(base), "trading-bot")
+        base = str(Path.home() / ".local" / "state")
+    return os.path.join(base, "trading-bot")

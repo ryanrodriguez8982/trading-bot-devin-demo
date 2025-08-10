@@ -7,6 +7,7 @@ import os
 import logging
 import sqlite3
 import ccxt
+from typing import Optional
 from trading_bot.exchange import create_exchange
 
 from trading_bot.utils.config import get_config
@@ -55,16 +56,16 @@ def _fetch_price_data(symbol: str):
 def _add_indicators(
     df: pd.DataFrame,
     strategy: str,
-    sma_short: int | None = None,
-    sma_long: int | None = None,
-    rsi_period: int | None = None,
-    lower_thresh: int | None = None,
-    upper_thresh: int | None = None,
-    macd_fast: int | None = None,
-    macd_slow: int | None = None,
-    macd_signal: int | None = None,
-    boll_window: int | None = None,
-    boll_std: float | None = None,
+    sma_short: Optional[int] = None,
+    sma_long: Optional[int] = None,
+    rsi_period: Optional[int] = None,
+    lower_thresh: Optional[int] = None,
+    upper_thresh: Optional[int] = None,
+    macd_fast: Optional[int] = None,
+    macd_slow: Optional[int] = None,
+    macd_signal: Optional[int] = None,
+    boll_window: Optional[int] = None,
+    boll_std: Optional[float] = None,
 ):
     """Return copy of df with strategy-specific indicator columns."""
     df = df.copy()
