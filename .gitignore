@@ -5,6 +5,11 @@ __pycache__/
 *.pyc
 .env
 *.log
+# Build/test artifacts
+trading_bot.egg-info/
+.pytest_cache/
+.ruff_cache/
+signals.db
 
 # C extensions
 *.so
@@ -52,7 +57,6 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
-.pytest_cache/
 cover/
 
 # Translations
@@ -60,7 +64,6 @@ cover/
 *.pot
 
 # Django stuff:
-*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -192,8 +195,6 @@ cython_debug/
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 
-# Ruff stuff:
-.ruff_cache/
 
 # PyPI configuration file
 .pypirc
