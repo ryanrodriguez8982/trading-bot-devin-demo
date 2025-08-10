@@ -204,7 +204,9 @@ Example `config.json`:
     "bbands_window": 20,
     "bbands_std": 2,
     "trade_size": 1.0,
-    "fees_bps": 0
+    "broker": {
+        "fees_bps": 0
+    }
 }
 ```
 
@@ -218,7 +220,7 @@ To enable live trading, supply your API credentials **via environment variables*
 
 You may also pass them on the command line using `--api-key`, `--api-secret` and `--api-passphrase` flags. Never commit real keys to the repository.
 
-`config.json` lets you specify `api_key`, `api_secret`, `api_passphrase` and the default `trade_size` for each order along with `fees_bps`. Adjust these and the dashboard's **Starting Balance** input to tune PnL calculations.
+`config.json` lets you specify `api_key`, `api_secret`, `api_passphrase` and the default `trade_size` for each order along with broker fee settings (`fees_bps`). Adjust these and the dashboard's **Starting Balance** input to tune PnL calculations.
 
 Run the bot with `--live --live-trade` to place real orders once your keys are configured.
 
