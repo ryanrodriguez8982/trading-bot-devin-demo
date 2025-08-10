@@ -440,9 +440,9 @@ def main():
 
     state_dir = args.state_dir or default_state_dir()
     os.makedirs(state_dir, exist_ok=True)
-    api_key = args.api_key or os.getenv('TRADING_BOT_API_KEY') or config.get('api_key')
-    api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
-    api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
+    api_key = args.api_key or config.get('api_key')
+    api_secret = args.api_secret or config.get('api_secret')
+    api_passphrase = args.api_passphrase or config.get('api_passphrase')
     trade_size = args.trade_size if args.trade_size is not None else config.get('trade_size', 1.0)
     broker_cfg = config.get('broker', {})
     fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get('fees_bps', config.get('fees_bps', 0.0))

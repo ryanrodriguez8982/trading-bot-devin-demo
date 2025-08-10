@@ -25,3 +25,18 @@ def test_config_overlays_and_cli_precedence(tmp_path):
 
     final_symbol = args.symbol or config.get("symbol")
     assert final_symbol == "DOGE/USDT"
+
+
+def test_env_overrides_secrets(tmp_path, monkeypatch):
+    base = {"api_key": "file_key", "api_secret": "file_secret", "api_passphrase": "file_pass"}
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(base))
+
+    monkeypatch.setenv("TRADING_BOT_API_KEY", "env_key")
+    monkeypatch.setenv("TRADING_BOT_API_SECRET", "env_secret")
+    monkeypatch.setenv("TRADING_BOT_API_PASSPHRASE", "env_pass")
+
+    config = load_config(config_dir=str(tmp_path))
+    assert config["api_key"] == "env_key"
+    assert config["api_secret"] == "env_secret"
+    assert config["api_passphrase"] == "env_pass"

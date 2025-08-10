@@ -8,8 +8,9 @@ Set your exchange API keys so the bot can authenticate:
 ```bash
 export TRADING_BOT_API_KEY="your_api_key"
 export TRADING_BOT_API_SECRET="your_api_secret"
+export TRADING_BOT_API_PASSPHRASE="your_api_passphrase" # if required
 ```
-Keep these secrets secure and never commit them to source control.
+Keep these secrets secure and never commit them to source control. When set, they automatically override any values stored in config files.
 
 ## 2. Start with a Dry Run
 Run the bot in live mode **without** enabling real trades to verify behaviour and logging:
