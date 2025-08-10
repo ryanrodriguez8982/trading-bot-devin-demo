@@ -2,6 +2,9 @@ import pandas as pd
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
 def macd_strategy(df, fast_period=12, slow_period=26, signal_period=9):
     """Generate trading signals based on MACD crossovers.
 
@@ -15,14 +18,14 @@ def macd_strategy(df, fast_period=12, slow_period=26, signal_period=9):
         list: dictionaries with ``timestamp``, ``action`` and ``price``.
     """
     if df is None or df.empty:
-        logging.warning("Empty dataframe provided to MACD strategy")
+        logger.warning("Empty dataframe provided to MACD strategy")
         return []
 
     if 'close' not in df.columns:
         raise KeyError('close')
 
     if len(df) < slow_period:
-        logging.warning(
+        logger.warning(
             f"Not enough data for {slow_period}-period EMA calculation"
         )
         return []
@@ -55,5 +58,5 @@ def macd_strategy(df, fast_period=12, slow_period=26, signal_period=9):
                 'price': df.iloc[i]['close']
             })
 
-    logging.info(f"Generated {len(signals)} MACD crossover signals")
+    logger.info(f"Generated {len(signals)} MACD crossover signals")
     return signals

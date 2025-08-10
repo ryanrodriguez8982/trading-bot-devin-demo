@@ -4,6 +4,9 @@ from datetime import datetime
 
 from trading_bot.utils.config import get_config
 
+
+logger = logging.getLogger(__name__)
+
 CONFIG = get_config()
 DEFAULT_SMA_SHORT = CONFIG.get("sma_short", 5)
 DEFAULT_SMA_LONG = CONFIG.get("sma_long", 20)
@@ -25,7 +28,7 @@ def sma_crossover_strategy(df, sma_short=DEFAULT_SMA_SHORT, sma_long=DEFAULT_SMA
         list: List of dictionaries with 'timestamp', 'action' ('buy'/'sell')
     """
     if len(df) < sma_long:
-        logging.warning(f"Not enough data for {sma_long}-period SMA calculation")
+        logger.warning(f"Not enough data for {sma_long}-period SMA calculation")
         return []
     
     df = df.copy()
@@ -56,5 +59,5 @@ def sma_crossover_strategy(df, sma_short=DEFAULT_SMA_SHORT, sma_long=DEFAULT_SMA
                 'price': df.iloc[i]['close']
             })
     
-    logging.info(f"Generated {len(signals)} trading signals")
+    logger.info(f"Generated {len(signals)} trading signals")
     return signals

@@ -1,7 +1,11 @@
 import logging
+import logging
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Optional, Any
 import pandas as pd
+
+
+logger = logging.getLogger(__name__)
 
 
 def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, required: int = 2):
@@ -22,7 +26,7 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
     try:
         from trading_bot.strategies import STRATEGY_REGISTRY  # avoid circular import
     except ImportError as e:
-        logging.error(f"Failed to import STRATEGY_REGISTRY: {e}")
+        logger.error(f"Failed to import STRATEGY_REGISTRY: {e}")
         return []
 
     # Collect signals from member strategies
@@ -30,12 +34,12 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
     for name in members:
         strategy_fn = STRATEGY_REGISTRY.get(name)
         if not callable(strategy_fn):
-            logging.warning(f"Unknown strategy in confluence: {name}")
+            logger.warning(f"Unknown strategy in confluence: {name}")
             continue
         try:
             signals = strategy_fn(df)
         except Exception as exc:
-            logging.exception(f"Error executing strategy '{name}': {exc}")
+            logger.exception(f"Error executing strategy '{name}': {exc}")
             continue
         for sig in signals:
             ts = sig["timestamp"]

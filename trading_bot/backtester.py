@@ -13,6 +13,9 @@ from trading_bot.portfolio import Portfolio
 from trading_bot.utils.config import get_config
 
 
+logger = logging.getLogger(__name__)
+
+
 CONFIG = get_config()
 DEFAULT_INITIAL_CAPITAL = 10000.0
 DEFAULT_TRADE_SIZE = CONFIG.get("trade_size", 1.0)
@@ -237,18 +240,18 @@ def run_backtest(
 
     if equity_out:
         eq_df.to_csv(equity_out, index=False)
-        logging.info(f"Equity curve saved to {equity_out}")
+        logger.info(f"Equity curve saved to {equity_out}")
     else:
-        logging.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
+        logger.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
 
     if stats_out:
         with open(stats_out, 'w') as f:
             json.dump(stats, f, indent=2)
-        logging.info(f"Summary stats saved to {stats_out}")
+        logger.info(f"Summary stats saved to {stats_out}")
 
-    logging.info(f"Net PnL: {stats['net_pnl']:.2f}")
-    logging.info(f"Win rate: {stats['win_rate']:.2f}%")
-    logging.info(f"Max drawdown: {stats['max_drawdown']:.2f}%")
+    logger.info(f"Net PnL: {stats['net_pnl']:.2f}")
+    logger.info(f"Win rate: {stats['win_rate']:.2f}%")
+    logger.info(f"Max drawdown: {stats['max_drawdown']:.2f}%")
 
     if plot and chart_out:
         import matplotlib
@@ -261,6 +264,6 @@ def run_backtest(
         plt.title('Equity Curve')
         plt.tight_layout()
         plt.savefig(chart_out)
-        logging.info(f"Equity chart saved to {chart_out}")
+        logger.info(f"Equity chart saved to {chart_out}")
 
     return stats
