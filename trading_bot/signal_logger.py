@@ -72,7 +72,9 @@ def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
                 )
             
             conn.commit()
-            logging.info(f"Logged {len(signals)} signals to database {db_path}")
+            logging.debug(
+                "Logged %d signals to database %s", len(signals), db_path
+            )
             
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
@@ -106,7 +108,12 @@ def log_trade_to_db(trade, db_path=None):
                 ),
             )
             conn.commit()
-            logging.info(f"Logged trade {trade['side']} {trade['symbol']} to database {db_path}")
+            logging.debug(
+                "Logged trade %s %s to database %s",
+                trade['side'],
+                trade['symbol'],
+                db_path,
+            )
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
         raise

@@ -52,7 +52,7 @@ def tune(csv_path, strategy="sma", param_grid=None):
     results = []
     for combo in itertools.product(*values):
         params = dict(zip(keys, combo))
-        logging.info("Testing %s", params)
+        logging.debug("Testing %s", params)
         stats = run_backtest(csv_path, strategy=strategy, **params)
         result = {"params": params}
         result.update(stats)

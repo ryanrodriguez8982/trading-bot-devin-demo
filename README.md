@@ -52,6 +52,10 @@ Use CLI flags to control logging:
 trading-bot --log-level DEBUG --json-logs
 ```
 
+Normal runs typically use `INFO` (or even `WARNING`) to keep output concise.
+Set `--log-level DEBUG` when troubleshooting to see detailed indicator
+calculations and trade processing steps.
+
 ### Option 2: Direct Python Execution
 
 For development or if you prefer not to install:

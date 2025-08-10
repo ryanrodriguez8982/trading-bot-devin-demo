@@ -153,7 +153,7 @@ def log_signals_to_file(signals, symbol, state_dir=None):
         for signal in signals:
             ts = signal['timestamp'].isoformat()
             f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
-    logging.info(f"Logged {len(signals)} signals to {log_path}")
+    logging.debug("Logged %d signals to %s", len(signals), log_path)
 
 def log_order_to_file(order, symbol, state_dir=None):
     if not order:
@@ -169,7 +169,7 @@ def log_order_to_file(order, symbol, state_dir=None):
         price = order.get('price')
         side = order.get('side')
         f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
-    logging.info(f"Logged order {order_id} to {log_path}")
+    logging.debug("Logged order %s to %s", order_id, log_path)
 
 def send_alert(signal):
     ts = signal['timestamp'].isoformat()
@@ -207,7 +207,7 @@ def run_single_analysis(
             data = fetch_btc_usdt_data(symbol, timeframe, limit, exchange=exchange)
         else:
             data = fetch_btc_usdt_data(symbol, timeframe, limit)
-        logging.info(f"Fetched {len(data)} data points")
+        logging.debug("Fetched %d data points", len(data))
 
         strategy_fn = STRATEGY_REGISTRY[strategy]
         if strategy == "rsi":
@@ -234,7 +234,7 @@ def run_single_analysis(
         else:
             signals = strategy_fn(data, sma_short, sma_long)
 
-        logging.info(f"Generated {len(signals)} trading signals")
+        logging.debug("Generated %d trading signals", len(signals))
         if signals:
             log_signals_to_file(signals, symbol, state_dir)
             db_path = os.path.join(state_dir or default_state_dir(), 'signals.db')
@@ -305,7 +305,7 @@ def run_live_mode(
                 logging.warning("Guardrails triggered - halting trading")
                 break
             if guardrails.cooling_down():
-                logging.info("Guardrails active - skipping iteration")
+                logging.debug("Guardrails active - skipping iteration")
                 time.sleep(interval_seconds)
                 continue
 
@@ -336,7 +336,7 @@ def run_live_mode(
                         signal["action"],
                         db_path=db_path,
                     ):
-                        logging.info(
+                        logging.debug(
                             json.dumps(
                                 {
                                     "symbol": symbol,
@@ -353,7 +353,7 @@ def run_live_mode(
                     if live_trade and exchange:
                         order = execute_trade(exchange, symbol, signal["action"], trade_amount)
                         log_order_to_file(order, symbol, state_dir)
-                        logging.info(
+                        logging.debug(
                             json.dumps(
                                 {
                                     "symbol": symbol,
@@ -369,7 +369,7 @@ def run_live_mode(
                                 portfolio.buy(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
                             else:
                                 portfolio.sell(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
-                            logging.info(
+                            logging.debug(
                                 json.dumps(
                                     {
                                         "symbol": symbol,

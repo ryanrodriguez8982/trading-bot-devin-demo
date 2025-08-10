@@ -42,6 +42,13 @@ def macd_strategy(df, fast_period=12, slow_period=26, signal_period=9):
         curr_macd = df.iloc[i]['macd']
         curr_signal = df.iloc[i]['signal']
 
+        logging.debug(
+            "t=%s macd=%.2f signal=%.2f",
+            df.iloc[i]['timestamp'],
+            curr_macd,
+            curr_signal,
+        )
+
         if prev_macd <= prev_signal and curr_macd > curr_signal:
             signals.append({
                 'timestamp': df.iloc[i]['timestamp'],
@@ -55,5 +62,5 @@ def macd_strategy(df, fast_period=12, slow_period=26, signal_period=9):
                 'price': df.iloc[i]['close']
             })
 
-    logging.info(f"Generated {len(signals)} MACD crossover signals")
+    logging.debug("Generated %d MACD crossover signals", len(signals))
     return signals
