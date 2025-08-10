@@ -1,6 +1,6 @@
-import logging
 from typing import List, Dict, Any
 
+import logging
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def bbands_strategy(df: pd.DataFrame, window: int = 20, num_std: float = 2) -> L
         return []
 
     if 'timestamp' not in df.columns or 'close' not in df.columns:
-        raise ValueError("DataFrame must include 'timestamp' and 'close' columns")
+        raise KeyError("DataFrame must include 'timestamp' and 'close' columns")
 
     if len(df) < window:
         logger.warning("Not enough data for %d-period Bollinger Bands", window)

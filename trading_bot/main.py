@@ -1,32 +1,31 @@
-import logging
-import json
 import argparse
+import json
+import logging
 import os
-import time
 import signal as sig
 import sys
+import time
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any, Dict, List, Optional
 
-from trading_bot.utils.state import default_state_dir
-from trading_bot.utils.config import get_config
-from trading_bot.utils.logging_config import setup_logging
-
-# Package modules
 from trading_bot.backtester import run_backtest
+from trading_bot.broker import CcxtSpotBroker, PaperBroker
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.exchange import create_exchange, execute_trade
-from trading_bot.signal_logger import (
-    log_signals_to_db,
-    mark_signal_handled,
-    log_trade_to_db,
-)
+from trading_bot.notify import configure as configure_alerts
 from trading_bot.portfolio import Portfolio
 from trading_bot.risk.position_sizing import calculate_position_size
-from trading_bot.broker import PaperBroker, CcxtSpotBroker
-from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
-from trading_bot.notify import configure as configure_alerts
 from trading_bot.risk_config import get_risk_config
+from trading_bot.signal_logger import (
+    log_signals_to_db,
+    log_trade_to_db,
+    mark_signal_handled,
+)
+from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.utils.config import get_config
+from trading_bot.utils.logging_config import setup_logging
+from trading_bot.utils.state import default_state_dir
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -155,7 +154,12 @@ def parse_args():
     return args
 
 
-def log_signals_to_file(signals, symbol, state_dir=None):
+
+def log_signals_to_file(
+    signals: List[Dict[str, Any]],
+    symbol: str,
+    state_dir: Optional[str] = None,
+) -> None:
     if not signals:
         return
     state_dir = state_dir or default_state_dir()
@@ -164,20 +168,22 @@ def log_signals_to_file(signals, symbol, state_dir=None):
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(logs_dir, f"{timestamp}_signals.log")
     with open(log_path, "w", encoding="utf-8") as f:
-        f.write(f"Trading Signals Log - {symbol}
-")
-        f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()}
-")
-        f.write("=" * 50 + "
-")
+        f.write(f"Trading Signals Log - {symbol}\n")
+        f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()}\n")
+        f.write("=" * 50 + "\n")
         for signal in signals:
             ts = signal["timestamp"].isoformat()
-            f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}
-")
+            f.write(
+                f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n"
+            )
     logger.info("Logged %d signals to %s", len(signals), log_path)
 
 
-def log_order_to_file(order, symbol, state_dir=None):
+def log_order_to_file(
+    order: Dict[str, Any],
+    symbol: str,
+    state_dir: Optional[str] = None,
+) -> None:
     if not order:
         return
     state_dir = state_dir or default_state_dir()
@@ -190,11 +196,8 @@ def log_order_to_file(order, symbol, state_dir=None):
         amount = order.get("amount")
         price = order.get("price")
         side = order.get("side")
-        f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}
-")
+        f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
     logger.info("Logged order %s to %s", order.get("id", "N/A"), log_path)
-
-
 def send_alert(signal):
     ts = signal["timestamp"].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
