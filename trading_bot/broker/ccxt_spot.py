@@ -55,7 +55,7 @@ class CcxtSpotBroker(Broker):
         if exchange is not None:
             self.exchange = exchange
         else:
-            name = exchange_name or os.getenv("EXCHANGE", "binance")
+            name = exchange_name or os.getenv("EXCHANGE") or "binance"
             key = api_key or os.getenv("API_KEY")
             secret = api_secret or os.getenv("API_SECRET")
             params: Dict[str, Any] = {}
@@ -161,6 +161,7 @@ class CcxtSpotBroker(Broker):
                 if attempt == self.retries - 1:
                     raise
                 time.sleep(self.backoff * (2 ** attempt))
+        raise RuntimeError("unreachable")
 
 
 __all__ = ["CcxtSpotBroker"]

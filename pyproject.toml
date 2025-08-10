@@ -42,3 +42,9 @@ include = ["trading_bot"]
 
 [tool.setuptools.package-data]
 "trading_bot" = ["*.json"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+ignore = ["E402", "F401", "F811", "F841"]

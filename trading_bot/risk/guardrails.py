@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from trading_bot.notify import send as notify_send
 
@@ -42,9 +43,9 @@ class Guardrails:
     cooldown_minutes: int = 0
 
     # Internal state
-    month_start_equity: float | None = None
+    month_start_equity: Optional[float] = None
     consecutive_losses: int = 0
-    cooldown_until: datetime | None = None
+    cooldown_until: Optional[datetime] = None
 
     def reset_month(self, equity: float) -> None:
         """Reset the month starting equity."""
@@ -72,7 +73,7 @@ class Guardrails:
 
     # ------------------------------------------------------------------
     # Cooldown checks
-    def record_trade(self, pnl: float, *, now: datetime | None = None) -> None:
+    def record_trade(self, pnl: float, *, now: Optional[datetime] = None) -> None:
         """Record the outcome of a trade.
 
         Negative ``pnl`` values count as losses and may trigger a cooldown
@@ -90,7 +91,7 @@ class Guardrails:
         else:
             self.consecutive_losses = 0
 
-    def cooling_down(self, *, now: datetime | None = None) -> bool:
+    def cooling_down(self, *, now: Optional[datetime] = None) -> bool:
         """Return ``True`` if currently in a cooldown period."""
         if self.cooldown_until is None:
             return False
@@ -98,7 +99,7 @@ class Guardrails:
         return now < self.cooldown_until
 
     # ------------------------------------------------------------------
-    def allow_trade(self, equity: float, *, now: datetime | None = None) -> bool:
+    def allow_trade(self, equity: float, *, now: Optional[datetime] = None) -> bool:
         """Return ``True`` if trading is allowed.
 
         Trading is disallowed if either the drawdown threshold has been

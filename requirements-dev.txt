@@ -1,3 +1,6 @@
 -r requirements.txt
 pytest
 flake8
+ruff
+mypy
+pytest-cov

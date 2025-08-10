@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from functools import lru_cache
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 
 def _deep_update(base: Dict, override: Dict) -> Dict:
@@ -15,7 +15,7 @@ def _deep_update(base: Dict, override: Dict) -> Dict:
     return base
 
 
-def load_config(config_dir: str | None = None) -> Dict:
+def load_config(config_dir: Optional[str] = None) -> Dict:
     """Load configuration with optional local overrides.
 
     Parameters
@@ -106,6 +106,6 @@ def _validate_config(config: Dict) -> None:
 
 
 @lru_cache(maxsize=1)
-def get_config(config_dir: str | None = None) -> Dict:
+def get_config(config_dir: Optional[str] = None) -> Dict:
     """Return the merged configuration, caching the result."""
     return load_config(config_dir)

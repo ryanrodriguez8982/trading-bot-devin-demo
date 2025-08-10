@@ -6,7 +6,14 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from trading_bot.signal_logger import log_signals_to_db, get_signals_from_db
+import trading_bot.signal_logger as signal_logger
+from trading_bot.signal_logger import (
+    get_signals_from_db,
+    get_trades_from_db,
+    log_signals_to_db,
+    log_trade_to_db,
+    mark_signal_handled,
+)
 
 
 def test_log_signals_to_db(tmp_path):
@@ -73,6 +80,15 @@ def test_get_signals_from_db(tmp_path):
 def test_empty_signals_list(tmp_path):
     """Test that empty signals list is handled gracefully."""
     log_signals_to_db([], "BTC/USDT", "sma", db_path=str(tmp_path / "signals.db"))
+
+
+def test_log_signals_default_path(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        signal_logger, "_default_db_path", lambda: str(tmp_path / "signals.db")
+    )
+    signals = [{"timestamp": pd.Timestamp("2024-01-01"), "action": "buy", "price": 1}]
+    log_signals_to_db(signals, "BTC/USDT")
+    assert (tmp_path / "signals.db").exists()
 
 
 def test_database_schema(tmp_path):
@@ -156,3 +172,103 @@ def test_timestamp_parsing_failure(tmp_path):
     malformed_signal = [{'timestamp': 'invalid-date', 'action': 'buy', 'price': 50}]
     with pytest.raises(AttributeError):
         log_signals_to_db(malformed_signal, "BTC/USDT", db_path=str(db_file))
+
+
+def test_log_trade_and_get_trades(tmp_path):
+    trade = {
+        "timestamp": "2024-01-01T00:00:00",
+        "symbol": "BTC/USDT",
+        "side": "buy",
+        "qty": 1,
+        "price": 100,
+        "fee": 0,
+        "strategy": "sma",
+        "broker": "paper",
+    }
+    db_path = tmp_path / "trades.db"
+    log_trade_to_db(trade, db_path=str(db_path))
+    trades = get_trades_from_db(symbol="BTC/USDT", db_path=str(db_path))
+    assert len(trades) == 1
+    assert trades[0][1] == "BTC/USDT"
+
+
+def test_log_trade_invalid(tmp_path):
+    db_path = tmp_path / "bad.db"
+    with pytest.raises(KeyError):
+        log_trade_to_db({"timestamp": "2024-01-01"}, db_path=str(db_path))
+
+
+def test_log_trade_db_error(monkeypatch):
+    trade = {
+        "timestamp": "2024-01-01T00:00:00",
+        "symbol": "BTC/USDT",
+        "side": "buy",
+        "qty": 1,
+        "price": 100,
+    }
+
+    def bad_connect(*args, **kwargs):  # pragma: no cover - used for testing error path
+        raise sqlite3.OperationalError("locked")
+
+    monkeypatch.setattr(sqlite3, "connect", bad_connect)
+    with pytest.raises(sqlite3.OperationalError):
+        log_trade_to_db(trade)
+
+
+def test_mark_signal_handled(tmp_path):
+    db_path = tmp_path / "processed.db"
+    first = mark_signal_handled(
+        "BTC/USDT", "sma", "1m", "123", "buy", db_path=str(db_path)
+    )
+    second = mark_signal_handled(
+        "BTC/USDT", "sma", "1m", "123", "buy", db_path=str(db_path)
+    )
+    assert first is False
+    assert second is True
+
+
+def test_mark_signal_handled_default_path(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        signal_logger, "_default_db_path", lambda: str(tmp_path / "proc.db")
+    )
+    assert mark_signal_handled("BTC/USDT", "sma", "1m", "1", "buy") is False
+
+
+def test_mark_signal_handled_db_error(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        signal_logger, "_default_db_path", lambda: str(tmp_path / "proc.db")
+    )
+
+    def bad_connect(*args, **kwargs):
+        raise sqlite3.OperationalError("locked")
+
+    monkeypatch.setattr(sqlite3, "connect", bad_connect)
+    with pytest.raises(sqlite3.OperationalError):
+        mark_signal_handled("BTC/USDT", "sma", "1m", "1", "buy")
+
+
+def test_get_trades_db_error(monkeypatch, tmp_path):
+    def bad_connect(*args, **kwargs):
+        raise sqlite3.OperationalError("boom")
+
+    monkeypatch.setattr(sqlite3, "connect", bad_connect)
+    result = get_trades_from_db(db_path=str(tmp_path / "t.db"))
+    assert result == []
+
+
+def test_get_signals_default_path(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        signal_logger, "_default_db_path", lambda: str(tmp_path / "sigs.db")
+    )
+    assert get_signals_from_db() == []
+
+
+def test_get_signals_db_error(monkeypatch, tmp_path):
+    db = tmp_path / "sigs.db"
+    db.touch()
+
+    def bad_connect(*args, **kwargs):
+        raise sqlite3.OperationalError("boom")
+
+    monkeypatch.setattr(sqlite3, "connect", bad_connect)
+    assert get_signals_from_db(db_path=str(db)) == []

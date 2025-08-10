@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -160,7 +160,10 @@ def _apply_overrides(config: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[
     return config
 
 
-def get_risk_config(config_dict: Dict[str, Any] | None = None, overrides: Dict[str, Any] | None = None) -> RiskConfig:
+def get_risk_config(
+    config_dict: Optional[Dict[str, Any]] = None,
+    overrides: Optional[Dict[str, Any]] = None,
+) -> RiskConfig:
     """Merge defaults with config/CLI overrides and return a validated RiskConfig."""
     merged: Dict[str, Any] = {}
     _deep_merge(merged, DEFAULT_RISK_DICT.copy())

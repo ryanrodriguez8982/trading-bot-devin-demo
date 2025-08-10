@@ -4,6 +4,7 @@ import pandas as pd
 import logging
 import os
 import json
+from typing import Any, Callable, Optional, cast
 
 # ? Absolute import for package compatibility
 from trading_bot.signal_logger import log_signals_to_db
@@ -67,9 +68,9 @@ def simulate_equity(
     trade_size: float = DEFAULT_TRADE_SIZE,
     fees_bps: float = 0.0,
     slippage_bps: float = 0.0,
-    stop_loss_pct: float | None = None,
-    take_profit_rr: float | None = None,
-    trailing_stop_pct: float | None = None,
+    stop_loss_pct: Optional[float] = None,
+    take_profit_rr: Optional[float] = None,
+    trailing_stop_pct: Optional[float] = None,
     symbol: str = "asset",
 ):
     portfolio = Portfolio(cash=initial_capital)
@@ -105,10 +106,10 @@ def simulate_equity(
                 exit_price = pos.take_profit
             if exit_price is not None:
                 exec_price = exit_price * (1 - slippage_bps / 10_000)
-                avg_cost = pos.avg_cost
+                exit_avg_cost = pos.avg_cost
                 qty = pos.qty
                 portfolio.sell(symbol, qty, exec_price, fee_bps=fees_bps)
-                trade_profits.append((exec_price - avg_cost) * qty)
+                trade_profits.append((exec_price - exit_avg_cost) * qty)
                 highest_prices.pop(symbol, None)
 
         while current_signal is not None and current_signal['timestamp'] <= ts:
@@ -138,7 +139,9 @@ def simulate_equity(
                 elif action == 'sell':
                     sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
-                    avg_cost = pos.avg_cost if pos and pos.qty >= trade_size else None
+                    avg_cost: Optional[float] = (
+                        pos.avg_cost if pos and pos.qty >= trade_size else None
+                    )
                     portfolio.sell(symbol, trade_size, sell_price, fee_bps=fees_bps)
                     highest_prices.pop(symbol, None)
                     if avg_cost is not None:
@@ -183,9 +186,9 @@ def run_backtest(
     trade_size=DEFAULT_TRADE_SIZE,
     fees_bps=0.0,
     slippage_bps: float = 0.0,
-    stop_loss_pct: float | None = None,
-    take_profit_rr: float | None = None,
-    trailing_stop_pct: float | None = None,
+    stop_loss_pct: Optional[float] = None,
+    take_profit_rr: Optional[float] = None,
+    trailing_stop_pct: Optional[float] = None,
     confluence_members=None,
     confluence_required=2,
 ):
@@ -195,7 +198,7 @@ def run_backtest(
     if strategy not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy")
 
-    strategy_fn = STRATEGY_REGISTRY[strategy]
+    strategy_fn = cast(Callable[..., list[dict[str, Any]]], STRATEGY_REGISTRY[strategy])
     if strategy == 'rsi':
         signals = strategy_fn(df, period=rsi_period)
     elif strategy == 'macd':
