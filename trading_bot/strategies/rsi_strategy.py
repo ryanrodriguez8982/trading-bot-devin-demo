@@ -3,6 +3,9 @@ import logging
 
 from trading_bot.utils.config import get_config
 
+
+logger = logging.getLogger(__name__)
+
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
 DEFAULT_RSI_LOWER = CONFIG.get("rsi_lower", 30)
@@ -27,11 +30,11 @@ def rsi_crossover_strategy(
         list: List of dictionaries with 'timestamp', 'action', 'price'.
     """
     if df is None or df.empty:
-        logging.warning("Empty dataframe provided to RSI strategy")
+        logger.warning("Empty dataframe provided to RSI strategy")
         return []
 
     if len(df) < period:
-        logging.warning(f"Not enough data for {period}-period RSI calculation")
+        logger.warning(f"Not enough data for {period}-period RSI calculation")
         return []
 
     df = df.copy()
@@ -66,7 +69,7 @@ def rsi_crossover_strategy(
                 'price': df.iloc[i]['close']
             })
 
-    logging.info(f"Generated {len(signals)} RSI crossover signals")
+    logger.info(f"Generated {len(signals)} RSI crossover signals")
     return signals
 
 # TODO(Devin): integrate RSI signals into Streamlit dashboard

@@ -1,10 +1,14 @@
 import logging
+import logging
 import random
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional, TypeVar
 
 from trading_bot.notify import send as notify_send
+
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -43,7 +47,7 @@ class RetryPolicy:
         attempt = 0
         while True:
             if self._circuit_open():
-                logging.error(f"Circuit breaker open for {func.__name__}")
+                logger.error(f"Circuit breaker open for {func.__name__}")
                 notify_send(f"Circuit breaker open for {func.__name__}")
                 raise RuntimeError("circuit breaker open")
             try:
@@ -53,11 +57,11 @@ class RetryPolicy:
             except Exception as e:  # pragma: no cover - generic catch
                 attempt += 1
                 self._record_failure()
-                logging.warning(
+                logger.warning(
                     f"{func.__name__} failed on attempt {attempt}: {e}", exc_info=True
                 )
                 if attempt > self.retries:
-                    logging.error(
+                    logger.error(
                         f"{func.__name__} failed after {self.retries} retries: {e}",
                         exc_info=True,
                     )

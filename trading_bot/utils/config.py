@@ -5,6 +5,9 @@ from functools import lru_cache
 from typing import Dict, Tuple, Optional
 
 
+logger = logging.getLogger(__name__)
+
+
 def _deep_update(base: Dict, override: Dict) -> Dict:
     """Recursively merge ``override`` into ``base``."""
     for key, value in override.items():
@@ -36,7 +39,7 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
         with open(config_path, "r") as f:
             config = json.load(f)
     except FileNotFoundError:
-        logging.warning("config.json not found, using default values")
+        logger.warning("config.json not found, using default values")
         config = {
             "symbol": "BTC/USDT",
             "timeframe": "1m",
@@ -56,7 +59,7 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
                 local_cfg = json.load(f)
             config = _deep_update(config, local_cfg)
         except (OSError, json.JSONDecodeError) as e:  # noqa: BLE001
-            logging.warning(f"Failed loading config.local.json: {e}")
+            logger.warning(f"Failed loading config.local.json: {e}")
     # Override sensitive values with environment variables if available
     env_api_key = os.getenv("TRADING_BOT_API_KEY")
     if env_api_key:

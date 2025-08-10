@@ -6,6 +6,9 @@ from typing import Optional
 from trading_bot.utils.state import default_state_dir
 
 
+logger = logging.getLogger(__name__)
+
+
 def _default_db_path() -> str:
     return os.path.join(default_state_dir(), "signals.db")
 
@@ -72,10 +75,10 @@ def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
                 )
             
             conn.commit()
-            logging.info(f"Logged {len(signals)} signals to database {db_path}")
+            logger.info(f"Logged {len(signals)} signals to database {db_path}")
             
     except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
         raise
 
 
@@ -106,12 +109,12 @@ def log_trade_to_db(trade, db_path=None):
                 ),
             )
             conn.commit()
-            logging.info(f"Logged trade {trade['side']} {trade['symbol']} to database {db_path}")
+            logger.info(f"Logged trade {trade['side']} {trade['symbol']} to database {db_path}")
     except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
         raise
     except (KeyError, ValueError, TypeError) as e:
-        logging.error(f"Error logging trade to database: {e}")
+        logger.error(f"Error logging trade to database: {e}")
         raise
 
 
@@ -164,7 +167,7 @@ def get_trades_from_db(symbol=None, limit=None, db_path=None):
             return cursor.fetchall()
 
     except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
         return []
 
 def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None):
@@ -215,7 +218,7 @@ def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None)
             return cursor.fetchall()
             
     except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
         return []
 
 
@@ -271,5 +274,5 @@ def mark_signal_handled(
             except sqlite3.IntegrityError:
                 return True
     except sqlite3.Error as e:
-        logging.error(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
         raise
