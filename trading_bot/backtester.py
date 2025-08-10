@@ -9,6 +9,20 @@ import json
 from trading_bot.signal_logger import log_signals_to_db
 from trading_bot.strategies import STRATEGY_REGISTRY
 from trading_bot.portfolio import Portfolio
+from trading_bot.utils.config import get_config
+
+
+CONFIG = get_config()
+DEFAULT_INITIAL_CAPITAL = 10000.0
+DEFAULT_TRADE_SIZE = CONFIG.get("trade_size", 1.0)
+DEFAULT_SMA_SHORT = CONFIG.get("sma_short", 5)
+DEFAULT_SMA_LONG = CONFIG.get("sma_long", 20)
+DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
+DEFAULT_MACD_FAST = CONFIG.get("macd_fast", 12)
+DEFAULT_MACD_SLOW = CONFIG.get("macd_slow", 26)
+DEFAULT_MACD_SIGNAL = CONFIG.get("macd_signal", 9)
+DEFAULT_BBANDS_WINDOW = CONFIG.get("bbands_window", 20)
+DEFAULT_BBANDS_STD = CONFIG.get("bbands_std", 2)
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -49,8 +63,8 @@ def compute_drawdown(equity_curve):
 def simulate_equity(
     df,
     signals,
-    initial_capital: float = 10000,
-    trade_size: float = 1.0,
+    initial_capital: float = DEFAULT_INITIAL_CAPITAL,
+    trade_size: float = DEFAULT_TRADE_SIZE,
     fees_bps: float = 0.0,
     slippage_bps: float = 0.0,
     stop_loss_pct: float | None = None,
@@ -154,19 +168,19 @@ def simulate_equity(
 def run_backtest(
     csv_path,
     strategy='sma',
-    sma_short=5,
-    sma_long=20,
-    rsi_period=14,
-    macd_fast=12,
-    macd_slow=26,
-    macd_signal=9,
-    bbands_window=20,
-    bbands_std=2,
+    sma_short=DEFAULT_SMA_SHORT,
+    sma_long=DEFAULT_SMA_LONG,
+    rsi_period=DEFAULT_RSI_PERIOD,
+    macd_fast=DEFAULT_MACD_FAST,
+    macd_slow=DEFAULT_MACD_SLOW,
+    macd_signal=DEFAULT_MACD_SIGNAL,
+    bbands_window=DEFAULT_BBANDS_WINDOW,
+    bbands_std=DEFAULT_BBANDS_STD,
     plot=False,
     equity_out=None,
     stats_out=None,
     chart_out=None,
-    trade_size=1.0,
+    trade_size=DEFAULT_TRADE_SIZE,
     fees_bps=0.0,
     slippage_bps: float = 0.0,
     stop_loss_pct: float | None = None,

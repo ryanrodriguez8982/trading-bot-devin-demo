@@ -25,6 +25,18 @@ config = get_config()
 exchange_name = config.get("exchange", "binance")
 exchange = create_exchange(exchange_name=exchange_name)
 
+DEFAULT_STARTING_BALANCE = 10000.0
+DEFAULT_SMA_SHORT = config.get("sma_short", 5)
+DEFAULT_SMA_LONG = config.get("sma_long", 20)
+DEFAULT_RSI_PERIOD = config.get("rsi_period", 14)
+DEFAULT_RSI_LOWER = config.get("rsi_lower", 30)
+DEFAULT_RSI_UPPER = config.get("rsi_upper", 70)
+DEFAULT_MACD_FAST = config.get("macd_fast", 12)
+DEFAULT_MACD_SLOW = config.get("macd_slow", 26)
+DEFAULT_MACD_SIGNAL = config.get("macd_signal", 9)
+DEFAULT_BOLL_WINDOW = config.get("bbands_window", 20)
+DEFAULT_BOLL_STD = config.get("bbands_std", 2.0)
+
 # Optional debug line in sidebar:
 st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
 
@@ -110,7 +122,10 @@ limit = st.sidebar.slider(
 
 # Starting balance for equity curve
 starting_balance = st.sidebar.number_input(
-    "Starting Balance (USDT)", min_value=100.0, value=10000.0, step=100.0
+    "Starting Balance (USDT)",
+    min_value=100.0,
+    value=DEFAULT_STARTING_BALANCE,
+    step=100.0,
 )
 
 # Strategy specific parameters
@@ -121,28 +136,33 @@ boll_window = boll_std = None
 
 if selected_strategy in ("All", "sma"):
     sma_short = st.sidebar.number_input(
-        "Short SMA Period", min_value=1, max_value=50, value=5)
+        "Short SMA Period", min_value=1, max_value=50, value=DEFAULT_SMA_SHORT)
     sma_long = st.sidebar.number_input(
-        "Long SMA Period", min_value=1, max_value=200, value=20)
+        "Long SMA Period", min_value=1, max_value=200, value=DEFAULT_SMA_LONG)
 elif selected_strategy == "rsi":
     rsi_period = st.sidebar.number_input(
-        "RSI Period", min_value=2, max_value=100, value=14)
+        "RSI Period", min_value=2, max_value=100, value=DEFAULT_RSI_PERIOD)
     lower_thresh = st.sidebar.number_input(
-        "RSI Lower Threshold", min_value=1, max_value=100, value=30)
+        "RSI Lower Threshold", min_value=1, max_value=100, value=DEFAULT_RSI_LOWER)
     upper_thresh = st.sidebar.number_input(
-        "RSI Upper Threshold", min_value=1, max_value=100, value=70)
+        "RSI Upper Threshold", min_value=1, max_value=100, value=DEFAULT_RSI_UPPER)
 elif selected_strategy == "macd":
     macd_fast = st.sidebar.number_input(
-        "MACD Fast Period", min_value=1, max_value=100, value=12)
+        "MACD Fast Period", min_value=1, max_value=100, value=DEFAULT_MACD_FAST)
     macd_slow = st.sidebar.number_input(
-        "MACD Slow Period", min_value=1, max_value=200, value=26)
+        "MACD Slow Period", min_value=1, max_value=200, value=DEFAULT_MACD_SLOW)
     macd_signal = st.sidebar.number_input(
-        "MACD Signal Period", min_value=1, max_value=100, value=9)
+        "MACD Signal Period", min_value=1, max_value=100, value=DEFAULT_MACD_SIGNAL)
 elif selected_strategy == "bbands":
     boll_window = st.sidebar.number_input(
-        "Bollinger Window", min_value=1, max_value=200, value=20)
+        "Bollinger Window", min_value=1, max_value=200, value=DEFAULT_BOLL_WINDOW)
     boll_std = st.sidebar.number_input(
-        "Bollinger Std Dev", min_value=0.5, max_value=5.0, value=2.0, step=0.1)
+        "Bollinger Std Dev",
+        min_value=0.5,
+        max_value=5.0,
+        value=DEFAULT_BOLL_STD,
+        step=0.1,
+    )
 
 col1, col2 = st.columns([2, 1])
 

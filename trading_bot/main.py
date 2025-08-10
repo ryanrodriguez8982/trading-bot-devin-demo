@@ -23,6 +23,12 @@ from trading_bot.broker import PaperBroker, CcxtSpotBroker
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.notify import configure as configure_alerts
 
+CONFIG = get_config()
+DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
+DEFAULT_RSI_LOWER = CONFIG.get("rsi_lower", 30)
+DEFAULT_RSI_UPPER = CONFIG.get("rsi_upper", 70)
+DEFAULT_BBANDS_STD = CONFIG.get("bbands_std", 2)
+
 try:
     from plyer import notification
 except ImportError:
@@ -191,11 +197,20 @@ def run_single_analysis(
 
         strategy_fn = STRATEGY_REGISTRY[strategy]
         if strategy == "rsi":
-            signals = strategy_fn(data, period=14)
+            signals = strategy_fn(
+                data,
+                period=DEFAULT_RSI_PERIOD,
+                lower_thresh=DEFAULT_RSI_LOWER,
+                upper_thresh=DEFAULT_RSI_UPPER,
+            )
         elif strategy == "macd":
             signals = strategy_fn(data)
         elif strategy == "bbands":
-            signals = strategy_fn(data, window=sma_long, num_std=2)
+            signals = strategy_fn(
+                data,
+                window=sma_long,
+                num_std=DEFAULT_BBANDS_STD,
+            )
         elif strategy == "confluence":
             signals = strategy_fn(
                 data,

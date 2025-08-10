@@ -198,6 +198,8 @@ Example `config.json`:
     "sma_short": 5,
     "sma_long": 20,
     "rsi_period": 14,
+    "rsi_lower": 30,
+    "rsi_upper": 70,
     "macd_fast": 12,
     "macd_slow": 26,
     "macd_signal": 9,
