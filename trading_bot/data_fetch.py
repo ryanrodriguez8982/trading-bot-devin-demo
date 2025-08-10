@@ -18,10 +18,10 @@ def fetch_btc_usdt_data(
     exchange_name: Optional[str] = None,
     retry_policy: Optional[RetryPolicy] = None,
     **creds,
-):
+) -> pd.DataFrame:
     """
     Fetch historical OHLCV data from the specified exchange.
-    
+
     Args:
         symbol (str): Trading pair symbol (e.g., BTC/USDT)
         timeframe (str): Timeframe for candles (e.g., 1m, 5m)

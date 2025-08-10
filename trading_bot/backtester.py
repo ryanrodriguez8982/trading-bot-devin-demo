@@ -6,7 +6,6 @@ import os
 import json
 from typing import Any, Callable, Optional, cast
 
-# ? Absolute import for package compatibility
 from trading_bot.signal_logger import log_signals_to_db
 from trading_bot.strategies import STRATEGY_REGISTRY
 from trading_bot.portfolio import Portfolio
@@ -14,7 +13,6 @@ from trading_bot.utils.config import get_config
 
 
 logger = logging.getLogger(__name__)
-
 
 CONFIG = get_config()
 DEFAULT_INITIAL_CAPITAL = 10000.0
@@ -88,7 +86,6 @@ def simulate_equity(
         ts = row['timestamp']
         close_price = row['close']
 
-        # Check for stop-loss / take-profit before new signals
         pos = portfolio.positions.get(symbol)
         if pos and pos.qty > 0:
             if trailing_stop_pct is not None:
