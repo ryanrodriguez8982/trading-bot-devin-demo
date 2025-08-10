@@ -9,15 +9,7 @@ import sqlite3
 import ccxt
 from trading_bot.exchange import create_exchange
 
-# Load config.json to determine default exchange
-with open("config.json") as f:
-    config = json.load(f)
-
-exchange_name = config.get("exchange", "binance")
-exchange = create_exchange(exchange_name=exchange_name)
-
-# Optional debug line in sidebar:
-st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
+from trading_bot.utils.config import get_config
 from trading_bot.signal_logger import (
     get_signals_from_db,
     log_signals_to_db,
@@ -28,6 +20,13 @@ from trading_bot.strategy import sma_crossover_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
 from trading_bot.portfolio import Portfolio
+
+config = get_config()
+exchange_name = config.get("exchange", "binance")
+exchange = create_exchange(exchange_name=exchange_name)
+
+# Optional debug line in sidebar:
+st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
 
 @st.cache_data(show_spinner=False)
 def _fetch_price_data(symbol: str):
