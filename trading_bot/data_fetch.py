@@ -7,6 +7,9 @@ import ccxt
 from trading_bot.exchange import create_exchange
 from trading_bot.utils.retry import RetryPolicy, default_retry
 
+
+logger = logging.getLogger(__name__)
+
 def fetch_btc_usdt_data(
     symbol: str = "BTC/USDT",
     timeframe: str = "1m",
@@ -15,10 +18,10 @@ def fetch_btc_usdt_data(
     exchange_name: Optional[str] = None,
     retry_policy: Optional[RetryPolicy] = None,
     **creds,
-):
+) -> pd.DataFrame:
     """
     Fetch historical OHLCV data from the specified exchange.
-    
+
     Args:
         symbol (str): Trading pair symbol (e.g., BTC/USDT)
         timeframe (str): Timeframe for candles (e.g., 1m, 5m)
@@ -45,12 +48,9 @@ def fetch_btc_usdt_data(
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
 
-        logging.debug(
-            "Fetched %d candles for %s from %s", len(df), symbol, exchange.id
-        )
-        logging.debug("Sample data:\n%s", df.head().to_string(index=False))
+        logger.info(f"Successfully fetched {len(df)} candles for {symbol} from {exchange.id}")
         return df
 
     except (ccxt.BaseError, RuntimeError) as e:
-        logging.error(f"Error fetching data: {e}")
+        logger.error(f"Error fetching data: {e}")
         raise

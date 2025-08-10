@@ -5,6 +5,9 @@ from typing import Optional
 from trading_bot.utils.retry import RetryPolicy, default_retry
 
 
+logger = logging.getLogger(__name__)
+
+
 def create_exchange(api_key=None, api_secret=None, api_passphrase=None, exchange_name="binance"):
     """Create a CCXT exchange instance with optional credentials.
 
@@ -26,7 +29,7 @@ def create_exchange(api_key=None, api_secret=None, api_passphrase=None, exchange
         return exchange
 
     except (AttributeError, ccxt.BaseError) as e:
-        logging.error(f"Failed to initialize exchange '{exchange_name}': {e}")
+        logger.error(f"Failed to initialize exchange '{exchange_name}': {e}")
         raise
 
 def execute_trade(
@@ -41,10 +44,10 @@ def execute_trade(
     policy = retry_policy or default_retry()
     try:
         order = policy.call(exchange.create_market_order, symbol, side, amount)
-        logging.info(
+        logger.info(
             f"Executed {side} order for {amount} {symbol}: id={order.get('id')}")
         return order
     except ccxt.BaseError as e:
-        logging.error(f"Order execution failed: {e}")
+        logger.error(f"Order execution failed: {e}")
         return None
 

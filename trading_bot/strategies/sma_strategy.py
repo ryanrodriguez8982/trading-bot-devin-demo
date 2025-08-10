@@ -1,68 +1,100 @@
-import pandas as pd
 import logging
-from datetime import datetime
+from typing import List, Dict, Any
+
+import pandas as pd
 
 from trading_bot.utils.config import get_config
 
+logger = logging.getLogger(__name__)
+
 CONFIG = get_config()
-DEFAULT_SMA_SHORT = CONFIG.get("sma_short", 5)
-DEFAULT_SMA_LONG = CONFIG.get("sma_long", 20)
+DEFAULT_SMA_SHORT: int = int(CONFIG.get("sma_short", 5))
+DEFAULT_SMA_LONG: int = int(CONFIG.get("sma_long", 20))
 
 
-def sma_crossover_strategy(df, sma_short=DEFAULT_SMA_SHORT, sma_long=DEFAULT_SMA_LONG):
+def sma_crossover_strategy(
+    df: pd.DataFrame,
+    sma_short: int = DEFAULT_SMA_SHORT,
+    sma_long: int = DEFAULT_SMA_LONG,
+) -> List[Dict[str, Any]]:
     """
-    Implement SMA crossover strategy.
-    
-    Buy when short-period SMA crosses above long-period SMA.
-    Sell when short-period SMA crosses below long-period SMA.
-    
+    SMA crossover strategy.
+
+    Buy when short SMA crosses above long SMA.
+    Sell when short SMA crosses below long SMA.
+
     Args:
-        df (pd.DataFrame): DataFrame with OHLCV data
-        sma_short (int): Short-period SMA window
-        sma_long (int): Long-period SMA window
-        
+        df: DataFrame with at least ['timestamp', 'close'] columns.
+        sma_short: Short-period SMA window.
+        sma_long: Long-period SMA window.
+
     Returns:
-        list: List of dictionaries with 'timestamp', 'action' ('buy'/'sell')
+        List of dicts: { 'timestamp': pd.Timestamp, 'action': 'buy'|'sell', 'price': float }.
     """
-    if len(df) < sma_long:
-        logging.warning(f"Not enough data for {sma_long}-period SMA calculation")
+    if df is None or df.empty:
+        logger.warning("Empty dataframe provided to SMA strategy")
         return []
-    
-    df = df.copy()
-    df[f'sma_{sma_short}'] = df['close'].rolling(window=sma_short).mean()
-    df[f'sma_{sma_long}'] = df['close'].rolling(window=sma_long).mean()
-    
-    signals = []
-    
-    for i in range(1, len(df)):
-        if pd.isna(df.iloc[i][f'sma_{sma_short}']) or pd.isna(df.iloc[i][f'sma_{sma_long}']):
+
+    required_cols = {"timestamp", "close"}
+    if not required_cols.issubset(df.columns):
+        raise KeyError("DataFrame must include 'timestamp' and 'close' columns")
+
+    if sma_short <= 0 or sma_long <= 0:
+        raise ValueError("sma_short and sma_long must be positive integers")
+
+    if sma_short >= sma_long:
+        logger.warning("sma_short (%d) >= sma_long (%d) may reduce signal quality", sma_short, sma_long)
+
+    if len(df) < sma_long:
+        logger.warning("Not enough data for %d-period SMA calculation", sma_long)
+        return []
+
+    d = df.copy()
+
+    # Ensure timestamp is datetime for consistency
+    if not pd.api.types.is_datetime64_any_dtype(d['timestamp']):
+        d['timestamp'] = pd.to_datetime(d['timestamp'], utc=True, errors='coerce')
+
+    d[f'sma_{sma_short}'] = d['close'].rolling(window=sma_short, min_periods=sma_short).mean()
+    d[f'sma_{sma_long}'] = d['close'].rolling(window=sma_long, min_periods=sma_long).mean()
+
+    signals: List[Dict[str, Any]] = []
+
+    for i in range(1, len(d)):
+        prev = d.iloc[i - 1]
+        curr = d.iloc[i]
+
+        # Skip until both SMAs are available
+        if pd.isna(curr[f'sma_{sma_short}']) or pd.isna(curr[f'sma_{sma_long}']):
             continue
 
-        current_short_sma = df.iloc[i][f'sma_{sma_short}']
-        current_long_sma = df.iloc[i][f'sma_{sma_long}']
-        prev_short_sma = df.iloc[i-1][f'sma_{sma_short}']
-        prev_long_sma = df.iloc[i-1][f'sma_{sma_long}']
+        prev_short = prev[f'sma_{sma_short}']
+        prev_long = prev[f'sma_{sma_long}']
+        curr_short = curr[f'sma_{sma_short}']
+        curr_long = curr[f'sma_{sma_long}']
 
-        logging.debug(
-            "t=%s price=%.2f short=%.2f long=%.2f",
-            df.iloc[i]['timestamp'],
-            df.iloc[i]['close'],
-            current_short_sma,
-            current_long_sma,
+        logger.debug(
+            "t=%s price=%.6f short=%.6f long=%.6f",
+            curr['timestamp'],
+            float(curr['close']),
+            float(curr_short),
+            float(curr_long),
         )
 
-        if (prev_short_sma <= prev_long_sma and current_short_sma > current_long_sma):
+        # Bullish crossover: short crosses above long
+        if (prev_short <= prev_long) and (curr_short > curr_long):
             signals.append({
-                'timestamp': df.iloc[i]['timestamp'],
+                'timestamp': curr['timestamp'],
                 'action': 'buy',
-                'price': df.iloc[i]['close']
+                'price': float(curr['close']),
             })
-        elif (prev_short_sma >= prev_long_sma and current_short_sma < current_long_sma):
+        # Bearish crossover: short crosses below long
+        elif (prev_short >= prev_long) and (curr_short < curr_long):
             signals.append({
-                'timestamp': df.iloc[i]['timestamp'],
+                'timestamp': curr['timestamp'],
                 'action': 'sell',
-                'price': df.iloc[i]['close']
+                'price': float(curr['close']),
             })
 
-    logging.debug("Generated %d trading signals", len(signals))
+    logger.info("Generated %d SMA crossover signals", len(signals))
     return signals

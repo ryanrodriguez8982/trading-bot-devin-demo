@@ -1,8 +1,7 @@
-import time
 import logging
+import time
 
 import pytest
-import logging
 
 from trading_bot.notify import configure
 from trading_bot.utils.retry import RetryPolicy

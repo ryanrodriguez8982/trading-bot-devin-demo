@@ -1,79 +1,97 @@
-import pandas as pd
 import logging
+from typing import List, Dict, Any
+
+import numpy as np
+import pandas as pd
 
 from trading_bot.utils.config import get_config
 
+logger = logging.getLogger(__name__)
+
 CONFIG = get_config()
-DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
-DEFAULT_RSI_LOWER = CONFIG.get("rsi_lower", 30)
-DEFAULT_RSI_UPPER = CONFIG.get("rsi_upper", 70)
+DEFAULT_RSI_PERIOD: int = int(CONFIG.get("rsi_period", 14))
+DEFAULT_RSI_LOWER: float = float(CONFIG.get("rsi_lower", 30))
+DEFAULT_RSI_UPPER: float = float(CONFIG.get("rsi_upper", 70))
 
 
 def rsi_crossover_strategy(
-    df,
+    df: pd.DataFrame,
     period: int = DEFAULT_RSI_PERIOD,
-    lower_thresh: int = DEFAULT_RSI_LOWER,
-    upper_thresh: int = DEFAULT_RSI_UPPER,
-):
-    """Generate trading signals based on RSI crossovers.
+    lower_thresh: float = DEFAULT_RSI_LOWER,
+    upper_thresh: float = DEFAULT_RSI_UPPER,
+) -> List[Dict[str, Any]]:
+    """Generate trading signals based on RSI threshold crossovers.
 
     Args:
-        df (pd.DataFrame): DataFrame with 'close' price column and 'timestamp'.
-        period (int): Lookback period for RSI calculation.
-        lower_thresh (int): Oversold threshold.
-        upper_thresh (int): Overbought threshold.
+        df: DataFrame with 'close' price column and 'timestamp'.
+        period: Lookback period for RSI calculation.
+        lower_thresh: Oversold threshold.
+        upper_thresh: Overbought threshold.
 
     Returns:
-        list: List of dictionaries with 'timestamp', 'action', 'price'.
+        List of dicts: { 'timestamp': pd.Timestamp, 'action': 'buy'|'sell', 'price': float }.
     """
     if df is None or df.empty:
-        logging.warning("Empty dataframe provided to RSI strategy")
+        logger.warning("Empty dataframe provided to RSI strategy")
         return []
+
+    if 'close' not in df.columns or 'timestamp' not in df.columns:
+        raise KeyError("DataFrame must include 'timestamp' and 'close' columns")
 
     if len(df) < period:
-        logging.warning(f"Not enough data for {period}-period RSI calculation")
+        logger.warning("Not enough data for %d-period RSI calculation", period)
         return []
 
-    df = df.copy()
-    delta = df['close'].diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
+    d = df.copy()
+
+    # Ensure timestamp is pandas datetime for consistency
+    if not pd.api.types.is_datetime64_any_dtype(d['timestamp']):
+        d['timestamp'] = pd.to_datetime(d['timestamp'], utc=True, errors='coerce')
+
+    # RSI (simple rolling mean variant; Wilder's smoothing can be added later if desired)
+    delta = d['close'].diff()
+    gain = delta.clip(lower=0.0)
+    loss = -delta.clip(upper=0.0)
 
     avg_gain = gain.rolling(window=period, min_periods=period).mean()
     avg_loss = loss.rolling(window=period, min_periods=period).mean()
-    rs = avg_gain / avg_loss.replace(0, pd.NA)
-    rsi = 100 - (100 / (1 + rs))
-    df['rsi'] = rsi
 
-    signals = []
-    for i in range(1, len(df)):
-        if pd.isna(df.iloc[i-1]['rsi']) or pd.isna(df.iloc[i]['rsi']):
+    # Avoid division by zero
+    avg_loss = avg_loss.replace(0, np.nan)
+    rs = avg_gain / avg_loss
+    d['rsi'] = 100.0 - (100.0 / (1.0 + rs))
+
+    signals: List[Dict[str, Any]] = []
+
+    for i in range(1, len(d)):
+        prev = d.iloc[i - 1]
+        curr = d.iloc[i]
+
+        if pd.isna(prev.get('rsi')) or pd.isna(curr.get('rsi')):
             continue
 
-        prev_rsi = df.iloc[i-1]['rsi']
-        curr_rsi = df.iloc[i]['rsi']
+        prev_rsi = float(prev['rsi'])
+        curr_rsi = float(curr['rsi'])
+        curr_close = float(curr['close'])
 
-        logging.debug(
-            "t=%s rsi=%.2f prev_rsi=%.2f",
-            df.iloc[i]['timestamp'],
-            curr_rsi,
-            prev_rsi,
-        )
+        logger.debug("t=%s rsi=%.2f prev_rsi=%.2f", curr['timestamp'], curr_rsi, prev_rsi)
 
+        # Cross up from below lower_thresh -> BUY
         if prev_rsi <= lower_thresh and curr_rsi > lower_thresh:
             signals.append({
-                'timestamp': df.iloc[i]['timestamp'],
+                'timestamp': curr['timestamp'],
                 'action': 'buy',
-                'price': df.iloc[i]['close']
+                'price': curr_close,
             })
+        # Cross down from above upper_thresh -> SELL
         elif prev_rsi >= upper_thresh and curr_rsi < upper_thresh:
             signals.append({
-                'timestamp': df.iloc[i]['timestamp'],
+                'timestamp': curr['timestamp'],
                 'action': 'sell',
-                'price': df.iloc[i]['close']
+                'price': curr_close,
             })
 
-    logging.debug("Generated %d RSI crossover signals", len(signals))
+    logger.info("Generated %d RSI crossover signals", len(signals))
     return signals
 
-# TODO(Devin): integrate RSI signals into Streamlit dashboard
+# TODO: Consider Wilder's RSI using ewm(alpha=1/period, adjust=False) for smoothing
