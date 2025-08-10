@@ -58,7 +58,7 @@ def parse_args():
         pkg_version = version("trading-bot")
     except PackageNotFoundError:
         try:
-            from trading_bot import __version__ as pkg_version  # type: ignore
+            from trading_bot import __version__ as pkg_version
         except Exception:
             pkg_version = "0.0.0"
 
