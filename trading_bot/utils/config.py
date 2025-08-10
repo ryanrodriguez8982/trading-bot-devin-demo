@@ -53,6 +53,16 @@ def load_config(config_dir: str | None = None) -> Dict:
             config = _deep_update(config, local_cfg)
         except (OSError, json.JSONDecodeError) as e:  # noqa: BLE001
             logging.warning(f"Failed loading config.local.json: {e}")
+    # Override sensitive values with environment variables if available
+    env_api_key = os.getenv("TRADING_BOT_API_KEY")
+    if env_api_key:
+        config["api_key"] = env_api_key
+    env_api_secret = os.getenv("TRADING_BOT_API_SECRET")
+    if env_api_secret:
+        config["api_secret"] = env_api_secret
+    env_api_passphrase = os.getenv("TRADING_BOT_API_PASSPHRASE")
+    if env_api_passphrase:
+        config["api_passphrase"] = env_api_passphrase
 
     return config
 
