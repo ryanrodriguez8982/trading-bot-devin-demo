@@ -42,6 +42,16 @@ trading-bot --version
 trading-bot --help
 ```
 
+### Logging Options
+
+Logs are written to your system's state directory (e.g., `~/.local/state/trading-bot/logs`).
+Use CLI flags to control logging:
+
+```bash
+# Enable debug logs and JSON output
+trading-bot --log-level DEBUG --json-logs
+```
+
 ### Option 2: Direct Python Execution
 
 For development or if you prefer not to install:

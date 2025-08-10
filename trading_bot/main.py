@@ -10,6 +10,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from trading_bot.utils.state import default_state_dir
 from trading_bot.utils.config import get_config
+from trading_bot.utils.logging_config import setup_logging
 
 # ? Absolute imports for package context
 from trading_bot.backtester import run_backtest
@@ -22,6 +23,7 @@ from trading_bot.risk.position_sizing import calculate_position_size
 from trading_bot.broker import PaperBroker, CcxtSpotBroker
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.notify import configure as configure_alerts
+from trading_bot.risk_config import get_risk_config
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -103,6 +105,18 @@ def parse_args():
     )
     parser.add_argument('--risk-profile', type=str, help='Risk profile name. Overrides config files.')
     parser.add_argument('--state-dir', type=str, help='Directory for logs and database state')
+    parser.add_argument(
+        '--log-level',
+        type=str.upper,
+        default='INFO',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        help='Logging level for the application',
+    )
+    parser.add_argument(
+        '--json-logs',
+        action='store_true',
+        help='Output logs in JSON format',
+    )
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
@@ -428,15 +442,11 @@ def run_live_mode(
         time.sleep(60)
 
 def main():
-    logging.Formatter.converter = time.gmtime
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%dT%H:%M:%S%z',
-    )
+    args = parse_args()
+    state_dir = args.state_dir or default_state_dir()
+    setup_logging(level=args.log_level, state_dir=state_dir, json_logs=args.json_logs)
     config = get_config()
     configure_alerts(config)
-    args = parse_args()
     risk_config = get_risk_config(config.get('risk'), getattr(args, 'risk_overrides', {}))
 
     symbol = args.symbol or config['symbol']
@@ -453,7 +463,6 @@ def main():
     confluence_members = confluence_cfg.get("members", ["sma", "rsi", "macd"])
     confluence_required = confluence_cfg.get("required", 2)
 
-    state_dir = args.state_dir or default_state_dir()
     os.makedirs(state_dir, exist_ok=True)
     api_key = args.api_key or config.get('api_key')
     api_secret = args.api_secret or config.get('api_secret')
