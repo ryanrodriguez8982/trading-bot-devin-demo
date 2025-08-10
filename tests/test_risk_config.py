@@ -5,7 +5,8 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from trading_bot.risk_config import get_risk_config
-from trading_bot.main import parse_args, load_config
+from trading_bot.main import parse_args
+from trading_bot.utils.config import load_config
 
 
 def test_default_risk_config():
