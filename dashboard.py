@@ -516,9 +516,9 @@ with col2:
                 sym = row.Symbol
                 try:
                     if side == "buy":
-                        portfolio.buy(sym, qty, price, fee_bps=config.get("fees_bps", 0))
+                        portfolio.buy(sym, qty, price, fee_bps=config.get("broker", {}).get("fees_bps", 0))
                     else:
-                        portfolio.sell(sym, qty, price, fee_bps=config.get("fees_bps", 0))
+                        portfolio.sell(sym, qty, price, fee_bps=config.get("broker", {}).get("fees_bps", 0))
                 except ValueError as exc:
                     logging.warning("Skipping trade %s %s due to error: %s", side, sym, exc)
                 history.append({"timestamp": ts, "equity": portfolio.equity({sym: price})})

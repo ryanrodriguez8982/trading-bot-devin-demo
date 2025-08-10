@@ -11,22 +11,22 @@ from trading_bot.utils.config import load_config
 
 def test_default_risk_config():
     rc = get_risk_config({})
-    assert rc.fees_bps == 10
+    assert rc.slippage_bps == 5
     assert rc.position_sizing.mode == "fixed_fraction"
 
 
 def test_invalid_risk_config():
     with pytest.raises(ValueError):
-        get_risk_config({"fees_bps": -1})
+        get_risk_config({"slippage_bps": -1})
 
 
 def test_cli_override():
     original = sys.argv
     try:
-        sys.argv = ["main.py", "--risk.fees_bps", "8"]
+        sys.argv = ["main.py", "--risk.slippage_bps", "8"]
         args = parse_args()
         config = load_config()
         rc = get_risk_config(config.get("risk"), args.risk_overrides)
-        assert rc.fees_bps == 8
+        assert rc.slippage_bps == 8
     finally:
         sys.argv = original
