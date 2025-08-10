@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from trading_bot.broker import Broker
 
@@ -22,12 +22,12 @@ class LiveTrader:
     def process_signal(
         self,
         symbol: str,
-        signal: Dict[str, float],
+        signal: Dict[str, Union[float, str]],
         qty: float,
         *,
         stop_loss: Optional[float] = None,
         take_profit: Optional[float] = None,
-    ) -> Dict[str, float]:
+    ) -> Dict[str, Union[float, str]]:
         """Execute a single trading signal for ``symbol``.
 
         Parameters
@@ -42,8 +42,8 @@ class LiveTrader:
         stop_loss, take_profit:
             Optional levels to attach to the resulting position when buying.
         """
-        price = signal["price"]
-        action = signal["action"]
+        price = float(signal["price"])
+        action = str(signal["action"])
         self.broker.set_price(symbol, price)
         order = self.broker.create_order(action, symbol, qty)
         if action == "buy" and (stop_loss is not None or take_profit is not None):
@@ -58,7 +58,7 @@ class LiveTrader:
 
     def run_batch(
         self,
-        signals_by_symbol: Dict[str, List[Dict[str, float]]],
+        signals_by_symbol: Dict[str, List[Dict[str, Union[float, str]]]],
         qtys: Dict[str, float],
     ) -> None:
         """Process lists of signals for multiple symbols sequentially.

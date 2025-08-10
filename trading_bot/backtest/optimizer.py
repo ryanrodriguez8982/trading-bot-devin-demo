@@ -1,7 +1,7 @@
 import itertools
 import json
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any, Callable, cast
 
 import pandas as pd
 
@@ -31,7 +31,7 @@ def parse_optimize_args(tokens: List[str]) -> Dict:
     dict
         Parsed options containing strategy, param_grid, split, metric.
     """
-    options = {
+    options: Dict[str, Any] = {
         "strategy": "sma",
         "param_grid": {},
         "split": (0.7, 0.3),
@@ -61,13 +61,14 @@ def parse_optimize_args(tokens: List[str]) -> Dict:
                 parsed = json.loads(value)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid grid for {key}: {value}") from exc
-            options["param_grid"][key] = parsed
+            param_grid = cast(Dict[str, List], options["param_grid"])
+            param_grid[key] = parsed
     return options
 
 
 def _run_strategy(df: pd.DataFrame, strategy: str, params: Dict) -> Tuple[List[float], Dict]:
     """Generate equity curve and stats for given params on dataframe."""
-    strategy_fn = STRATEGY_REGISTRY[strategy]
+    strategy_fn = cast(Callable[..., List[Dict]], STRATEGY_REGISTRY[strategy])
     aliases = PARAM_ALIASES.get(strategy, {})
     call_params = {aliases.get(k, k): v for k, v in params.items()}
     if strategy == "rsi":

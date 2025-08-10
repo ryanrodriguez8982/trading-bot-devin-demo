@@ -41,6 +41,7 @@ def setup_logging(level: str = "INFO", state_dir: Optional[str] = None, json_log
     for handler in list(root.handlers):
         root.removeHandler(handler)
 
+    formatter: logging.Formatter
     if json_logs:
         formatter = JsonFormatter()
     else:

@@ -8,7 +8,7 @@ def bbands_strategy(df, window=20, num_std=2):
     Args:
         df (pd.DataFrame): DataFrame with OHLCV data and 'timestamp'.
         window (int): Moving average window for the middle band.
-        num_std (int | float): Number of standard deviations for the bands.
+        num_std (int or float): Number of standard deviations for the bands.
 
     Returns:
         list: List of signals with timestamp, action and price.

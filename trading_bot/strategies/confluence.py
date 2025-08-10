@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import List, Optional
+from typing import DefaultDict, Dict, List, Optional, Any
 import pandas as pd
 
 
@@ -26,7 +26,7 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
         return []
 
     # Collect signals from member strategies
-    signals_map = defaultdict(list)
+    signals_map: DefaultDict[pd.Timestamp, List[Dict[str, Any]]] = defaultdict(list)
     for name in members:
         strategy_fn = STRATEGY_REGISTRY.get(name)
         if not callable(strategy_fn):

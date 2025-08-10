@@ -1,6 +1,7 @@
 import sqlite3
 import logging
 import os
+from typing import Optional
 
 from trading_bot.utils.state import default_state_dir
 
@@ -240,7 +241,7 @@ def mark_signal_handled(
     timeframe: str,
     signal_ts: str,
     action: str,
-    db_path: str | None = None,
+    db_path: Optional[str] = None,
 ) -> bool:
     """Record a signal and return True if it was already processed.
 
