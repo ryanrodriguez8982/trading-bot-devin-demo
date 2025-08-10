@@ -1,8 +1,20 @@
 import pandas as pd
 import logging
 
+from trading_bot.utils.config import get_config
 
-def rsi_crossover_strategy(df, period=14, lower_thresh=30, upper_thresh=70):
+CONFIG = get_config()
+DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
+DEFAULT_RSI_LOWER = CONFIG.get("rsi_lower", 30)
+DEFAULT_RSI_UPPER = CONFIG.get("rsi_upper", 70)
+
+
+def rsi_crossover_strategy(
+    df,
+    period: int = DEFAULT_RSI_PERIOD,
+    lower_thresh: int = DEFAULT_RSI_LOWER,
+    upper_thresh: int = DEFAULT_RSI_UPPER,
+):
     """Generate trading signals based on RSI crossovers.
 
     Args:

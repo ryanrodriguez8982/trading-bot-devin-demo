@@ -3,12 +3,18 @@ from typing import List, Tuple, Dict
 
 from trading_bot.backtester import compute_drawdown
 from trading_bot.portfolio import Portfolio
+from trading_bot.utils.config import get_config
+
+
+CONFIG = get_config()
+DEFAULT_INITIAL_BALANCE = 10000.0
+DEFAULT_TRADE_SIZE = CONFIG.get("trade_size", 1.0)
 
 
 def compute_equity_curve(
     signals: List[Dict],
-    initial_balance: float = 10000.0,
-    trade_size: float = 1.0,
+    initial_balance: float = DEFAULT_INITIAL_BALANCE,
+    trade_size: float = DEFAULT_TRADE_SIZE,
     fees_bps: float = 0.0,
     symbol: str = "asset",
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:

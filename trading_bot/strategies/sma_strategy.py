@@ -2,7 +2,14 @@ import pandas as pd
 import logging
 from datetime import datetime
 
-def sma_crossover_strategy(df, sma_short=5, sma_long=20):
+from trading_bot.utils.config import get_config
+
+CONFIG = get_config()
+DEFAULT_SMA_SHORT = CONFIG.get("sma_short", 5)
+DEFAULT_SMA_LONG = CONFIG.get("sma_long", 20)
+
+
+def sma_crossover_strategy(df, sma_short=DEFAULT_SMA_SHORT, sma_long=DEFAULT_SMA_LONG):
     """
     Implement SMA crossover strategy.
     

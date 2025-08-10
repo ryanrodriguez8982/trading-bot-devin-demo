@@ -43,6 +43,10 @@ def load_config(config_dir: str | None = None) -> Dict:
             "limit": 500,
             "sma_short": 5,
             "sma_long": 20,
+            "rsi_period": 14,
+            "rsi_lower": 30,
+            "rsi_upper": 70,
+            "trade_size": 1.0,
         }
 
     local_path = os.path.join(base_dir, "config.local.json")
