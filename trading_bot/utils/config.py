@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from functools import lru_cache
-from typing import Dict
+from typing import Dict, Tuple
 
 
 def _deep_update(base: Dict, override: Dict) -> Dict:
@@ -68,7 +68,41 @@ def load_config(config_dir: str | None = None) -> Dict:
     if env_api_passphrase:
         config["api_passphrase"] = env_api_passphrase
 
+    _validate_config(config)
     return config
+
+
+def _validate_config(config: Dict) -> None:
+    """Validate required configuration values and types."""
+
+    required_fields: Dict[str, Tuple[type, ...]] = {
+        "symbol": (str,),
+        "timeframe": (str,),
+        "limit": (int,),
+        "sma_short": (int,),
+        "sma_long": (int,),
+        "trade_size": (int, float),
+    }
+
+    for key, expected in required_fields.items():
+        if key not in config:
+            raise ValueError(f"Missing required config field: {key}")
+        if not isinstance(config[key], expected):
+            raise ValueError(
+                f"Config field '{key}' must be of type {expected}"
+            )
+
+    confluence = config.get("confluence", {})
+    members = confluence.get("members")
+    if members is None or not isinstance(members, list) or not members:
+        raise ValueError("confluence.members must be a non-empty list")
+
+    required = confluence.get("required", 0)
+    if not isinstance(required, int) or required <= 0:
+        raise ValueError("confluence.required must be a positive integer")
+
+    if required > len(members):
+        raise ValueError("confluence.required cannot exceed number of members")
 
 
 @lru_cache(maxsize=1)
