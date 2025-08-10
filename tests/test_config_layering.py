@@ -1,7 +1,8 @@
 import json
 import sys
 
-from trading_bot.main import load_config, parse_args
+from trading_bot.utils.config import load_config
+from trading_bot.main import parse_args
 
 
 def test_config_overlays_and_cli_precedence(tmp_path):
