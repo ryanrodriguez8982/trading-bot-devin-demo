@@ -1,5 +1,3 @@
-import pandas as pd
-import ccxt
 import ccxt
 import pytest
 
