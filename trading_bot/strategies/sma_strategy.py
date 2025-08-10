@@ -37,12 +37,20 @@ def sma_crossover_strategy(df, sma_short=DEFAULT_SMA_SHORT, sma_long=DEFAULT_SMA
     for i in range(1, len(df)):
         if pd.isna(df.iloc[i][f'sma_{sma_short}']) or pd.isna(df.iloc[i][f'sma_{sma_long}']):
             continue
-            
+
         current_short_sma = df.iloc[i][f'sma_{sma_short}']
         current_long_sma = df.iloc[i][f'sma_{sma_long}']
         prev_short_sma = df.iloc[i-1][f'sma_{sma_short}']
         prev_long_sma = df.iloc[i-1][f'sma_{sma_long}']
-        
+
+        logging.debug(
+            "t=%s price=%.2f short=%.2f long=%.2f",
+            df.iloc[i]['timestamp'],
+            df.iloc[i]['close'],
+            current_short_sma,
+            current_long_sma,
+        )
+
         if (prev_short_sma <= prev_long_sma and current_short_sma > current_long_sma):
             signals.append({
                 'timestamp': df.iloc[i]['timestamp'],
@@ -55,6 +63,6 @@ def sma_crossover_strategy(df, sma_short=DEFAULT_SMA_SHORT, sma_long=DEFAULT_SMA
                 'action': 'sell',
                 'price': df.iloc[i]['close']
             })
-    
-    logging.info(f"Generated {len(signals)} trading signals")
+
+    logging.debug("Generated %d trading signals", len(signals))
     return signals

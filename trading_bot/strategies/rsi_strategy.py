@@ -53,6 +53,13 @@ def rsi_crossover_strategy(
         prev_rsi = df.iloc[i-1]['rsi']
         curr_rsi = df.iloc[i]['rsi']
 
+        logging.debug(
+            "t=%s rsi=%.2f prev_rsi=%.2f",
+            df.iloc[i]['timestamp'],
+            curr_rsi,
+            prev_rsi,
+        )
+
         if prev_rsi <= lower_thresh and curr_rsi > lower_thresh:
             signals.append({
                 'timestamp': df.iloc[i]['timestamp'],
@@ -66,7 +73,7 @@ def rsi_crossover_strategy(
                 'price': df.iloc[i]['close']
             })
 
-    logging.info(f"Generated {len(signals)} RSI crossover signals")
+    logging.debug("Generated %d RSI crossover signals", len(signals))
     return signals
 
 # TODO(Devin): integrate RSI signals into Streamlit dashboard

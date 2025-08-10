@@ -237,14 +237,14 @@ def run_backtest(
 
     if equity_out:
         eq_df.to_csv(equity_out, index=False)
-        logging.info(f"Equity curve saved to {equity_out}")
+        logging.debug("Equity curve saved to %s", equity_out)
     else:
-        logging.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
+        logging.debug("Equity curve:\n%s", eq_df.tail().to_string(index=False))
 
     if stats_out:
         with open(stats_out, 'w') as f:
             json.dump(stats, f, indent=2)
-        logging.info(f"Summary stats saved to {stats_out}")
+        logging.debug("Summary stats saved to %s", stats_out)
 
     logging.info(f"Net PnL: {stats['net_pnl']:.2f}")
     logging.info(f"Win rate: {stats['win_rate']:.2f}%")
@@ -261,6 +261,6 @@ def run_backtest(
         plt.title('Equity Curve')
         plt.tight_layout()
         plt.savefig(chart_out)
-        logging.info(f"Equity chart saved to {chart_out}")
+        logging.debug("Equity chart saved to %s", chart_out)
 
     return stats

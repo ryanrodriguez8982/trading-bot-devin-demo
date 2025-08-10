@@ -39,6 +39,14 @@ def bbands_strategy(df, window=20, num_std=2):
         prev_upper = df.iloc[i-1]['upper_band']
         curr_upper = df.iloc[i]['upper_band']
 
+        logging.debug(
+            "t=%s close=%.2f lower=%.2f upper=%.2f",
+            df.iloc[i]['timestamp'],
+            curr_close,
+            curr_lower,
+            curr_upper,
+        )
+
         if prev_close < prev_lower and curr_close >= curr_lower:
             signals.append({
                 'timestamp': df.iloc[i]['timestamp'],
@@ -52,5 +60,5 @@ def bbands_strategy(df, window=20, num_std=2):
                 'price': curr_close
             })
 
-    logging.info(f"Generated {len(signals)} Bollinger band signals")
+    logging.debug("Generated %d Bollinger band signals", len(signals))
     return signals

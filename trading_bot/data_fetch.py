@@ -45,7 +45,10 @@ def fetch_btc_usdt_data(
         df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
 
-        logging.info(f"Successfully fetched {len(df)} candles for {symbol} from {exchange.id}")
+        logging.debug(
+            "Fetched %d candles for %s from %s", len(df), symbol, exchange.id
+        )
+        logging.debug("Sample data:\n%s", df.head().to_string(index=False))
         return df
 
     except (ccxt.BaseError, RuntimeError) as e:
