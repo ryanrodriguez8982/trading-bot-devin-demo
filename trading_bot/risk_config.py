@@ -95,20 +95,18 @@ class MaxDrawdownConfig:
 
 @dataclass
 class RiskConfig:
-    fees_bps: float = 10
     slippage_bps: float = 5
     position_sizing: PositionSizingConfig = field(default_factory=PositionSizingConfig)
     stops: StopsConfig = field(default_factory=StopsConfig)
     max_drawdown: MaxDrawdownConfig = field(default_factory=MaxDrawdownConfig)
 
     def __post_init__(self) -> None:
-        if self.fees_bps < 0 or self.slippage_bps < 0:
+        if self.slippage_bps < 0:
             raise ValueError("bps values must be non-negative")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RiskConfig":
         return cls(
-            fees_bps=data.get("fees_bps", 10),
             slippage_bps=data.get("slippage_bps", 5),
             position_sizing=PositionSizingConfig.from_dict(data.get("position_sizing", {})),
             stops=StopsConfig.from_dict(data.get("stops", {})),
@@ -117,7 +115,6 @@ class RiskConfig:
 
 
 DEFAULT_RISK_DICT: Dict[str, Any] = {
-    "fees_bps": 10,
     "slippage_bps": 5,
     "position_sizing": {
         "mode": "fixed_fraction",
