@@ -22,6 +22,8 @@ from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
 from trading_bot.portfolio import Portfolio
 
+logger = logging.getLogger(__name__)
+
 config = get_config()
 exchange_name = config.get("exchange", "binance")
 exchange = create_exchange(exchange_name=exchange_name)
@@ -206,7 +208,7 @@ with col1:
             try:
                 df = _fetch_price_data(selected_symbol)
             except (ccxt.BaseError, RuntimeError) as api_error:
-                logging.exception("Price data fetch failed")
+                logger.exception("Price data fetch failed")
                 st.warning(
                     f"API unavailable ({str(api_error)[:50]}...), using mock data for demonstration"
                 )
@@ -394,14 +396,14 @@ with col1:
                         )
                         st.rerun()
                     except sqlite3.Error as e:
-                        logging.exception("Error saving signals to database")
+                        logger.exception("Error saving signals to database")
                         st.error(f"Error saving signals: {str(e)}")
             else:
                 st.info("No crossover signals detected in current data")
         else:
             st.error("Failed to fetch price data")
     except Exception as e:  # Catch-all to prevent dashboard crash
-        logging.exception("Error fetching or processing data")
+        logger.exception("Error fetching or processing data")
         st.error(f"Error fetching or processing data: {str(e)}")
 
 with col2:
@@ -414,7 +416,7 @@ with col2:
         else:
             st.metric("Last Trade", "No trades")
     except sqlite3.Error as e:
-        logging.exception("Error loading last trade")
+        logger.exception("Error loading last trade")
         st.error(f"Error loading last trade: {str(e)}")
 
     status_file = "status.json"
@@ -429,7 +431,7 @@ with col2:
             if last_loop:
                 st.metric("Last Loop", last_loop)
         except (OSError, json.JSONDecodeError) as exc:
-            logging.warning("Error reading status file: %s", exc)
+            logger.warning("Error reading status file: %s", exc)
 
     risk_cfg = config.get("risk", {})
     md = risk_cfg.get("max_drawdown", {}).get("monthly_pct", 0.0)
@@ -497,7 +499,7 @@ with col2:
             st.code("python trading_bot/main.py", language="bash")
 
     except sqlite3.Error as e:
-        logging.exception("Error loading signals from database")
+        logger.exception("Error loading signals from database")
         st.error(f"Error loading signals: {str(e)}")
 
     st.subheader("Recent Trades")
@@ -541,7 +543,7 @@ with col2:
                     else:
                         portfolio.sell(sym, qty, price, fee_bps=config.get("broker", {}).get("fees_bps", 0))
                 except ValueError as exc:
-                    logging.warning("Skipping trade %s %s due to error: %s", side, sym, exc)
+                    logger.warning("Skipping trade %s %s due to error: %s", side, sym, exc)
                 history.append({"timestamp": ts, "equity": portfolio.equity({sym: price})})
 
             if history:
@@ -565,7 +567,7 @@ with col2:
         else:
             st.info("No trades found in database")
     except sqlite3.Error as e:
-        logging.exception("Error loading trades from database")
+        logger.exception("Error loading trades from database")
         st.error(f"Error loading trades: {str(e)}")
 
     st.subheader("Error Log")

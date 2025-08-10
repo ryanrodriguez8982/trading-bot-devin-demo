@@ -2,6 +2,9 @@ import pandas as pd
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
 def bbands_strategy(df, window=20, num_std=2):
     """Generate trading signals based on Bollinger Bands.
 
@@ -14,11 +17,11 @@ def bbands_strategy(df, window=20, num_std=2):
         list: List of signals with timestamp, action and price.
     """
     if df is None or df.empty:
-        logging.warning("Empty dataframe provided to Bollinger strategy")
+        logger.warning("Empty dataframe provided to Bollinger strategy")
         return []
 
     if len(df) < window:
-        logging.warning(f"Not enough data for {window}-period Bollinger Bands")
+        logger.warning(f"Not enough data for {window}-period Bollinger Bands")
         return []
 
     df = df.copy()
@@ -52,5 +55,5 @@ def bbands_strategy(df, window=20, num_std=2):
                 'price': curr_close
             })
 
-    logging.info(f"Generated {len(signals)} Bollinger band signals")
+    logger.info(f"Generated {len(signals)} Bollinger band signals")
     return signals

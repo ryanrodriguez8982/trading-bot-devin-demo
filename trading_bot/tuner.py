@@ -4,6 +4,9 @@ import itertools
 from trading_bot.backtester import run_backtest
 
 
+logger = logging.getLogger(__name__)
+
+
 DEFAULT_GRIDS = {
     "sma": {
         "sma_short": [5, 10, 15],
@@ -52,7 +55,7 @@ def tune(csv_path, strategy="sma", param_grid=None):
     results = []
     for combo in itertools.product(*values):
         params = dict(zip(keys, combo))
-        logging.info("Testing %s", params)
+        logger.info("Testing %s", params)
         stats = run_backtest(csv_path, strategy=strategy, **params)
         result = {"params": params}
         result.update(stats)

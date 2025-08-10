@@ -153,7 +153,7 @@ def log_signals_to_file(signals, symbol, state_dir=None):
         for signal in signals:
             ts = signal['timestamp'].isoformat()
             f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
-    logging.info(f"Logged {len(signals)} signals to {log_path}")
+    logger.info(f"Logged {len(signals)} signals to {log_path}")
 
 def log_order_to_file(order, symbol, state_dir=None):
     if not order:
@@ -169,7 +169,7 @@ def log_order_to_file(order, symbol, state_dir=None):
         price = order.get('price')
         side = order.get('side')
         f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
-    logging.info(f"Logged order {order_id} to {log_path}")
+    logger.info(f"Logged order {order_id} to {log_path}")
 
 def send_alert(signal):
     ts = signal['timestamp'].isoformat()
@@ -182,7 +182,7 @@ def send_alert(signal):
             logger.exception("Notification error: %s", e)
 
 def signal_handler(signum, frame):
-    logging.info("Received interrupt signal. Shutting down live trading mode gracefully...")
+    logger.info("Received interrupt signal. Shutting down live trading mode gracefully...")
     logger.info("=== Live Trading Mode Shutdown ===")
     sys.exit(0)
 
@@ -207,7 +207,7 @@ def run_single_analysis(
             data = fetch_btc_usdt_data(symbol, timeframe, limit, exchange=exchange)
         else:
             data = fetch_btc_usdt_data(symbol, timeframe, limit)
-        logging.info(f"Fetched {len(data)} data points")
+        logger.info(f"Fetched {len(data)} data points")
 
         strategy_fn = STRATEGY_REGISTRY[strategy]
         if strategy == "rsi":
@@ -234,7 +234,7 @@ def run_single_analysis(
         else:
             signals = strategy_fn(data, sma_short, sma_long)
 
-        logging.info(f"Generated {len(signals)} trading signals")
+        logger.info(f"Generated {len(signals)} trading signals")
         if signals:
             log_signals_to_file(signals, symbol, state_dir)
             db_path = os.path.join(state_dir or default_state_dir(), 'signals.db')
@@ -244,7 +244,7 @@ def run_single_analysis(
                     send_alert(s)
         return signals
     except Exception as e:
-        logging.exception("Error in analysis cycle")
+        logger.exception("Error in analysis cycle")
         return []
 
 def run_live_mode(
@@ -302,10 +302,10 @@ def run_live_mode(
         if guardrails and portfolio:
             eq = portfolio.equity()
             if guardrails.should_halt(eq):
-                logging.warning("Guardrails triggered - halting trading")
+                logger.warning("Guardrails triggered - halting trading")
                 break
             if guardrails.cooling_down():
-                logging.info("Guardrails active - skipping iteration")
+                logger.info("Guardrails active - skipping iteration")
                 time.sleep(interval_seconds)
                 continue
 
@@ -336,7 +336,7 @@ def run_live_mode(
                         signal["action"],
                         db_path=db_path,
                     ):
-                        logging.info(
+                        logger.info(
                             json.dumps(
                                 {
                                     "symbol": symbol,
@@ -353,7 +353,7 @@ def run_live_mode(
                     if live_trade and exchange:
                         order = execute_trade(exchange, symbol, signal["action"], trade_amount)
                         log_order_to_file(order, symbol, state_dir)
-                        logging.info(
+                        logger.info(
                             json.dumps(
                                 {
                                     "symbol": symbol,
@@ -369,7 +369,7 @@ def run_live_mode(
                                 portfolio.buy(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
                             else:
                                 portfolio.sell(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
-                            logging.info(
+                            logger.info(
                                 json.dumps(
                                     {
                                         "symbol": symbol,
@@ -380,7 +380,7 @@ def run_live_mode(
                                 )
                             )
                         except ValueError:
-                            logging.debug("Trade skipped due to portfolio constraints")
+                            logger.debug("Trade skipped due to portfolio constraints")
             else:
                 logger.info(f"No new signals for {symbol}.")
         logger.info(f"Next analysis in {interval_seconds} seconds...")
@@ -435,7 +435,7 @@ def run_live_mode(
                             else:
                                 portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
                     except ValueError:
-                        logging.debug("Trade skipped due to portfolio/broker constraints")
+                        logger.debug("Trade skipped due to portfolio/broker constraints")
         else:
             logger.info("No new signals.")
         logger.info("Next analysis in 60 seconds...")
@@ -593,7 +593,7 @@ def main():
             else:
                 logger.info("No trading signals generated.")
     except Exception as e:
-        logging.exception("Error in main")
+        logger.exception("Error in main")
         raise
 
 if __name__ == "__main__":
