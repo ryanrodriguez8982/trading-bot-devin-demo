@@ -359,6 +359,16 @@ The equity curve helps gauge profitability relative to your configured starting 
 
 **Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bbands` in the Strategy filter to visualize those indicators.
 
+## Source Distribution
+
+To share a clean snapshot of the project without local virtual environments or other untracked files, create an archive directly from Git:
+
+```bash
+git archive -o trading-bot-src.zip HEAD
+```
+
+The resulting zip contains only tracked files, so directories like `.venv/` remain excluded.
+
 ## Changelog
 
 ### Roadmap 1 Complete
