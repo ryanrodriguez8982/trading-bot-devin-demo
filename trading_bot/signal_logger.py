@@ -2,6 +2,12 @@ import sqlite3
 import logging
 import os
 
+from trading_bot.utils.state import default_state_dir
+
+
+def _default_db_path() -> str:
+    return os.path.join(default_state_dir(), "signals.db")
+
 def create_signals_table(cursor):
     """Create the signals table if it doesn't exist."""
     cursor.execute('''
@@ -46,7 +52,8 @@ def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
         return
     
     if db_path is None:
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+        db_path = _default_db_path()
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
     
     try:
         with sqlite3.connect(db_path) as conn:
@@ -74,7 +81,8 @@ def log_signals_to_db(signals, symbol, strategy_id='sma', db_path=None):
 def log_trade_to_db(trade, db_path=None):
     """Log a single trade execution to the trades table."""
     if db_path is None:
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+        db_path = _default_db_path()
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
     try:
         with sqlite3.connect(db_path) as conn:
@@ -124,9 +132,7 @@ def get_trades_from_db(symbol=None, limit=None, db_path=None):
         List of trade tuples ordered by newest first.
     """
     if db_path is None:
-        db_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "signals.db"
-        )
+        db_path = _default_db_path()
 
     if not os.path.exists(db_path):
         return []
@@ -174,7 +180,7 @@ def get_signals_from_db(symbol=None, strategy_id=None, limit=None, db_path=None)
         list: List of signal records as tuples
     """
     if db_path is None:
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+        db_path = _default_db_path()
     
     if not os.path.exists(db_path):
         return []
@@ -244,7 +250,8 @@ def mark_signal_handled(
     duplicate work.
     """
     if db_path is None:
-        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "signals.db")
+        db_path = _default_db_path()
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
     try:
         with sqlite3.connect(db_path) as conn:

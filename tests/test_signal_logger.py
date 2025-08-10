@@ -3,30 +3,29 @@ import pandas as pd
 import sqlite3
 import os
 import sys
-import tempfile
-import shutil
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from signal_logger import log_signals_to_db, get_signals_from_db
+from trading_bot.signal_logger import log_signals_to_db, get_signals_from_db
 
-def test_log_signals_to_db():
+
+def test_log_signals_to_db(tmp_path):
     """Test that signals are logged to SQLite database correctly."""
     import time
     unique_id = str(int(time.time() * 1000))
     test_symbol = f"TEST{unique_id}/USDT"
     test_strategy = f"test_strategy_{unique_id}"
-    
+
     signals = [
         {'timestamp': pd.Timestamp('2024-01-01 10:00:00'), 'action': 'buy', 'price': 50000.0},
         {'timestamp': pd.Timestamp('2024-01-01 11:00:00'), 'action': 'sell', 'price': 51000.0}
     ]
-    
-    log_signals_to_db(signals, test_symbol, test_strategy)
-    
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
+
+    db_path = tmp_path / "signals.db"
+    log_signals_to_db(signals, test_symbol, test_strategy, db_path=str(db_path))
+
     assert os.path.exists(db_path), "Database file should be created"
-    
+
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='signals'")
@@ -52,36 +51,39 @@ def test_log_signals_to_db():
         assert records[1][1] == 'sell', "Second record should be sell"
         assert records[1][2] == 51000.0, "Second record price should be 51000.0"
 
-def test_get_signals_from_db():
+
+def test_get_signals_from_db(tmp_path):
     """Test retrieving signals from database."""
     signals = [
         {'timestamp': pd.Timestamp('2024-01-01 12:00:00'), 'action': 'buy', 'price': 52000.0},
         {'timestamp': pd.Timestamp('2024-01-01 13:00:00'), 'action': 'sell', 'price': 53000.0}
     ]
-    
-    log_signals_to_db(signals, "ETH/USDT", "test_strategy")
-    
-    retrieved_signals = get_signals_from_db(symbol="ETH/USDT", strategy_id="test_strategy", limit=2)
+
+    db_path = tmp_path / "signals.db"
+    log_signals_to_db(signals, "ETH/USDT", "test_strategy", db_path=str(db_path))
+
+    retrieved_signals = get_signals_from_db(symbol="ETH/USDT", strategy_id="test_strategy", limit=2, db_path=str(db_path))
     
     assert len(retrieved_signals) >= 2, "Should retrieve at least 2 signals"
     assert retrieved_signals[0][1] == 'sell', "Most recent should be sell signal"
     assert retrieved_signals[0][3] == 'ETH/USDT', "Symbol should match"
     assert retrieved_signals[0][4] == 'test_strategy', "Strategy ID should match"
 
-def test_empty_signals_list():
-    """Test that empty signals list is handled gracefully."""
-    log_signals_to_db([], "BTC/USDT", "sma")
 
-def test_database_schema():
+def test_empty_signals_list(tmp_path):
+    """Test that empty signals list is handled gracefully."""
+    log_signals_to_db([], "BTC/USDT", "sma", db_path=str(tmp_path / "signals.db"))
+
+
+def test_database_schema(tmp_path):
     """Test that database schema matches requirements."""
     signals = [
         {'timestamp': pd.Timestamp('2024-01-01 14:00:00'), 'action': 'buy', 'price': 54000.0}
     ]
-    
-    log_signals_to_db(signals, "TEST/USDT", "schema_test")
-    
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'signals.db')
-    
+
+    db_path = tmp_path / "signals.db"
+    log_signals_to_db(signals, "TEST/USDT", "schema_test", db_path=str(db_path))
+
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("PRAGMA table_info(signals)")
@@ -102,12 +104,11 @@ def test_database_schema():
 
 
 def test_missing_database_file(tmp_path):
-    """Ensure informative error when database path does not exist."""
+    """Function should create missing directories for database path."""
     bad_db_path = tmp_path / "nonexistent" / "signals.db"
     signal = [{'timestamp': pd.Timestamp('2024-01-01 00:00:00'), 'action': 'buy', 'price': 100}]
-    with pytest.raises(Exception) as excinfo:
-        log_signals_to_db(signal, "BTC/USDT", db_path=str(bad_db_path))
-    assert "No such file" in str(excinfo.value) or "unable to open database file" in str(excinfo.value)
+    log_signals_to_db(signal, "BTC/USDT", db_path=str(bad_db_path))
+    assert bad_db_path.exists()
 
 
 def test_malformed_signal_entry(tmp_path):

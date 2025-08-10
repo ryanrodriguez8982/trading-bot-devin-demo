@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from typing import Dict
 
+from trading_bot.utils.state import default_state_dir
+
 # ? Absolute imports for package context
 from trading_bot.backtester import run_backtest
 from trading_bot.data_fetch import fetch_btc_usdt_data
@@ -142,6 +144,7 @@ def parse_args():
         help='Comma-separated list of trading symbols for live mode',
     )
     parser.add_argument('--risk-profile', type=str, help='Risk profile name. Overrides config files.')
+    parser.add_argument('--state-dir', type=str, help='Directory for logs and database state')
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
@@ -163,10 +166,11 @@ def parse_args():
     return args
 
 
-def log_signals_to_file(signals, symbol):
+def log_signals_to_file(signals, symbol, state_dir=None):
     if not signals:
         return
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    state_dir = state_dir or default_state_dir()
+    logs_dir = os.path.join(state_dir, 'logs')
     os.makedirs(logs_dir, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     log_path = os.path.join(logs_dir, f"{timestamp}_signals.log")
@@ -179,10 +183,11 @@ def log_signals_to_file(signals, symbol):
             f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
     logging.info(f"Logged {len(signals)} signals to {log_path}")
 
-def log_order_to_file(order, symbol):
+def log_order_to_file(order, symbol, state_dir=None):
     if not order:
         return
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+    state_dir = state_dir or default_state_dir()
+    logs_dir = os.path.join(state_dir, 'logs')
     os.makedirs(logs_dir, exist_ok=True)
     log_path = os.path.join(logs_dir, 'orders.log')
     with open(log_path, 'a') as f:
@@ -220,6 +225,7 @@ def run_single_analysis(
     exchange=None,
     confluence_members=None,
     confluence_required=2,
+    state_dir=None,
 ):
     try:
         if strategy not in STRATEGY_REGISTRY:
@@ -249,8 +255,9 @@ def run_single_analysis(
 
         logging.info(f"Generated {len(signals)} trading signals")
         if signals:
-            log_signals_to_file(signals, symbol)
-            log_signals_to_db(signals, symbol)
+            log_signals_to_file(signals, symbol, state_dir)
+            db_path = os.path.join(state_dir or default_state_dir(), 'signals.db')
+            log_signals_to_db(signals, symbol, db_path=db_path)
             if alert_mode:
                 for s in signals:
                     send_alert(s)
@@ -275,7 +282,10 @@ def run_live_mode(
     broker=None,
     confluence_members=None,
     confluence_required=2,
+    state_dir=None,
 ):
+    state_dir = state_dir or default_state_dir()
+    db_path = os.path.join(state_dir, 'signals.db')
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
     if strategy not in STRATEGY_REGISTRY:
@@ -331,6 +341,7 @@ def run_live_mode(
                 exchange=exchange,
                 confluence_members=confluence_members,
                 confluence_required=confluence_required,
+                state_dir=state_dir,
             )
             if signals:
                 logger.info(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
@@ -342,6 +353,7 @@ def run_live_mode(
                         timeframe,
                         signal["timestamp"].isoformat(),
                         signal["action"],
+                        db_path=db_path,
                     ):
                         logging.info(
                             json.dumps(
@@ -359,7 +371,7 @@ def run_live_mode(
                     )
                     if live_trade and exchange:
                         order = execute_trade(exchange, symbol, signal["action"], trade_amount)
-                        log_order_to_file(order, symbol)
+                        log_order_to_file(order, symbol, state_dir)
                         logging.info(
                             json.dumps(
                                 {
@@ -403,6 +415,7 @@ def run_live_mode(
             exchange=exchange,
             confluence_members=confluence_members,
             confluence_required=confluence_required,
+            state_dir=state_dir,
         )
         if signals:
             logger.info(f"?? NEW SIGNALS ({len(signals)}):")
@@ -423,7 +436,7 @@ def run_live_mode(
                     continue
                 if live_trade and exchange:
                     order = execute_trade(exchange, symbol, signal['action'], qty)
-                    log_order_to_file(order, symbol)
+                    log_order_to_file(order, symbol, state_dir)
                 else:
                     try:
                         if signal['action'] == 'buy':
@@ -434,7 +447,7 @@ def run_live_mode(
                             broker.set_price(symbol, signal['price'])
                             trade = broker.create_order(signal['action'], symbol, trade_amount)
                             trade['strategy'] = strategy
-                            log_trade_to_db(trade)
+                            log_trade_to_db(trade, db_path=db_path)
                         else:
                             if signal['action'] == 'buy':
                                 portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
@@ -473,6 +486,8 @@ def main():
     confluence_members = confluence_cfg.get("members", ["sma", "rsi", "macd"])
     confluence_required = confluence_cfg.get("required", 2)
 
+    state_dir = args.state_dir or default_state_dir()
+    os.makedirs(state_dir, exist_ok=True)
     api_key = args.api_key or os.getenv('TRADING_BOT_API_KEY') or config.get('api_key')
     api_secret = args.api_secret or os.getenv('TRADING_BOT_API_SECRET') or config.get('api_secret')
     api_passphrase = args.api_passphrase or os.getenv('TRADING_BOT_API_PASSPHRASE') or config.get('api_passphrase')
@@ -574,6 +589,7 @@ def main():
                 broker=broker,
                 confluence_members=confluence_members,
                 confluence_required=confluence_required,
+                state_dir=state_dir,
             )
         else:
             signals = run_single_analysis(
@@ -587,6 +603,7 @@ def main():
                 exchange=exchange,
                 confluence_members=confluence_members,
                 confluence_required=confluence_required,
+                state_dir=state_dir,
             )
 
             logger.info(f"=== Trading Bot Results for {symbol} ===")
