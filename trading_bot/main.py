@@ -29,7 +29,6 @@ from trading_bot.utils.config import get_config
 from trading_bot.utils.logging_config import setup_logging
 from trading_bot.utils.state import default_state_dir
 from trading_bot.utils.retry import RetryPolicy, default_retry
-from typing import Optional
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -46,9 +45,10 @@ logger = logging.getLogger(__name__)
 
 
 class CLIArgsModel(BaseModel):
+    # ✅ Use Optional[...] for Python 3.9 compatibility
     limit: Optional[int] = Field(default=None, gt=0)
-    trade_size: float | None = Field(default=None, gt=0)
-    fee_bps: float | None = Field(default=None, ge=0)
+    trade_size: Optional[float] = Field(default=None, gt=0)
+    fee_bps: Optional[float] = Field(default=None, ge=0)
     interval_seconds: int = Field(default=60, gt=0)
 
     model_config = ConfigDict(extra="ignore")
@@ -221,6 +221,7 @@ def log_order_to_file(
         logger.info("Logged order %s to %s", order.get("id", "N/A"), log_path)
     except OSError as e:
         logger.error("Failed to log order to %s: %s", log_path, e)
+
 def send_alert(signal):
     ts = signal["timestamp"].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
