@@ -33,6 +33,9 @@ jobs:
       run: |
         mypy --ignore-missing-imports trading_bot
 
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+
     - name: Run tests with coverage
       run: |
         pytest --cov=trading_bot --cov-report=term --cov-fail-under=80
