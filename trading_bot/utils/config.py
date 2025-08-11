@@ -2,7 +2,16 @@ import json
 import logging
 import os
 from functools import lru_cache
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -81,41 +90,54 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
     if env_exchange:
         config["exchange"] = env_exchange
 
-    _validate_config(config)
-    return config
+    try:
+        validated = ConfigModel(**config)
+    except ValidationError as e:  # noqa: BLE001
+        raise ValueError(f"Invalid configuration: {e}") from e
+    return validated.model_dump()
 
 
-def _validate_config(config: Dict) -> None:
-    """Validate required configuration values and types."""
+class ConfluenceModel(BaseModel):
+    required: int = Field(gt=0)
+    members: list[str]
 
-    required_fields: Dict[str, Tuple[type, ...]] = {
-        "symbol": (str,),
-        "timeframe": (str,),
-        "limit": (int,),
-        "sma_short": (int,),
-        "sma_long": (int,),
-        "trade_size": (int, float),
-    }
+    model_config = ConfigDict(extra="forbid")
 
-    for key, expected in required_fields.items():
-        if key not in config:
-            raise ValueError(f"Missing required config field: {key}")
-        if not isinstance(config[key], expected):
+    @field_validator("members")
+    @classmethod
+    def members_non_empty(cls, v: list[str]) -> list[str]:
+        if not v:
+            raise ValueError("confluence.members must be a non-empty list")
+        return v
+
+    @model_validator(mode="after")
+    def check_required(self) -> "ConfluenceModel":
+        if self.required > len(self.members):
             raise ValueError(
-                f"Config field '{key}' must be of type {expected}"
+                "confluence.required cannot exceed number of members"
             )
+        return self
 
-    confluence = config.get("confluence", {})
-    members = confluence.get("members")
-    if members is None or not isinstance(members, list) or not members:
-        raise ValueError("confluence.members must be a non-empty list")
 
-    required = confluence.get("required", 0)
-    if not isinstance(required, int) or required <= 0:
-        raise ValueError("confluence.required must be a positive integer")
+class ConfigModel(BaseModel):
+    symbol: str
+    timeframe: str
+    limit: int = Field(gt=0)
+    sma_short: int = Field(gt=0)
+    sma_long: int = Field(gt=0)
+    rsi_period: int = Field(gt=0)
+    rsi_lower: int = Field(ge=0, le=100)
+    rsi_upper: int = Field(ge=0, le=100)
+    trade_size: float = Field(gt=0)
+    confluence: ConfluenceModel
 
-    if required > len(members):
-        raise ValueError("confluence.required cannot exceed number of members")
+    model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="after")
+    def check_rsi_bounds(self) -> "ConfigModel":
+        if self.rsi_upper <= self.rsi_lower:
+            raise ValueError("rsi_upper must be greater than rsi_lower")
+        return self
 
 
 @lru_cache(maxsize=1)

@@ -28,6 +28,7 @@ dependencies = [
     "streamlit==1.38.0",
     "matplotlib==3.9.1",
     "plyer==2.1.0",
+    "pydantic==2.7.4",
 ]
 
 [project.urls]
