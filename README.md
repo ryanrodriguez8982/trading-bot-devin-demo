@@ -9,6 +9,27 @@ Create a trading bot using `ccxt` that:
 - Executes buy/sell logic
 - Logs results and generates reports
 
+## Quick Start
+
+```bash
+# 1. Clone the repository and enter the project
+git clone https://github.com/ryanrodriguez8982/trading-bot-devin-demo.git
+cd trading-bot-devin-demo
+
+# 2. Create a virtual environment and install dependencies
+python -m venv .venv
+source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+pip install -r requirements.txt
+
+# 3. Run a backtest to verify everything works
+trading-bot --backtest path/to/data.csv --strategy sma
+
+# 4. Launch the dashboard (optional)
+streamlit run dashboard.py
+```
+
+The sections below describe installation, configuration, and usage in more detail.
+
 ## Installation
 
 ### Option 1: Pip Installation (Recommended)
@@ -73,6 +94,21 @@ pip install -r requirements-dev.txt
 
 # Run directly
 python trading_bot/main.py --symbol BTC/USDT
+```
+
+## Configuration
+
+Default settings live in [`config.json`](config.json). Key options include:
+
+- `symbol` and `timeframe` – market and candle interval to trade.
+- Strategy parameters such as `sma_short`, `rsi_period`, `macd_fast`, or `bbands_window`.
+- API credentials and trade sizing under `api_key`, `api_secret`, and `trade_size`.
+- Risk controls and broker settings in the nested `risk` and `broker` sections.
+
+Any value can be overridden from the command line by passing the corresponding flag, e.g.:
+
+```bash
+trading-bot --symbol ETH/USDT --timeframe 5m
 ```
 
 ## Usage
@@ -356,6 +392,7 @@ trading-bot --live --live-trade
 ## Dashboard
 
 The project includes a Streamlit dashboard for visualizing trading signals and price data.
+Detailed instructions are in [docs/dashboard.md](docs/dashboard.md).
 
 ### Running the Dashboard
 ```bash
@@ -381,6 +418,16 @@ streamlit run dashboard.py
 The equity curve helps gauge profitability relative to your configured starting balance. Use the strategy filter to compare how each method performs.
 
 **Note**: Run the trading bot first to generate signals that will appear in the dashboard. Select `macd` or `bbands` in the Strategy filter to visualize those indicators.
+
+## Adding a New Strategy
+
+Strategies live in [`trading_bot/strategies`](trading_bot/strategies). To add one:
+
+1. Create a new module implementing your strategy logic.
+2. Import and register the strategy in `trading_bot/strategies/__init__.py` so it appears in the `STRATEGY_REGISTRY`.
+3. Reference your strategy via the `--strategy` flag or in `config.json`.
+
+See [docs/adding_strategy.md](docs/adding_strategy.md) for a walkthrough.
 
 ## Source Distribution
 
