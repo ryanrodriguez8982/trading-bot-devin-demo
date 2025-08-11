@@ -17,7 +17,7 @@ from trading_bot.signal_logger import (
     get_trades_from_db,
 )
 from trading_bot.data_fetch import fetch_btc_usdt_data
-from trading_bot.strategy import sma_crossover_strategy
+from trading_bot.strategy import sma_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
 from trading_bot.portfolio import Portfolio
@@ -232,14 +232,14 @@ with col1:
 
             if selected_strategy == "All" or selected_strategy == "sma":
                 if sma_short and sma_long:
-                    signals = sma_crossover_strategy(df_copy,
-                                                     sma_short=sma_short,
-                                                     sma_long=sma_long)
+                    signals = sma_strategy(
+                        df_copy, sma_short=sma_short, sma_long=sma_long
+                    )
                 else:
                     signals = []
             else:
                 strategy_fn = STRATEGY_REGISTRY.get(
-                    selected_strategy, sma_crossover_strategy
+                    selected_strategy, sma_strategy
                 )
                 if (selected_strategy == "rsi" and
                         all([rsi_period, lower_thresh, upper_thresh])):
