@@ -3,12 +3,14 @@
 This guide helps you move from paper trading to small real trades safely.
 
 ## 1. Configure Environment Variables
-Set your exchange API keys so the bot can authenticate:
+Set your exchange API keys so the bot can authenticate. You can copy
+`.env.example` to `.env` and fill in your credentials:
 
 ```bash
 export TRADING_BOT_API_KEY="your_api_key"
 export TRADING_BOT_API_SECRET="your_api_secret"
 export TRADING_BOT_API_PASSPHRASE="your_api_passphrase" # if required
+export TRADING_BOT_EXCHANGE="coinbase" # default exchange
 ```
 Keep these secrets secure and never commit them to source control. When set, they automatically override any values stored in config files.
 

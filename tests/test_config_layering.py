@@ -49,6 +49,7 @@ def test_env_overrides_secrets(tmp_path, monkeypatch):
         "api_key": "file_key",
         "api_secret": "file_secret",
         "api_passphrase": "file_pass",
+        "exchange": "binance",
     }
     config_path = tmp_path / "config.json"
     config_path.write_text(json.dumps(base))
@@ -56,11 +57,13 @@ def test_env_overrides_secrets(tmp_path, monkeypatch):
     monkeypatch.setenv("TRADING_BOT_API_KEY", "env_key")
     monkeypatch.setenv("TRADING_BOT_API_SECRET", "env_secret")
     monkeypatch.setenv("TRADING_BOT_API_PASSPHRASE", "env_pass")
+    monkeypatch.setenv("TRADING_BOT_EXCHANGE", "coinbase")
 
     config = load_config(config_dir=str(tmp_path))
     assert config["api_key"] == "env_key"
     assert config["api_secret"] == "env_secret"
     assert config["api_passphrase"] == "env_pass"
+    assert config["exchange"] == "coinbase"
 
 
 def test_missing_confluence_members_raises(tmp_path):

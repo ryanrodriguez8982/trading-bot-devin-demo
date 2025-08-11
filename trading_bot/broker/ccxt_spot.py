@@ -26,8 +26,9 @@ class CcxtSpotBroker(Broker):
         Name of the exchange supported by CCXT (e.g. ``"binance"``).
     api_key, api_secret:
         Credentials for the exchange.  If not provided they will be read from
-        the ``API_KEY`` and ``API_SECRET`` environment variables.  The exchange
-        name can also be supplied via the ``EXCHANGE`` environment variable.
+        the ``TRADING_BOT_API_KEY`` and ``TRADING_BOT_API_SECRET`` environment
+        variables.  The exchange name can also be supplied via the
+        ``TRADING_BOT_EXCHANGE`` environment variable.
     exchange:
         Optional pre-initialised CCXT exchange instance (useful for tests).
     dry_run:
@@ -55,9 +56,9 @@ class CcxtSpotBroker(Broker):
         if exchange is not None:
             self.exchange = exchange
         else:
-            name = exchange_name or os.getenv("EXCHANGE") or "binance"
-            key = api_key or os.getenv("API_KEY")
-            secret = api_secret or os.getenv("API_SECRET")
+            name = exchange_name or os.getenv("TRADING_BOT_EXCHANGE") or "binance"
+            key = api_key or os.getenv("TRADING_BOT_API_KEY")
+            secret = api_secret or os.getenv("TRADING_BOT_API_SECRET")
             params: Dict[str, Any] = {}
             if key and secret:
                 params = {"apiKey": key, "secret": secret}

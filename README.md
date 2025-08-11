@@ -121,7 +121,7 @@ trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
 
 # Real trading example (requires API keys)
 TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
-trading-bot --live --live-trade --symbol BTC/USDT
+TRADING_BOT_EXCHANGE=coinbase trading-bot --live --live-trade --symbol BTC/USDT
 
 For a step-by-step safety checklist before enabling real trades, see [Live Trading Guide & Safety Checklist](docs/live_trading.md).
 
@@ -201,7 +201,12 @@ sma_signals = get_signals_from_db(strategy_id="sma")
 The bot uses a `config.json` file for default parameters. You can create a
 `config.local.json` alongside it to override any of those defaults without
 committing sensitive values. Command line flags take precedence over both
-files.
+files. `config.local.json` is ignored by git so your local overrides remain
+private.
+
+Environment variables can be defined in a `.env` file (see
+`.env.example` for the full list) and will be loaded automatically by most
+shells and tooling.
 
 Example `config.json`:
 ```json
@@ -233,6 +238,7 @@ To enable live trading, supply your API credentials **via environment variables*
 - `TRADING_BOT_API_KEY`
 - `TRADING_BOT_API_SECRET`
 - `TRADING_BOT_API_PASSPHRASE` (if required)
+- `TRADING_BOT_EXCHANGE` (e.g., `coinbase`)
 
 You may also pass them on the command line using `--api-key`, `--api-secret` and `--api-passphrase` flags. Never commit real keys to the repository.
 
@@ -350,7 +356,7 @@ Connect to Binance for live trading:
 
 ```bash
 TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
-trading-bot --live --live-trade
+TRADING_BOT_EXCHANGE=coinbase trading-bot --live --live-trade
 ```
 
 ## Dashboard
