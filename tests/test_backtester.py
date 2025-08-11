@@ -1,7 +1,12 @@
 import pandas as pd
 import pytest
 
-from trading_bot.backtester import load_csv_data, run_backtest, simulate_equity
+from trading_bot.backtester import (
+    load_csv_data,
+    run_backtest,
+    simulate_equity,
+    generate_signals,
+)
 from trading_bot.strategies import STRATEGY_REGISTRY
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
@@ -60,8 +65,8 @@ def test_backtest_different_strategies(tmp_path, strategy_name):
     assert 'net_pnl' in result
 
 
-def test_backtest_generic_strategy_dispatch(tmp_path):
-    """Ensure run_backtest calls strategies with only supported params."""
+def test_generate_signals_dispatch(tmp_path):
+    """Ensure generate_signals calls strategies with only supported params."""
     timestamps = pd.date_range('2024-01-01', periods=5, freq='1min')
     df = pd.DataFrame({
         'timestamp': timestamps,
@@ -71,7 +76,6 @@ def test_backtest_generic_strategy_dispatch(tmp_path):
         'close': [100 + i for i in range(5)],
         'volume': [1000] * 5,
     })
-    csv_file = write_csv(tmp_path, df)
 
     called = {}
 
@@ -81,7 +85,7 @@ def test_backtest_generic_strategy_dispatch(tmp_path):
 
     STRATEGY_REGISTRY['minimal'] = minimal_strategy
     try:
-        run_backtest(str(csv_file), strategy='minimal')
+        generate_signals(df, strategy='minimal')
     finally:
         del STRATEGY_REGISTRY['minimal']
 
