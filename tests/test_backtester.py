@@ -7,14 +7,17 @@ from trading_bot.backtester import (
     simulate_equity,
     generate_signals,
 )
-from trading_bot.strategies import STRATEGY_REGISTRY
+from trading_bot.strategies import STRATEGY_REGISTRY, Strategy
+
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+
 
 def write_csv(tmp_path, df):
     csv_path = tmp_path / "data.csv"
     df.to_csv(csv_path, index=False)
     return csv_path
+
 
 def test_missing_columns(tmp_path):
     df = pd.DataFrame({
@@ -28,11 +31,13 @@ def test_missing_columns(tmp_path):
     with pytest.raises(ValueError):
         load_csv_data(csv_file)
 
+
 def test_empty_csv(tmp_path):
     df = pd.DataFrame(columns=REQUIRED_COLUMNS)
     csv_file = write_csv(tmp_path, df)
     with pytest.raises(ValueError):
         load_csv_data(csv_file)
+
 
 def test_inconsistent_timestamps(tmp_path):
     df = pd.DataFrame({
@@ -46,6 +51,7 @@ def test_inconsistent_timestamps(tmp_path):
     csv_file = write_csv(tmp_path, df)
     with pytest.raises(ValueError):
         load_csv_data(csv_file)
+
 
 @pytest.mark.parametrize("strategy_name", STRATEGY_REGISTRY.keys())
 def test_backtest_different_strategies(tmp_path, strategy_name):
@@ -83,7 +89,7 @@ def test_generate_signals_dispatch(tmp_path):
         called['yes'] = True
         return []
 
-    STRATEGY_REGISTRY['minimal'] = minimal_strategy
+    STRATEGY_REGISTRY['minimal'] = Strategy(minimal_strategy)
     try:
         generate_signals(df, strategy='minimal')
     finally:
@@ -96,11 +102,11 @@ def test_backtest_saves_outputs(tmp_path):
     timestamps = pd.date_range('2024-01-01', periods=10, freq='1min')
     df = pd.DataFrame({
         'timestamp': timestamps,
-        'open': [100]*10,
-        'high': [105]*10,
-        'low': [95]*10,
+        'open': [100] * 10,
+        'high': [105] * 10,
+        'low': [95] * 10,
         'close': [100 + i for i in range(10)],
-        'volume': [1000]*10
+        'volume': [1000] * 10,
     })
     csv_file = write_csv(tmp_path, df)
 
@@ -108,8 +114,14 @@ def test_backtest_saves_outputs(tmp_path):
     stats_out = tmp_path / 'summary_stats.json'
     chart_out = tmp_path / 'equity_chart.png'
 
-    run_backtest(str(csv_file), strategy='sma', plot=True,
-                equity_out=str(equity_out), stats_out=str(stats_out), chart_out=str(chart_out))
+    run_backtest(
+        str(csv_file),
+        strategy='sma',
+        plot=True,
+        equity_out=str(equity_out),
+        stats_out=str(stats_out),
+        chart_out=str(chart_out),
+    )
 
     assert equity_out.exists()
     assert stats_out.exists()
@@ -144,4 +156,3 @@ def test_fees_slippage_pnl_consistency():
     fee_sell = sell_exec * 10 / 10_000
     expected = (sell_exec - buy_exec) - (fee_buy + fee_sell)
     assert stats['net_pnl'] == pytest.approx(expected)
-

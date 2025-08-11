@@ -238,9 +238,8 @@ with col1:
                 else:
                     signals = []
             else:
-                strategy_fn = STRATEGY_REGISTRY.get(
-                    selected_strategy, sma_crossover_strategy
-                )
+                entry = STRATEGY_REGISTRY.get(selected_strategy)
+                strategy_fn = entry.func if entry else sma_crossover_strategy
                 if (selected_strategy == "rsi" and
                         all([rsi_period, lower_thresh, upper_thresh])):
                     signals = strategy_fn(df_copy, period=rsi_period,

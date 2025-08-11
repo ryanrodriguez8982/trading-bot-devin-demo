@@ -24,7 +24,7 @@ from trading_bot.signal_logger import (
     log_trade_to_db,
     mark_signal_handled,
 )
-from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.strategies import STRATEGY_REGISTRY
 from trading_bot.utils.config import get_config
 from trading_bot.utils.logging_config import setup_logging
 from trading_bot.utils.retry import RetryPolicy, default_retry
@@ -302,7 +302,7 @@ def run_single_analysis(
     alert_mode=False,
     exchange=None,
     confluence_members=None,
-    confluence_required=2,
+    confluence_required: Optional[int] = None,
     state_dir=None,
 ):
     try:
@@ -315,7 +315,10 @@ def run_single_analysis(
             data = fetch_btc_usdt_data(symbol, timeframe, limit)
         logger.info("Fetched %d data points for %s (%s)", len(data), symbol, timeframe)
 
-        strategy_fn = STRATEGY_REGISTRY[strategy]
+        entry = STRATEGY_REGISTRY[strategy]
+        strategy_fn = entry.func
+        metadata = entry.metadata
+
         if strategy == "rsi":
             signals = strategy_fn(
                 data,
@@ -332,6 +335,10 @@ def run_single_analysis(
                 num_std=DEFAULT_BBANDS_STD,
             )
         elif strategy == "confluence":
+            if confluence_members is None:
+                confluence_members = metadata.get("requires")
+            if confluence_required is None:
+                confluence_required = metadata.get("required_count")
             signals = strategy_fn(
                 data,
                 members=confluence_members,
@@ -378,7 +385,7 @@ def run_live_mode(
     interval_seconds=60,
     broker=None,
     confluence_members=None,
-    confluence_required=2,
+    confluence_required: Optional[int] = None,
     state_dir=None,
     retry_policy: Optional[RetryPolicy] = None,
 ):
@@ -578,8 +585,13 @@ def main():
     interval_seconds = getattr(args, "interval_seconds", 60)
 
     confluence_cfg = config.get("confluence", {})
-    confluence_members = confluence_cfg.get("members", ["sma", "rsi", "macd"])
-    confluence_required = confluence_cfg.get("required", 2)
+    confluence_meta = STRATEGY_REGISTRY["confluence"].metadata
+    confluence_members = confluence_cfg.get(
+        "members", confluence_meta.get("requires")
+    )
+    confluence_required = confluence_cfg.get(
+        "required", confluence_meta.get("required_count")
+    )
 
     os.makedirs(state_dir, exist_ok=True)
     api_key = args.api_key or config.get("api_key")
@@ -620,8 +632,12 @@ def main():
     # List strategies and exit
     if getattr(args, "list_strategies", False):
         logger.info("Available strategies:")
-        for name in list_strategies():
-            logger.info("- %s", name)
+        for name, entry in STRATEGY_REGISTRY.items():
+            meta = entry.metadata
+            if meta:
+                logger.info("- %s: %s", name, meta)
+            else:
+                logger.info("- %s", name)
         return
 
     if strategy_choice not in STRATEGY_REGISTRY:

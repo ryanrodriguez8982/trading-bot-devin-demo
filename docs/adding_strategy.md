@@ -9,7 +9,7 @@ The bot loads strategies from the `trading_bot/strategies` package.
    - Implement a function that accepts price data and returns buy/sell signals.
 2. **Register the strategy**
    - Import your function in `trading_bot/strategies/__init__.py`.
-   - Add it to `STRATEGY_REGISTRY` with a short key.
+   - Add it to `STRATEGY_REGISTRY` with a short key and optional metadata (e.g., dependencies or parameter ranges).
 3. **Use the strategy**
    - Invoke the bot with `--strategy your_key` or set `"strategy": "your_key"` in `config.json`.
 4. **Test**

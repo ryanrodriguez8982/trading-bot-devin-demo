@@ -2,6 +2,7 @@ import pandas as pd
 
 from trading_bot.strategies.confluence import confluence_strategy
 from trading_bot import strategies as strategies_module
+from trading_bot.strategies import Strategy
 
 
 def test_confluence_emits_when_quorum(monkeypatch):
@@ -23,7 +24,11 @@ def test_confluence_emits_when_quorum(monkeypatch):
     monkeypatch.setattr(
         strategies_module,
         "STRATEGY_REGISTRY",
-        {"a": strat_a, "b": strat_b, "c": strat_c},
+        {
+            "a": Strategy(strat_a),
+            "b": Strategy(strat_b),
+            "c": Strategy(strat_c),
+        },
     )
 
     df = pd.DataFrame(
