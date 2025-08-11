@@ -4,7 +4,8 @@ import inspect
 import json
 import logging
 import os
-from typing import Any, Callable, Optional, cast
+from typing import Any, Optional
+
 
 import pandas as pd
 
@@ -238,7 +239,7 @@ def generate_signals(
         raise ValueError("Unknown strategy")
 
     entry = STRATEGY_REGISTRY[strategy]
-    strategy_fn = cast(Callable[..., list[dict[str, Any]]], entry.func)
+    strategy_fn = entry.func
     metadata = entry.metadata
 
     if confluence_members is None:
