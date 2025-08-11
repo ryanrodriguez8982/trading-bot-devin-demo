@@ -29,6 +29,7 @@ from trading_bot.utils.config import get_config
 from trading_bot.utils.logging_config import setup_logging
 from trading_bot.utils.state import default_state_dir
 from trading_bot.utils.retry import RetryPolicy, default_retry
+from typing import Optional
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -45,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 class CLIArgsModel(BaseModel):
-    limit: int | None = Field(default=None, gt=0)
+    limit: Optional[int] = Field(default=None, gt=0)
     trade_size: float | None = Field(default=None, gt=0)
     fee_bps: float | None = Field(default=None, ge=0)
     interval_seconds: int = Field(default=60, gt=0)
