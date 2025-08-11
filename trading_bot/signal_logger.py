@@ -105,10 +105,21 @@ def log_signals_to_db(
                 rows,
             )
             conn.commit()
-            logger.info("Logged %d signals to database %s", len(signals), db_path)
+            logger.info(
+                "Logged %d signals for %s (strategy=%s) to database %s",
+                len(signals),
+                symbol,
+                strategy_id,
+                db_path,
+            )
 
     except sqlite3.Error:
-        logger.exception("Database error while logging signals")
+        logger.exception(
+            "log_signals_to_db: Database error for symbol=%s strategy=%s db_path=%s",
+            symbol,
+            strategy_id,
+            db_path,
+        )
         raise
 
 
@@ -140,16 +151,27 @@ def log_trade_to_db(trade: Dict[str, Any], db_path: Optional[str] = None) -> Non
             )
             conn.commit()
             logger.info(
-                "Logged trade %s %s to database %s",
+                "Logged trade %s %s qty=%s price=%.4f strategy=%s to database %s",
                 trade["side"],
                 trade["symbol"],
+                trade.get("qty"),
+                float(trade.get("price", 0.0)),
+                trade.get("strategy", ""),
                 db_path,
             )
     except sqlite3.Error:
-        logger.exception("Database error while logging trade")
+        logger.exception(
+            "log_trade_to_db: Database error for trade=%s db_path=%s",
+            trade,
+            db_path,
+        )
         raise
     except (KeyError, ValueError, TypeError):
-        logger.exception("Error logging trade to database: bad trade payload")
+        logger.exception(
+            "log_trade_to_db: Error logging trade payload %s to %s",
+            trade,
+            db_path,
+        )
         raise
 
 
@@ -197,7 +219,12 @@ def get_trades_from_db(
             return cursor.fetchall()
 
     except sqlite3.Error:
-        logger.exception("Database error while fetching trades")
+        logger.exception(
+            "get_trades_from_db: Database error for symbol=%s limit=%s db_path=%s",
+            symbol,
+            limit,
+            db_path,
+        )
         return []
 
 
@@ -254,7 +281,13 @@ def get_signals_from_db(
             return cursor.fetchall()
 
     except sqlite3.Error:
-        logger.exception("Database error while fetching signals")
+        logger.exception(
+            "get_signals_from_db: Database error for symbol=%s strategy=%s limit=%s db_path=%s",
+            symbol,
+            strategy_id,
+            limit,
+            db_path,
+        )
         return []
 
 
@@ -310,5 +343,11 @@ def mark_signal_handled(
             except sqlite3.IntegrityError:
                 return True
     except sqlite3.Error:
-        logger.exception("Database error in mark_signal_handled")
+        logger.exception(
+            "mark_signal_handled: Database error for symbol=%s strategy=%s timeframe=%s db_path=%s",
+            symbol,
+            strategy_id,
+            timeframe,
+            db_path,
+        )
         raise

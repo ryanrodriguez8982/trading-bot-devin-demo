@@ -206,7 +206,7 @@ def send_alert(signal):
         try:
             notification.notify(title="Trading Bot Alert", message=message)
         except Exception as e:
-            logger.exception("Notification error: %s", e)
+            logger.exception("send_alert: Notification error: %s", e)
 
 
 def signal_handler(signum, frame):  # noqa: ARG001 (frame unused)
@@ -265,6 +265,15 @@ def run_single_analysis(
 
         logger.info("Generated %d trading signals for %s", len(signals), symbol)
         if signals:
+            for s in signals:
+                s["strategy"] = strategy
+                logger.info(
+                    "Signal generated: symbol=%s action=%s price=%.4f strategy=%s",
+                    symbol,
+                    s["action"],
+                    float(s["price"]),
+                    strategy,
+                )
             log_signals_to_file(signals, symbol, state_dir)
             db_path = os.path.join(state_dir or default_state_dir(), "signals.db")
             log_signals_to_db(signals, symbol, db_path=db_path)
@@ -389,8 +398,6 @@ def run_live_mode(
                     )
                     continue
 
-                logger.info("  %s - %s at $%.2f", ts, action.upper(), price)
-
                 # Determine quantity
                 qty = 0.0
                 if trade_amount:
@@ -398,6 +405,15 @@ def run_live_mode(
                 elif risk_config:
                     equity = portfolio.equity({sym: price}) if portfolio else 0
                     qty = calculate_position_size(risk_config.position_sizing, price, equity)
+
+                logger.info(
+                    "Processing signal: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
+                    sym,
+                    action.upper(),
+                    float(price),
+                    qty,
+                    signal.get("strategy", strategy),
+                )
 
                 # Execute trade
                 if live_trade and exchange:
@@ -408,6 +424,9 @@ def run_live_mode(
                             {
                                 "symbol": sym,
                                 "action": action,
+                                "price": price,
+                                "qty": qty,
+                                "strategy": signal.get("strategy", strategy),
                                 "timestamp": ts,
                                 "status": "placed",
                             }
@@ -431,6 +450,9 @@ def run_live_mode(
                                 {
                                     "symbol": sym,
                                     "action": action,
+                                    "price": price,
+                                    "qty": qty,
+                                    "strategy": signal.get("strategy", strategy),
                                     "timestamp": ts,
                                     "status": "executed",
                                 }

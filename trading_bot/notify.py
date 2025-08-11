@@ -34,7 +34,7 @@ def send(message: str, channels: Optional[Iterable[str]] = None) -> None:
         try:  # pragma: no cover - desktop notifications not testable
             desktop_notify.notify(title="Trading Bot Alert", message=message)
         except Exception as exc:  # pragma: no cover
-            logger.exception("Notification error: %s", exc)
+            logger.exception("send: Notification error via desktop channel: %s", exc)
     if "email" in channels:
         pass  # Stub for future email integration
     if "webhook" in channels:
