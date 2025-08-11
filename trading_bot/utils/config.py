@@ -77,6 +77,9 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
     env_api_passphrase = os.getenv("TRADING_BOT_API_PASSPHRASE")
     if env_api_passphrase:
         config["api_passphrase"] = env_api_passphrase
+    env_exchange = os.getenv("TRADING_BOT_EXCHANGE")
+    if env_exchange:
+        config["exchange"] = env_exchange
 
     _validate_config(config)
     return config
