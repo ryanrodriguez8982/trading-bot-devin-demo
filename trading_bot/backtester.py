@@ -4,6 +4,7 @@ import pandas as pd
 import logging
 import os
 import json
+import inspect
 from typing import Any, Callable, Optional, cast
 
 from trading_bot.signal_logger import log_signals_to_db
@@ -203,25 +204,31 @@ def run_backtest(
         raise ValueError("Unknown strategy")
 
     strategy_fn = cast(Callable[..., list[dict[str, Any]]], STRATEGY_REGISTRY[strategy])
-    if strategy == 'rsi':
-        signals = strategy_fn(df, period=rsi_period)
-    elif strategy == 'macd':
-        signals = strategy_fn(
-            df,
-            fast_period=macd_fast,
-            slow_period=macd_slow,
-            signal_period=macd_signal,
-        )
-    elif strategy == 'bbands':
-        signals = strategy_fn(df, window=bbands_window, num_std=bbands_std)
-    elif strategy == 'confluence':
-        signals = strategy_fn(
-            df,
-            members=confluence_members,
-            required=confluence_required,
-        )
-    else:
-        signals = strategy_fn(df, sma_short, sma_long)
+
+    # Map of all possible strategy parameters
+    available_params = {
+        'df': df,
+        'sma_short': sma_short,
+        'sma_long': sma_long,
+        'period': rsi_period,
+        'fast_period': macd_fast,
+        'slow_period': macd_slow,
+        'signal_period': macd_signal,
+        'window': bbands_window,
+        'num_std': bbands_std,
+        'members': confluence_members,
+        'required': confluence_required,
+    }
+
+    # Only pass parameters accepted by the strategy function
+    sig = inspect.signature(strategy_fn)
+    strategy_kwargs = {
+        name: value
+        for name, value in available_params.items()
+        if name in sig.parameters and value is not None
+    }
+
+    signals = strategy_fn(**strategy_kwargs)
 
     equity_curve, stats = simulate_equity(
         df,

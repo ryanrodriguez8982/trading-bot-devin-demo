@@ -60,6 +60,34 @@ def test_backtest_different_strategies(tmp_path, strategy_name):
     assert 'net_pnl' in result
 
 
+def test_backtest_generic_strategy_dispatch(tmp_path):
+    """Ensure run_backtest calls strategies with only supported params."""
+    timestamps = pd.date_range('2024-01-01', periods=5, freq='1min')
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'open': [100] * 5,
+        'high': [105] * 5,
+        'low': [95] * 5,
+        'close': [100 + i for i in range(5)],
+        'volume': [1000] * 5,
+    })
+    csv_file = write_csv(tmp_path, df)
+
+    called = {}
+
+    def minimal_strategy(df):  # expects only df
+        called['yes'] = True
+        return []
+
+    STRATEGY_REGISTRY['minimal'] = minimal_strategy
+    try:
+        run_backtest(str(csv_file), strategy='minimal')
+    finally:
+        del STRATEGY_REGISTRY['minimal']
+
+    assert called.get('yes') is True
+
+
 def test_backtest_saves_outputs(tmp_path):
     timestamps = pd.date_range('2024-01-01', periods=10, freq='1min')
     df = pd.DataFrame({
