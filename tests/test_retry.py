@@ -50,3 +50,24 @@ def test_circuit_breaker_opens_and_recovers(caplog):
         return 42
 
     assert policy.call(succeed) == 42
+
+
+def test_network_error_handled(caplog, monkeypatch):
+    import ccxt
+
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] < 2:
+            raise ccxt.NetworkError("net down")
+        return "ok"
+
+    policy = RetryPolicy(retries=3, backoff=0.01, jitter=0.0)
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+    with caplog.at_level(logging.WARNING):
+        result = policy.call(flaky)
+
+    assert result == "ok"
+    assert calls["n"] == 2
+    assert any("network error" in r.message.lower() for r in caplog.records)

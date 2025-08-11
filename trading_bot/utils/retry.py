@@ -4,6 +4,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional, TypeVar
 
+import ccxt
+
 from trading_bot.notify import send as notify_send
 
 
@@ -56,16 +58,30 @@ class RetryPolicy:
             except Exception as e:  # pragma: no cover - generic catch
                 attempt += 1
                 self._record_failure()
-                logger.warning(
-                    f"{func.__name__} failed on attempt {attempt}: {e}", exc_info=True
-                )
-                if attempt > self.retries:
-                    logger.error(
-                        f"{func.__name__} failed after {self.retries} retries: {e}",
+                if isinstance(e, ccxt.NetworkError):
+                    logger.warning(
+                        f"{func.__name__} network error on attempt {attempt}: {e}",
                         exc_info=True,
                     )
-                    raise
-                sleep = self.backoff * (2 ** (attempt - 1))
+                    if attempt > self.retries:
+                        logger.error(
+                            f"{func.__name__} network error after {self.retries} retries: {e}",
+                            exc_info=True,
+                        )
+                        raise
+                    sleep = min(self.backoff * (2 ** (attempt - 1)), 1.0)
+                else:
+                    logger.warning(
+                        f"{func.__name__} failed on attempt {attempt}: {e}",
+                        exc_info=True,
+                    )
+                    if attempt > self.retries:
+                        logger.error(
+                            f"{func.__name__} failed after {self.retries} retries: {e}",
+                            exc_info=True,
+                        )
+                        raise
+                    sleep = self.backoff * (2 ** (attempt - 1))
                 sleep += random.uniform(0, self.jitter)
                 time.sleep(sleep)
 

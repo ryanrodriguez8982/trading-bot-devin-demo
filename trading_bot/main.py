@@ -167,16 +167,19 @@ def log_signals_to_file(
     os.makedirs(logs_dir, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(logs_dir, f"{timestamp}_signals.log")
-    with open(log_path, "w", encoding="utf-8") as f:
-        f.write(f"Trading Signals Log - {symbol}\n")
-        f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()}\n")
-        f.write("=" * 50 + "\n")
-        for signal in signals:
-            ts = signal["timestamp"].isoformat()
-            f.write(
-                f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n"
-            )
-    logger.info("Logged %d signals to %s", len(signals), log_path)
+    try:
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(f"Trading Signals Log - {symbol}\n")
+            f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()}\n")
+            f.write("=" * 50 + "\n")
+            for signal in signals:
+                ts = signal["timestamp"].isoformat()
+                f.write(
+                    f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n"
+                )
+        logger.info("Logged %d signals to %s", len(signals), log_path)
+    except OSError as e:
+        logger.error("Failed to log signals to %s: %s", log_path, e)
 
 
 def log_order_to_file(
@@ -190,14 +193,17 @@ def log_order_to_file(
     logs_dir = os.path.join(state_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
     log_path = os.path.join(logs_dir, "orders.log")
-    with open(log_path, "a", encoding="utf-8") as f:
-        ts = datetime.now(timezone.utc).isoformat()
-        order_id = order.get("id", "N/A")
-        amount = order.get("amount")
-        price = order.get("price")
-        side = order.get("side")
-        f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
-    logger.info("Logged order %s to %s", order.get("id", "N/A"), log_path)
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            ts = datetime.now(timezone.utc).isoformat()
+            order_id = order.get("id", "N/A")
+            amount = order.get("amount")
+            price = order.get("price")
+            side = order.get("side")
+            f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
+        logger.info("Logged order %s to %s", order.get("id", "N/A"), log_path)
+    except OSError as e:
+        logger.error("Failed to log order to %s: %s", log_path, e)
 def send_alert(signal):
     ts = signal["timestamp"].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
