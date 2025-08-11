@@ -49,16 +49,17 @@ def rsi_crossover_strategy(
         d['timestamp'] = pd.to_datetime(d['timestamp'], utc=True, errors='coerce')
 
     # RSI (simple rolling mean variant; Wilder's smoothing can be added later if desired)
-    delta = d['close'].diff()
-    gain = delta.clip(lower=0.0)
-    loss = -delta.clip(upper=0.0)
+    delta = d['close'].diff()  # price change between consecutive closes
+    gain = delta.clip(lower=0.0)  # positive gains
+    loss = -delta.clip(upper=0.0)  # negative losses as positive numbers
 
+    # Rolling mean of gains/losses over the lookback period
     avg_gain = gain.rolling(window=period, min_periods=period).mean()
     avg_loss = loss.rolling(window=period, min_periods=period).mean()
 
-    # Avoid division by zero
+    # Avoid division by zero then compute relative strength and RSI oscillator
     avg_loss = avg_loss.replace(0, np.nan)
-    rs = avg_gain / avg_loss
+    rs = avg_gain / avg_loss  # relative strength
     d['rsi'] = 100.0 - (100.0 / (1.0 + rs))
 
     signals: List[Dict[str, Any]] = []
