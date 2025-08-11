@@ -50,6 +50,52 @@ def run_trailing(bars):
     return stats['net_pnl']
 
 
+@pytest.mark.parametrize(
+    "bars,expected_curve,expected_pnl,expected_win,expected_dd",
+    [
+        (
+            [
+                {"open": 100, "high": 100, "low": 100, "close": 100},
+                {"open": 100, "high": 105, "low": 89, "close": 95},
+                {"open": 95, "high": 95, "low": 95, "close": 95},
+            ],
+            [100, 90, 90],
+            -10,
+            0.0,
+            10.0,
+        ),
+        (
+            [
+                {"open": 100, "high": 100, "low": 100, "close": 100},
+                {"open": 100, "high": 125, "low": 95, "close": 110},
+                {"open": 110, "high": 110, "low": 110, "close": 110},
+            ],
+            [100, 120, 120],
+            20,
+            100.0,
+            0.0,
+        ),
+    ],
+)
+def test_equity_curve_and_stats_adjust(bars, expected_curve, expected_pnl, expected_win, expected_dd):
+    df = make_df(bars)
+    signals = [{"timestamp": df["timestamp"].iloc[0], "action": "buy"}]
+    equity, stats = simulate_equity(
+        df,
+        signals,
+        initial_capital=100,
+        trade_size=1,
+        fees_bps=0,
+        slippage_bps=0,
+        stop_loss_pct=0.10,
+        take_profit_rr=2.0,
+    )
+    assert equity == pytest.approx(expected_curve)
+    assert stats["net_pnl"] == pytest.approx(expected_pnl)
+    assert stats["win_rate"] == pytest.approx(expected_win)
+    assert stats["max_drawdown"] == pytest.approx(expected_dd)
+
+
 def test_stop_loss_hit():
     net = run_scenario([
         {'open': 100, 'high': 100, 'low': 100, 'close': 100},
