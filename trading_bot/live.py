@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 
+import logging
+
 from trading_bot.broker import Broker
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -46,6 +51,14 @@ class LiveTrader:
         action = str(signal["action"])
         self.broker.set_price(symbol, price)
         order = self.broker.create_order(action, symbol, qty)
+        logger.info(
+            "Executed order: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
+            symbol,
+            action,
+            price,
+            qty,
+            signal.get("strategy", ""),
+        )
         if action == "buy" and (stop_loss is not None or take_profit is not None):
             pos = getattr(self.broker, "portfolio", None)
             if pos and symbol in pos.positions:

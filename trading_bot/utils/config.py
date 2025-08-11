@@ -39,7 +39,10 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
         with open(config_path, "r") as f:
             config = json.load(f)
     except FileNotFoundError:
-        logger.warning("config.json not found, using default values")
+        logger.warning(
+            "load_config: config.json not found at %s, using default values",
+            config_path,
+        )
         config = {
             "symbol": "BTC/USDT",
             "timeframe": "1m",
@@ -59,7 +62,11 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
                 local_cfg = json.load(f)
             config = _deep_update(config, local_cfg)
         except (OSError, json.JSONDecodeError) as e:  # noqa: BLE001
-            logger.warning(f"Failed loading config.local.json: {e}")
+            logger.warning(
+                "load_config: Failed loading config.local.json at %s: %s",
+                local_path,
+                e,
+            )
     # Override sensitive values with environment variables if available
     env_api_key = os.getenv("TRADING_BOT_API_KEY")
     if env_api_key:
