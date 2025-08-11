@@ -1,18 +1,18 @@
 """CCXT spot broker implementation."""
+
 from __future__ import annotations
 
 import logging
-import math
 import os
 import time
 from typing import Any, Dict, Optional
 
 import ccxt
 
-from .base import Broker
 from trading_bot.utils.precision import round_to_increment
 from trading_bot.utils.rate_limit import RateLimiter
 
+from .base import Broker
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,8 @@ class CcxtSpotBroker(Broker):
             qty = round_to_increment(qty, float(min_amt), side)
         if qty != original:
             logger.debug(
-                "rounded qty", extra={"symbol": symbol, "side": side, "from": original, "to": qty}
+                "rounded qty",
+                extra={"symbol": symbol, "side": side, "from": original, "to": qty},
             )
         return qty
 
@@ -155,13 +156,11 @@ class CcxtSpotBroker(Broker):
                     return order_payload
                 self._wait_rate_limit()
                 return self.exchange.create_order(symbol, type, side, qty)
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.exception(
-                    "ccxt order failed", extra={"payload": order_payload}
-                )
+            except Exception:  # pragma: no cover - defensive
+                logger.exception("ccxt order failed", extra={"payload": order_payload})
                 if attempt == self.retries - 1:
                     raise
-                time.sleep(self.backoff * (2 ** attempt))
+                time.sleep(self.backoff * (2**attempt))
         raise RuntimeError("unreachable")
 
 

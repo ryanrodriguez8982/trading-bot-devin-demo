@@ -48,4 +48,4 @@ include = ["trading_bot"]
 line-length = 120
 
 [tool.ruff.lint]
-ignore = ["E402", "F401", "F811", "F841"]
+ignore = ["E203", "E501"]

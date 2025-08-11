@@ -1,4 +1,3 @@
-import pytest
 from trading_bot.risk.exits import ExitManager
 
 

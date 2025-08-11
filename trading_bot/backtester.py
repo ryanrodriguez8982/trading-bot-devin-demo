@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-import pandas as pd
+import inspect
+import json
 import logging
 import os
-import json
-import inspect
 from typing import Any, Callable, Optional, cast
 
-from trading_bot.signal_logger import log_signals_to_db
-from trading_bot.strategies import STRATEGY_REGISTRY
-from trading_bot.portfolio import Portfolio
-from trading_bot.utils.config import get_config
+import pandas as pd
 
+from trading_bot.portfolio import Portfolio
+from trading_bot.strategies import STRATEGY_REGISTRY
+from trading_bot.utils.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ DEFAULT_MACD_SIGNAL = CONFIG.get("macd_signal", 9)
 DEFAULT_BBANDS_WINDOW = CONFIG.get("bbands_window", 20)
 DEFAULT_BBANDS_STD = CONFIG.get("bbands_std", 2)
 
-REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+REQUIRED_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 
 
 def load_csv_data(csv_path):
@@ -48,8 +47,8 @@ def load_csv_data(csv_path):
     if df.empty:
         raise ValueError("CSV file contains no rows")
 
-    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
-    if not df['timestamp'].is_monotonic_increasing:
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    if not df["timestamp"].is_monotonic_increasing:
         raise ValueError("Timestamps must be strictly increasing")
 
     return df
@@ -84,24 +83,24 @@ def simulate_equity(
     trade_profits: list[float] = []
     highest_prices: dict[str, float] = {}
 
-    signal_iter = iter(sorted(signals, key=lambda x: x['timestamp']))
+    signal_iter = iter(sorted(signals, key=lambda x: x["timestamp"]))
     current_signal = next(signal_iter, None)
 
     for _, row in df.iterrows():
-        ts = row['timestamp']
-        close_price = row['close']
+        ts = row["timestamp"]
+        close_price = row["close"]
 
         pos = portfolio.positions.get(symbol)
         if pos and pos.qty > 0:
             if trailing_stop_pct is not None:
                 prev_high = highest_prices.get(symbol, pos.avg_cost)
-                curr_high = max(prev_high, row['high'])
+                curr_high = max(prev_high, row["high"])
                 highest_prices[symbol] = curr_high
                 trail = curr_high * (1 - trailing_stop_pct)
                 if pos.stop_loss is None or trail > pos.stop_loss:
                     pos.stop_loss = trail
-            stop_hit = pos.stop_loss is not None and row['low'] <= pos.stop_loss
-            tp_hit = pos.take_profit is not None and row['high'] >= pos.take_profit
+            stop_hit = pos.stop_loss is not None and row["low"] <= pos.stop_loss
+            tp_hit = pos.take_profit is not None and row["high"] >= pos.take_profit
             exit_price = None
             if stop_hit and tp_hit:
                 exit_price = pos.stop_loss
@@ -117,10 +116,10 @@ def simulate_equity(
                 trade_profits.append((exec_price - exit_avg_cost) * qty)
                 highest_prices.pop(symbol, None)
 
-        while current_signal is not None and current_signal['timestamp'] <= ts:
-            action = current_signal['action']
+        while current_signal is not None and current_signal["timestamp"] <= ts:
+            action = current_signal["action"]
             try:
-                if action == 'buy':
+                if action == "buy":
                     buy_price = close_price * (1 + slippage_bps / 10_000)
                     stop_price = None
                     take_price = None
@@ -131,7 +130,11 @@ def simulate_equity(
                             take_price = buy_price + risk * take_profit_rr
                     if trailing_stop_pct:
                         trail_price = buy_price * (1 - trailing_stop_pct)
-                        stop_price = max(stop_price, trail_price) if stop_price is not None else trail_price
+                        stop_price = (
+                            max(stop_price, trail_price)
+                            if stop_price is not None
+                            else trail_price
+                        )
                         highest_prices[symbol] = buy_price
                     portfolio.buy(
                         symbol,
@@ -141,7 +144,7 @@ def simulate_equity(
                         stop_loss=stop_price,
                         take_profit=take_price,
                     )
-                elif action == 'sell':
+                elif action == "sell":
                     sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
                     avg_cost: Optional[float] = (
@@ -158,7 +161,7 @@ def simulate_equity(
         equity = portfolio.equity({symbol: close_price})
         equity_history.append(equity)
 
-    final_equity = portfolio.equity({symbol: df.iloc[-1]['close']})
+    final_equity = portfolio.equity({symbol: df.iloc[-1]["close"]})
     net_pnl = final_equity - initial_capital
     win_rate = 0.0
     if trade_profits:
@@ -167,15 +170,15 @@ def simulate_equity(
 
     max_drawdown = compute_drawdown(equity_history)
     return equity_history, {
-        'net_pnl': float(net_pnl),
-        'win_rate': float(win_rate),
-        'max_drawdown': float(max_drawdown),
+        "net_pnl": float(net_pnl),
+        "win_rate": float(win_rate),
+        "max_drawdown": float(max_drawdown),
     }
 
 
 def generate_signals(
     df,
-    strategy='sma',
+    strategy="sma",
     sma_short: int = DEFAULT_SMA_SHORT,
     sma_long: int = DEFAULT_SMA_LONG,
     rsi_period: int = DEFAULT_RSI_PERIOD,
@@ -195,17 +198,17 @@ def generate_signals(
     strategy_fn = cast(Callable[..., list[dict[str, Any]]], STRATEGY_REGISTRY[strategy])
 
     available_params = {
-        'df': df,
-        'sma_short': sma_short,
-        'sma_long': sma_long,
-        'period': rsi_period,
-        'fast_period': macd_fast,
-        'slow_period': macd_slow,
-        'signal_period': macd_signal,
-        'window': bbands_window,
-        'num_std': bbands_std,
-        'members': confluence_members,
-        'required': confluence_required,
+        "df": df,
+        "sma_short": sma_short,
+        "sma_long": sma_long,
+        "period": rsi_period,
+        "fast_period": macd_fast,
+        "slow_period": macd_slow,
+        "signal_period": macd_signal,
+        "window": bbands_window,
+        "num_std": bbands_std,
+        "members": confluence_members,
+        "required": confluence_required,
     }
 
     sig = inspect.signature(strategy_fn)
@@ -239,7 +242,7 @@ def save_backtest_outputs(
 
     if stats_out:
         try:
-            with open(stats_out, 'w') as f:
+            with open(stats_out, "w") as f:
                 json.dump(stats, f, indent=2)
             logger.info(f"Summary stats saved to {stats_out}")
         except OSError as e:  # pragma: no cover - I/O errors are uncommon
@@ -251,13 +254,15 @@ def save_backtest_outputs(
 
     if plot and chart_out:
         import matplotlib
-        matplotlib.use('Agg')
+
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         plt.figure(figsize=(10, 4))
-        plt.plot(eq_df['timestamp'], eq_df['equity'])
-        plt.xlabel('Time')
-        plt.ylabel('Equity')
-        plt.title('Equity Curve')
+        plt.plot(eq_df["timestamp"], eq_df["equity"])
+        plt.xlabel("Time")
+        plt.ylabel("Equity")
+        plt.title("Equity Curve")
         plt.tight_layout()
         try:
             plt.savefig(chart_out)
@@ -268,7 +273,7 @@ def save_backtest_outputs(
 
 def run_backtest(
     csv_path,
-    strategy='sma',
+    strategy="sma",
     sma_short=DEFAULT_SMA_SHORT,
     sma_long=DEFAULT_SMA_LONG,
     rsi_period=DEFAULT_RSI_PERIOD,
@@ -319,10 +324,12 @@ def run_backtest(
         trailing_stop_pct=trailing_stop_pct,
     )
 
-    eq_df = pd.DataFrame({
-        'timestamp': df['timestamp'],
-        'equity': equity_curve,
-    })
+    eq_df = pd.DataFrame(
+        {
+            "timestamp": df["timestamp"],
+            "equity": equity_curve,
+        }
+    )
 
     save_backtest_outputs(
         eq_df,
