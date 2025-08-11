@@ -34,7 +34,11 @@ def load_csv_data(csv_path):
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
-    df = pd.read_csv(csv_path)
+    try:
+        df = pd.read_csv(csv_path)
+    except Exception as e:  # pragma: no cover - just log and re-raise
+        logger.error("Failed to read CSV %s: %s", csv_path, e)
+        raise
 
     for col in REQUIRED_COLUMNS:
         if col not in df.columns:
@@ -236,15 +240,21 @@ def run_backtest(
     })
 
     if equity_out:
-        eq_df.to_csv(equity_out, index=False)
-        logger.info(f"Equity curve saved to {equity_out}")
+        try:
+            eq_df.to_csv(equity_out, index=False)
+            logger.info(f"Equity curve saved to {equity_out}")
+        except OSError as e:  # pragma: no cover - I/O errors are uncommon
+            logger.error("Failed to save equity curve to %s: %s", equity_out, e)
     else:
         logger.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
 
     if stats_out:
-        with open(stats_out, 'w') as f:
-            json.dump(stats, f, indent=2)
-        logger.info(f"Summary stats saved to {stats_out}")
+        try:
+            with open(stats_out, 'w') as f:
+                json.dump(stats, f, indent=2)
+            logger.info(f"Summary stats saved to {stats_out}")
+        except OSError as e:  # pragma: no cover - I/O errors are uncommon
+            logger.error("Failed to save summary stats to %s: %s", stats_out, e)
 
     logger.info(f"Net PnL: {stats['net_pnl']:.2f}")
     logger.info(f"Win rate: {stats['win_rate']:.2f}%")
@@ -260,7 +270,10 @@ def run_backtest(
         plt.ylabel('Equity')
         plt.title('Equity Curve')
         plt.tight_layout()
-        plt.savefig(chart_out)
-        logger.info(f"Equity chart saved to {chart_out}")
+        try:
+            plt.savefig(chart_out)
+            logger.info(f"Equity chart saved to {chart_out}")
+        except OSError as e:  # pragma: no cover - I/O errors are uncommon
+            logger.error("Failed to save equity chart to %s: %s", chart_out, e)
 
     return stats

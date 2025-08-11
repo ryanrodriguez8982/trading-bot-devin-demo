@@ -118,11 +118,17 @@ def optimize(csv_path: str, strategy: str, param_grid: Dict[str, List], split: T
 
     df_results = pd.DataFrame(records)
     df_results.sort_values("valid_metric", ascending=False, inplace=True)
-    df_results.to_csv(results_csv, index=False)
+    try:
+        df_results.to_csv(results_csv, index=False)
+    except OSError as e:  # pragma: no cover - I/O errors are uncommon
+        logger.error("Failed to write optimization results to %s: %s", results_csv, e)
 
     best = df_results.iloc[0].to_dict() if not df_results.empty else {}
-    with open(best_json, "w") as f:
-        json.dump(best, f, indent=2)
+    try:
+        with open(best_json, "w") as f:
+            json.dump(best, f, indent=2)
+    except OSError as e:  # pragma: no cover - I/O errors are uncommon
+        logger.error("Failed to write best params to %s: %s", best_json, e)
 
     if best and best["train_metric"] > best["valid_metric"] * 1.5:
         logger.warning(

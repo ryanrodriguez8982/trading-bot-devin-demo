@@ -1,4 +1,5 @@
 
+import logging
 import pytest
 import pandas as pd
 import sys
@@ -180,3 +181,35 @@ def test_log_order_to_file(tmp_path):
     log_file = tmp_path / "logs" / "orders.log"
     assert log_file.exists()
     assert "BTC/USDT" in log_file.read_text()
+
+
+def test_log_signals_to_file_error(tmp_path, caplog, monkeypatch):
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import log_signals_to_file
+
+    signals = [
+        {'timestamp': pd.Timestamp('2024-01-01 10:00:00'), 'action': 'buy', 'price': 50000.0}
+    ]
+
+    def fail_open(*args, **kwargs):
+        raise OSError("fail")
+
+    monkeypatch.setattr('builtins.open', fail_open)
+    with caplog.at_level(logging.ERROR):
+        log_signals_to_file(signals, "BTC/USDT", state_dir=str(tmp_path))
+    assert any("Failed to log signals" in r.message for r in caplog.records)
+
+
+def test_log_order_to_file_error(tmp_path, caplog, monkeypatch):
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
+    from main import log_order_to_file
+
+    order = {"id": "1", "amount": 1, "price": 100.0, "side": "buy"}
+
+    def fail_open(*args, **kwargs):
+        raise OSError("fail")
+
+    monkeypatch.setattr('builtins.open', fail_open)
+    with caplog.at_level(logging.ERROR):
+        log_order_to_file(order, "BTC/USDT", state_dir=str(tmp_path))
+    assert any("Failed to log order" in r.message for r in caplog.records)
