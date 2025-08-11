@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from trading_bot.backtester import load_csv_data, run_backtest, simulate_equity
+from trading_bot.strategies import STRATEGY_REGISTRY
 
 REQUIRED_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -41,29 +42,22 @@ def test_inconsistent_timestamps(tmp_path):
     with pytest.raises(ValueError):
         load_csv_data(csv_file)
 
-def test_backtest_different_strategies(tmp_path):
+@pytest.mark.parametrize("strategy_name", STRATEGY_REGISTRY.keys())
+def test_backtest_different_strategies(tmp_path, strategy_name):
     timestamps = pd.date_range('2024-01-01', periods=30, freq='1min')
     df = pd.DataFrame({
         'timestamp': timestamps,
-        'open': [100]*30,
-        'high': [105]*30,
-        'low': [95]*30,
+        'open': [100] * 30,
+        'high': [105] * 30,
+        'low': [95] * 30,
         'close': [100 + i for i in range(30)],
-        'volume': [1000]*30
+        'volume': [1000] * 30,
     })
     csv_file = write_csv(tmp_path, df)
 
-    result_sma = run_backtest(str(csv_file), strategy='sma')
-    result_rsi = run_backtest(str(csv_file), strategy='rsi')
-    result_macd = run_backtest(str(csv_file), strategy='macd')
-    result_bbands = run_backtest(str(csv_file), strategy='bbands')
-    result_confluence = run_backtest(str(csv_file), strategy='confluence')
+    result = run_backtest(str(csv_file), strategy=strategy_name)
 
-    assert 'net_pnl' in result_sma
-    assert 'net_pnl' in result_rsi
-    assert 'net_pnl' in result_macd
-    assert 'net_pnl' in result_bbands
-    assert 'net_pnl' in result_confluence
+    assert 'net_pnl' in result
 
 
 def test_backtest_saves_outputs(tmp_path):
