@@ -12,7 +12,7 @@ DEFAULT_SMA_SHORT: int = int(CONFIG.get("sma_short", 5))
 DEFAULT_SMA_LONG: int = int(CONFIG.get("sma_long", 20))
 
 
-def sma_crossover_strategy(
+def sma_strategy(
     df: pd.DataFrame,
     sma_short: int = DEFAULT_SMA_SHORT,
     sma_long: int = DEFAULT_SMA_LONG,
@@ -96,5 +96,5 @@ def sma_crossover_strategy(
                 'price': float(curr['close']),
             })
 
-    logger.info("Generated %d SMA crossover signals", len(signals))
+    logger.info("Generated %d SMA signals", len(signals))
     return signals
