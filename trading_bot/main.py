@@ -27,8 +27,8 @@ from trading_bot.signal_logger import (
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.utils.config import get_config
 from trading_bot.utils.logging_config import setup_logging
-from trading_bot.utils.state import default_state_dir
 from trading_bot.utils.retry import RetryPolicy, default_retry
+from trading_bot.utils.state import default_state_dir
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -38,8 +38,8 @@ DEFAULT_BBANDS_STD = CONFIG.get("bbands_std", 2)
 
 try:
     from plyer import notification
-except ImportError:
-    notification = None
+except ImportError:  # pragma: no cover - plyer is optional
+    notification = None  # ensure attribute exists for tests
 
 logger = logging.getLogger(__name__)
 
@@ -75,25 +75,71 @@ def parse_args():
         except Exception:
             pkg_version = "0.0.0"
 
-    parser.add_argument("--version", action="version", version=f"%(prog)s {pkg_version}")
-    parser.add_argument("--symbol", type=str, help="Trading pair symbol (e.g., BTC/USDT). Overrides config files.")
-    parser.add_argument("--timeframe", type=str, help="Timeframe for candles (e.g., 1m, 5m). Overrides config files.")
-    parser.add_argument("--limit", type=int, help="Number of candles to fetch. Overrides config files.")
-    parser.add_argument("--sma-short", type=int, help="Short-period SMA window. Overrides config files.")
-    parser.add_argument("--sma-long", type=int, help="Long-period SMA window. Overrides config files.")
-    parser.add_argument("--live", action="store_true", help="Enable live trading simulation mode")
-    parser.add_argument("--live-trade", action="store_true", help="Execute real orders when in live mode")
-    parser.add_argument("--dry-run", action="store_true", help="Print order payload without executing")
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {pkg_version}"
+    )
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        help="Trading pair symbol (e.g., BTC/USDT). Overrides config files.",
+    )
+    parser.add_argument(
+        "--timeframe",
+        type=str,
+        help="Timeframe for candles (e.g., 1m, 5m). Overrides config files.",
+    )
+    parser.add_argument(
+        "--limit", type=int, help="Number of candles to fetch. Overrides config files."
+    )
+    parser.add_argument(
+        "--sma-short", type=int, help="Short-period SMA window. Overrides config files."
+    )
+    parser.add_argument(
+        "--sma-long", type=int, help="Long-period SMA window. Overrides config files."
+    )
+    parser.add_argument(
+        "--live", action="store_true", help="Enable live trading simulation mode"
+    )
+    parser.add_argument(
+        "--live-trade",
+        action="store_true",
+        help="Execute real orders when in live mode",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print order payload without executing"
+    )
     parser.add_argument("--api-key", type=str, help="Exchange API key")
     parser.add_argument("--api-secret", type=str, help="Exchange API secret")
-    parser.add_argument("--api-passphrase", type=str, help="Exchange API passphrase (if required)")
+    parser.add_argument(
+        "--api-passphrase", type=str, help="Exchange API passphrase (if required)"
+    )
     parser.add_argument("--broker", type=str, help="Broker type to use (paper or ccxt)")
-    parser.add_argument("--strategy", type=str, default="sma", help="Trading strategy to use")
-    parser.add_argument("--list-strategies", action="store_true", help="List available strategies and exit")
-    parser.add_argument("--alert-mode", action="store_true", help="Enable alert notifications for BUY/SELL signals")
-    parser.add_argument("--backtest", type=str, help="Path to CSV file for historical backtesting")
-    parser.add_argument("--tune", action="store_true", help="Run parameter tuning over a range of values")
-    parser.add_argument("--save-chart", action="store_true", help="Save equity curve CSV/JSON and chart during backtest")
+    parser.add_argument(
+        "--strategy", type=str, default="sma", help="Trading strategy to use"
+    )
+    parser.add_argument(
+        "--list-strategies",
+        action="store_true",
+        help="List available strategies and exit",
+    )
+    parser.add_argument(
+        "--alert-mode",
+        action="store_true",
+        help="Enable alert notifications for BUY/SELL signals",
+    )
+    parser.add_argument(
+        "--backtest", type=str, help="Path to CSV file for historical backtesting"
+    )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Run parameter tuning over a range of values",
+    )
+    parser.add_argument(
+        "--save-chart",
+        action="store_true",
+        help="Save equity curve CSV/JSON and chart during backtest",
+    )
     parser.add_argument(
         "--trade-size",
         type=float,
@@ -133,8 +179,12 @@ def parse_args():
         type=str,
         help="Comma-separated list of trading symbols for live mode",
     )
-    parser.add_argument("--risk-profile", type=str, help="Risk profile name. Overrides config files.")
-    parser.add_argument("--state-dir", type=str, help="Directory for logs and database state")
+    parser.add_argument(
+        "--risk-profile", type=str, help="Risk profile name. Overrides config files."
+    )
+    parser.add_argument(
+        "--state-dir", type=str, help="Directory for logs and database state"
+    )
     parser.add_argument(
         "--log-level",
         type=str.upper,
@@ -142,7 +192,9 @@ def parse_args():
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level for the application",
     )
-    parser.add_argument("--json-logs", action="store_true", help="Output logs in JSON format")
+    parser.add_argument(
+        "--json-logs", action="store_true", help="Output logs in JSON format"
+    )
 
     # Parse known and collect --risk.* overrides
     args, unknown = parser.parse_known_args()
@@ -168,7 +220,6 @@ def parse_args():
     except ValidationError as e:
         parser.error(str(e))
     return args
-
 
 
 def log_signals_to_file(
@@ -221,6 +272,7 @@ def log_order_to_file(
     except OSError as e:
         logger.error("Failed to log order to %s: %s", log_path, e)
 
+
 def send_alert(signal):
     ts = signal["timestamp"].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
@@ -233,7 +285,9 @@ def send_alert(signal):
 
 
 def signal_handler(signum, frame):  # noqa: ARG001 (frame unused)
-    logger.info("Received interrupt signal. Shutting down live trading mode gracefully...")
+    logger.info(
+        "Received interrupt signal. Shutting down live trading mode gracefully..."
+    )
     logger.info("=== Live Trading Mode Shutdown ===")
     sys.exit(0)
 
@@ -352,7 +406,10 @@ def run_live_mode(
     guardrails = None
     if risk_config is not None:
         md_cfg = getattr(risk_config, "max_drawdown", None)
-        if md_cfg and (getattr(md_cfg, "monthly_pct", 0) > 0 or getattr(md_cfg, "cooldown_bars", 0) > 0):
+        if md_cfg and (
+            getattr(md_cfg, "monthly_pct", 0) > 0
+            or getattr(md_cfg, "cooldown_bars", 0) > 0
+        ):
             from trading_bot.risk.guardrails import Guardrails
 
             guardrails = Guardrails(
@@ -376,6 +433,7 @@ def run_live_mode(
 
         now_iso = datetime.now(timezone.utc).isoformat()
         logger.info("[%s] Iteration #%d", now_iso, iteration)
+
         def _iteration_body():
             for sym in symbols:
                 signals = run_single_analysis(
@@ -429,7 +487,9 @@ def run_live_mode(
                         qty = trade_amount
                     elif risk_config:
                         equity = portfolio.equity({sym: price}) if portfolio else 0
-                        qty = calculate_position_size(risk_config.position_sizing, price, equity)
+                        qty = calculate_position_size(
+                            risk_config.position_sizing, price, equity
+                        )
 
                     logger.info(
                         "Processing signal: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
@@ -484,7 +544,9 @@ def run_live_mode(
                                 )
                             )
                         except ValueError:
-                            logger.debug("Trade skipped due to portfolio/broker constraints")
+                            logger.debug(
+                                "Trade skipped due to portfolio/broker constraints"
+                            )
 
         try:
             retry_policy.call(_iteration_body)
@@ -501,7 +563,9 @@ def main():
     setup_logging(level=args.log_level, state_dir=state_dir, json_logs=args.json_logs)
     config = get_config()
     configure_alerts(config)
-    risk_config = get_risk_config(config.get("risk"), getattr(args, "risk_overrides", {}))
+    risk_config = get_risk_config(
+        config.get("risk"), getattr(args, "risk_overrides", {})
+    )
 
     symbol = args.symbol or config["symbol"]
     symbols = args.symbols.split(",") if getattr(args, "symbols", None) else [symbol]
@@ -521,9 +585,15 @@ def main():
     api_key = args.api_key or config.get("api_key")
     api_secret = args.api_secret or config.get("api_secret")
     api_passphrase = args.api_passphrase or config.get("api_passphrase")
-    trade_size = args.trade_size if args.trade_size is not None else config.get("trade_size", 1.0)
+    trade_size = (
+        args.trade_size
+        if args.trade_size is not None
+        else config.get("trade_size", 1.0)
+    )
     broker_cfg = config.get("broker", {})
-    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get("fees_bps", 0.0)
+    fee_bps = (
+        args.fee_bps if args.fee_bps is not None else broker_cfg.get("fees_bps", 0.0)
+    )
     slippage_bps = broker_cfg.get("slippage_bps", 5.0)
     broker_type = getattr(args, "broker", None) or broker_cfg.get("type", "paper")
     exchange_name = args.exchange or config.get("exchange", "binance")
@@ -543,7 +613,9 @@ def main():
             slippage_bps=slippage_bps,
         )
     elif broker_type == "ccxt":
-        broker = CcxtSpotBroker(exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, "dry_run", False))
+        broker = CcxtSpotBroker(
+            exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, "dry_run", False)
+        )
 
     # List strategies and exit
     if getattr(args, "list_strategies", False):
@@ -630,7 +702,9 @@ def main():
                 logger.info("Last 5 signals:")
                 for i, s in enumerate(signals[-5:], 1):
                     ts = s["timestamp"].isoformat()
-                    logger.info("%d. %s - %s @ $%.2f", i, ts, s["action"].upper(), s["price"])
+                    logger.info(
+                        "%d. %s - %s @ $%.2f", i, ts, s["action"].upper(), s["price"]
+                    )
             else:
                 logger.info("No trading signals generated.")
     except Exception:

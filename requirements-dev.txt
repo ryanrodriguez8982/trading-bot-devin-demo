@@ -1,6 +1,9 @@
 -r requirements.txt
-pytest
-flake8
-ruff
+black
+detect-secrets
+isort
 mypy
+pre-commit
+pytest
 pytest-cov
+ruff

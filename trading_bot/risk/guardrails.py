@@ -14,7 +14,7 @@ the live trading loop and in unit tests where behaviour is simulated.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -83,10 +83,7 @@ class Guardrails:
         now = now or datetime.now(timezone.utc)
         if pnl < 0:
             self.consecutive_losses += 1
-            if (
-                self.cooldown_minutes > 0
-                and self.consecutive_losses >= self.loss_limit
-            ):
+            if self.cooldown_minutes > 0 and self.consecutive_losses >= self.loss_limit:
                 self.cooldown_until = now + timedelta(minutes=self.cooldown_minutes)
         else:
             self.consecutive_losses = 0
@@ -114,4 +111,3 @@ class Guardrails:
 
 
 __all__ = ["Guardrails"]
-

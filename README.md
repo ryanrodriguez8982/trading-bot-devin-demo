@@ -96,6 +96,17 @@ pip install -r requirements-dev.txt
 python trading_bot/main.py --symbol BTC/USDT
 ```
 
+### Code Quality
+
+This project uses [pre-commit](https://pre-commit.com/) to enforce formatting,
+linting, and secret scanning. Install the hooks and run them before committing:
+
+```bash
+pip install -r requirements-dev.txt
+pre-commit install
+pre-commit run --files <files>
+```
+
 ## Configuration
 
 Default settings live in [`config.json`](config.json). Key options include:
