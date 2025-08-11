@@ -40,10 +40,12 @@ def macd_strategy(
     if not pd.api.types.is_datetime64_any_dtype(d['timestamp']):
         d['timestamp'] = pd.to_datetime(d['timestamp'], utc=True, errors='coerce')
 
-    # EMAs and MACD
+    # Exponential moving averages for the fast and slow windows
     d['ema_fast'] = d['close'].ewm(span=fast_period, adjust=False).mean()
     d['ema_slow'] = d['close'].ewm(span=slow_period, adjust=False).mean()
+    # MACD line is simply the difference between the two EMAs
     d['macd'] = d['ema_fast'] - d['ema_slow']
+    # Signal line: EMA of the MACD line used for crossovers
     d['signal'] = d['macd'].ewm(span=signal_period, adjust=False).mean()
 
     signals: List[Dict[str, Any]] = []
@@ -67,14 +69,14 @@ def macd_strategy(
             curr_signal,
         )
 
-        # Bullish crossover: MACD crosses above signal -> BUY
+        # Bullish crossover: MACD line crosses above the signal -> BUY
         if prev_macd <= prev_signal and curr_macd > curr_signal:
             signals.append({
                 'timestamp': curr['timestamp'],
                 'action': 'buy',
                 'price': float(curr['close']),
             })
-        # Bearish crossover: MACD crosses below signal -> SELL
+        # Bearish crossover: MACD line crosses below the signal -> SELL
         elif prev_macd >= prev_signal and curr_macd < curr_signal:
             signals.append({
                 'timestamp': curr['timestamp'],

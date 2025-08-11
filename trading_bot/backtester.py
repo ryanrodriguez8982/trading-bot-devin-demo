@@ -78,9 +78,45 @@ def simulate_equity(
     trailing_stop_pct: Optional[float] = None,
     symbol: str = "asset",
 ):
+    """Simulate an equity curve given a stream of trade signals.
+
+    Parameters
+    ----------
+    df : DataFrame
+        Historical OHLC data for the asset.
+    signals : Iterable[dict]
+        Trading signals containing ``timestamp`` and ``action`` keys.
+    initial_capital : float, default ``DEFAULT_INITIAL_CAPITAL``
+        Starting cash balance for the simulated portfolio.
+    trade_size : float, default ``DEFAULT_TRADE_SIZE``
+        Quantity to buy or sell on each signal.
+    fees_bps : float, default ``0.0``
+        Trading fee in basis points applied to each transaction.
+    slippage_bps : float, default ``0.0``
+        Slippage in basis points applied to prices when executing trades.
+    stop_loss_pct : float, optional
+        Stop-loss distance expressed as a decimal (``0.02`` == 2%).
+    take_profit_rr : float, optional
+        Reward-to-risk multiplier used to derive take-profit from the stop
+        distance.
+    trailing_stop_pct : float, optional
+        Trailing stop distance expressed as a decimal.  When provided the
+        highest price seen since entry is tracked and the stop-loss is moved
+        up accordingly.
+    symbol : str, default ``"asset"``
+        Symbol identifier for the simulated position.
+
+    Returns
+    -------
+    tuple[list[float], dict[str, float]]
+        A list representing the equity curve for each bar and a dictionary of
+        summary statistics (``net_pnl``, ``win_rate`` and ``max_drawdown``).
+    """
+
     portfolio = Portfolio(cash=initial_capital)
     equity_history: list[float] = []
     trade_profits: list[float] = []
+    # Track highest prices per symbol to update trailing stops
     highest_prices: dict[str, float] = {}
 
     signal_iter = iter(sorted(signals, key=lambda x: x["timestamp"]))
@@ -93,10 +129,12 @@ def simulate_equity(
         pos = portfolio.positions.get(symbol)
         if pos and pos.qty > 0:
             if trailing_stop_pct is not None:
+                # Maintain the highest price seen to compute the trailing level
                 prev_high = highest_prices.get(symbol, pos.avg_cost)
                 curr_high = max(prev_high, row["high"])
                 highest_prices[symbol] = curr_high
                 trail = curr_high * (1 - trailing_stop_pct)
+                # Only move the stop upwards; never loosen it
                 if pos.stop_loss is None or trail > pos.stop_loss:
                     pos.stop_loss = trail
             stop_hit = pos.stop_loss is not None and row["low"] <= pos.stop_loss
@@ -109,6 +147,7 @@ def simulate_equity(
             elif tp_hit:
                 exit_price = pos.take_profit
             if exit_price is not None:
+                # Apply slippage to the exit price and realise the trade
                 exec_price = exit_price * (1 - slippage_bps / 10_000)
                 exit_avg_cost = pos.avg_cost
                 qty = pos.qty
@@ -124,11 +163,14 @@ def simulate_equity(
                     stop_price = None
                     take_price = None
                     if stop_loss_pct:
+                        # Derive stop-loss below the executed buy price
                         stop_price = buy_price * (1 - stop_loss_pct)
                         if take_profit_rr:
+                            # Take-profit based on configured reward-to-risk
                             risk = buy_price - stop_price
                             take_price = buy_price + risk * take_profit_rr
                     if trailing_stop_pct:
+                        # Start trailing stop at a fixed distance from entry
                         trail_price = buy_price * (1 - trailing_stop_pct)
                         stop_price = (
                             max(stop_price, trail_price)

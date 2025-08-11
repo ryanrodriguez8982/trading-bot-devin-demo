@@ -14,7 +14,15 @@ from typing import Dict, Optional
 
 @dataclass
 class ExitArm:
-    """Tracks state for a single position's protective exits."""
+    """Tracks state for a single position's protective exits.
+
+    Attributes
+    ----------
+    entry_price:
+        The price at which the position was opened.
+    highest_price:
+        Highest price seen since entry, used to compute a trailing stop.
+    """
 
     entry_price: float
     highest_price: float
@@ -22,7 +30,19 @@ class ExitArm:
 
 @dataclass
 class ExitManager:
-    """Evaluate stop-loss / take-profit / trailing-stop exits."""
+    """Evaluate stop-loss / take-profit / trailing-stop exits.
+
+    Parameters
+    ----------
+    stop_loss_pct:
+        Percentage drop from the entry price that should trigger a stop-loss
+        exit. ``5`` for example exits if price falls 5% below entry.
+    take_profit_pct:
+        Percentage gain from entry at which profits should be taken.
+    trailing_stop_pct:
+        Distance in percent from the highest price seen since entry used to
+        maintain a trailing stop. ``10`` keeps the stop 10% below the peak.
+    """
 
     stop_loss_pct: Optional[float] = None
     take_profit_pct: Optional[float] = None
@@ -48,14 +68,17 @@ class ExitManager:
             return False
         arm.highest_price = max(arm.highest_price, price)
 
+        # Check fixed stop-loss: price drops more than configured percentage
         if self.stop_loss_pct is not None:
             if price <= arm.entry_price * (1 - self.stop_loss_pct / 100):
                 self.disarm(symbol)
                 return True
+        # Check take-profit: price rises the configured percentage above entry
         if self.take_profit_pct is not None:
             if price >= arm.entry_price * (1 + self.take_profit_pct / 100):
                 self.disarm(symbol)
                 return True
+        # Check trailing stop: stop follows the highest price seen
         if self.trailing_stop_pct is not None:
             trail = arm.highest_price * (1 - self.trailing_stop_pct / 100)
             if price <= trail:
