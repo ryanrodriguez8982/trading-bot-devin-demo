@@ -276,6 +276,7 @@ The bot supports a live trading simulation mode that continuously monitors the m
 - **Continuous Monitoring**: Applies SMA crossover strategy in each iteration
 - **Live Logging**: Signals are logged to both files and database as they occur
 - **Graceful Shutdown**: Press Ctrl+C to stop with proper cleanup
+- **Error Resilience**: Transient errors are logged and the loop continues with retries
 
 ### Usage
 ```bash

@@ -26,6 +26,7 @@ from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.utils.config import get_config
 from trading_bot.utils.logging_config import setup_logging
 from trading_bot.utils.state import default_state_dir
+from trading_bot.utils.retry import RetryPolicy, default_retry
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -309,8 +310,10 @@ def run_live_mode(
     confluence_members=None,
     confluence_required=2,
     state_dir=None,
+    retry_policy: Optional[RetryPolicy] = None,
 ):
     state_dir = state_dir or default_state_dir()
+    retry_policy = retry_policy or default_retry()
     db_path = os.path.join(state_dir, "signals.db")
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
@@ -357,100 +360,74 @@ def run_live_mode(
 
         now_iso = datetime.now(timezone.utc).isoformat()
         logger.info("[%s] Iteration #%d", now_iso, iteration)
-
-        for sym in symbols:
-            signals = run_single_analysis(
-                sym,
-                timeframe,
-                live_limit,
-                sma_short,
-                sma_long,
-                strategy=strategy,
-                alert_mode=alert_mode,
-                exchange=exchange,
-                confluence_members=confluence_members,
-                confluence_required=confluence_required,
-                state_dir=state_dir,
-            )
-
-            if not signals:
-                logger.info("No new signals for %s.", sym)
-                continue
-
-            logger.info("✅ NEW SIGNALS for %s (%d)", sym, len(signals))
-
-            for signal in signals[-3:]:  # show last few
-                ts = signal["timestamp"].isoformat()
-                action = signal["action"]
-                price = signal["price"]
-
-                if mark_signal_handled(
+        def _iteration_body():
+            for sym in symbols:
+                signals = run_single_analysis(
                     sym,
-                    strategy,
                     timeframe,
-                    ts,
-                    action,
-                    db_path=db_path,
-                ):
-                    logger.info(
-                        json.dumps(
-                            {
-                                "symbol": sym,
-                                "action": action,
-                                "timestamp": ts,
-                                "status": "duplicate",
-                            }
-                        )
-                    )
-                    continue
-
-                # Determine quantity
-                qty = 0.0
-                if trade_amount:
-                    qty = trade_amount
-                elif risk_config:
-                    equity = portfolio.equity({sym: price}) if portfolio else 0
-                    qty = calculate_position_size(risk_config.position_sizing, price, equity)
-
-                logger.info(
-                    "Processing signal: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
-                    sym,
-                    action.upper(),
-                    float(price),
-                    qty,
-                    signal.get("strategy", strategy),
+                    live_limit,
+                    sma_short,
+                    sma_long,
+                    strategy=strategy,
+                    alert_mode=alert_mode,
+                    exchange=exchange,
+                    confluence_members=confluence_members,
+                    confluence_required=confluence_required,
+                    state_dir=state_dir,
                 )
 
-                # Execute trade
-                if live_trade and exchange:
-                    order = execute_trade(exchange, sym, action, qty)
-                    log_order_to_file(order, sym, state_dir)
-                    logger.info(
-                        json.dumps(
-                            {
-                                "symbol": sym,
-                                "action": action,
-                                "price": price,
-                                "qty": qty,
-                                "strategy": signal.get("strategy", strategy),
-                                "timestamp": ts,
-                                "status": "placed",
-                            }
+                if not signals:
+                    logger.info("No new signals for %s.", sym)
+                    continue
+
+                logger.info("✅ NEW SIGNALS for %s (%d)", sym, len(signals))
+
+                for signal in signals[-3:]:  # show last few
+                    ts = signal["timestamp"].isoformat()
+                    action = signal["action"]
+                    price = signal["price"]
+
+                    if mark_signal_handled(
+                        sym,
+                        strategy,
+                        timeframe,
+                        ts,
+                        action,
+                        db_path=db_path,
+                    ):
+                        logger.info(
+                            json.dumps(
+                                {
+                                    "symbol": sym,
+                                    "action": action,
+                                    "timestamp": ts,
+                                    "status": "duplicate",
+                                }
+                            )
                         )
+                        continue
+
+                    # Determine quantity
+                    qty = 0.0
+                    if trade_amount:
+                        qty = trade_amount
+                    elif risk_config:
+                        equity = portfolio.equity({sym: price}) if portfolio else 0
+                        qty = calculate_position_size(risk_config.position_sizing, price, equity)
+
+                    logger.info(
+                        "Processing signal: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
+                        sym,
+                        action.upper(),
+                        float(price),
+                        qty,
+                        signal.get("strategy", strategy),
                     )
-                else:
-                    try:
-                        if broker:
-                            # Price update + broker order
-                            broker.set_price(sym, price)
-                            trade = broker.create_order(action, sym, qty)
-                            trade["strategy"] = strategy
-                            log_trade_to_db(trade, db_path=db_path)
-                        elif portfolio:
-                            if action == "buy":
-                                portfolio.buy(sym, qty, price, fee_bps=fee_bps)
-                            else:
-                                portfolio.sell(sym, qty, price, fee_bps=fee_bps)
+
+                    # Execute trade
+                    if live_trade and exchange:
+                        order = execute_trade(exchange, sym, action, qty)
+                        log_order_to_file(order, sym, state_dir)
                         logger.info(
                             json.dumps(
                                 {
@@ -460,12 +437,43 @@ def run_live_mode(
                                     "qty": qty,
                                     "strategy": signal.get("strategy", strategy),
                                     "timestamp": ts,
-                                    "status": "executed",
+                                    "status": "placed",
                                 }
                             )
                         )
-                    except ValueError:
-                        logger.debug("Trade skipped due to portfolio/broker constraints")
+                    else:
+                        try:
+                            if broker:
+                                # Price update + broker order
+                                broker.set_price(sym, price)
+                                trade = broker.create_order(action, sym, qty)
+                                trade["strategy"] = strategy
+                                log_trade_to_db(trade, db_path=db_path)
+                            elif portfolio:
+                                if action == "buy":
+                                    portfolio.buy(sym, qty, price, fee_bps=fee_bps)
+                                else:
+                                    portfolio.sell(sym, qty, price, fee_bps=fee_bps)
+                            logger.info(
+                                json.dumps(
+                                    {
+                                        "symbol": sym,
+                                        "action": action,
+                                        "price": price,
+                                        "qty": qty,
+                                        "strategy": signal.get("strategy", strategy),
+                                        "timestamp": ts,
+                                        "status": "executed",
+                                    }
+                                )
+                            )
+                        except ValueError:
+                            logger.debug("Trade skipped due to portfolio/broker constraints")
+
+        try:
+            retry_policy.call(_iteration_body)
+        except Exception:
+            logger.error("Error during live trading iteration", exc_info=True)
 
         logger.info("Next analysis in %d seconds...", interval_seconds)
         time.sleep(interval_seconds)

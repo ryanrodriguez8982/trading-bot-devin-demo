@@ -32,7 +32,10 @@ trading-bot --live --live-trade --symbol BTC/USDT --trade-size 0.001
 ```
 Monitor the trade result and logs closely.
 
-## 5. Have a Rollback Plan
+## 5. Error Handling
+The live trading loop logs unexpected errors with traceback and retries, so transient failures won't halt the bot. Review the logs to diagnose any recurring issues.
+
+## 6. Have a Rollback Plan
 Be prepared to disable API keys or stop the bot immediately if unexpected behaviour occurs. Keep a manual record of changes and trades so you can revert settings or positions quickly.
 
 Following this checklist helps reduce risk as you transition from simulation to real markets.
