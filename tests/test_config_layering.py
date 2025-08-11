@@ -15,6 +15,9 @@ def test_config_overlays_and_cli_precedence(tmp_path):
         "sma_short": 5,
         "sma_long": 20,
         "trade_size": 1.0,
+        "rsi_period": 14,
+        "rsi_lower": 30,
+        "rsi_upper": 70,
         "confluence": {"members": ["sma", "rsi"], "required": 1},
     }
     local = {"symbol": "ETH/USDT"}
@@ -45,6 +48,9 @@ def test_env_overrides_secrets(tmp_path, monkeypatch):
         "sma_short": 5,
         "sma_long": 20,
         "trade_size": 1.0,
+        "rsi_period": 14,
+        "rsi_lower": 30,
+        "rsi_upper": 70,
         "confluence": {"members": ["sma", "rsi"], "required": 1},
         "api_key": "file_key",
         "api_secret": "file_secret",
@@ -73,6 +79,10 @@ def test_missing_confluence_members_raises(tmp_path):
         "limit": 500,
         "sma_short": 5,
         "sma_long": 20,
+        "trade_size": 1.0,
+        "rsi_period": 14,
+        "rsi_lower": 30,
+        "rsi_upper": 70,
         "confluence": {"required": 2},
     }
     config_path = tmp_path / "config.json"
@@ -88,6 +98,10 @@ def test_invalid_confluence_required_raises(tmp_path):
         "limit": 500,
         "sma_short": 5,
         "sma_long": 20,
+        "trade_size": 1.0,
+        "rsi_period": 14,
+        "rsi_lower": 30,
+        "rsi_upper": 70,
         "confluence": {"members": ["sma", "rsi"], "required": 3},
     }
     config_path = tmp_path / "config.json"

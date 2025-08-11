@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
 from trading_bot.backtester import run_backtest
 from trading_bot.broker import CcxtSpotBroker, PaperBroker
 from trading_bot.data_fetch import fetch_btc_usdt_data
@@ -40,6 +42,16 @@ except ImportError:
     notification = None
 
 logger = logging.getLogger(__name__)
+
+
+class CLIArgsModel(BaseModel):
+    # ✅ Use Optional[...] for Python 3.9 compatibility
+    limit: Optional[int] = Field(default=None, gt=0)
+    trade_size: Optional[float] = Field(default=None, gt=0)
+    fee_bps: Optional[float] = Field(default=None, ge=0)
+    interval_seconds: int = Field(default=60, gt=0)
+
+    model_config = ConfigDict(extra="ignore")
 
 
 def parse_args():
@@ -152,6 +164,10 @@ def parse_args():
     if getattr(args, "fixed_cash", None) is not None:
         risk_overrides["position_sizing.fixed_cash_amount"] = args.fixed_cash
     setattr(args, "risk_overrides", risk_overrides)
+    try:
+        CLIArgsModel(**vars(args))
+    except ValidationError as e:
+        parser.error(str(e))
     return args
 
 
@@ -205,6 +221,7 @@ def log_order_to_file(
         logger.info("Logged order %s to %s", order.get("id", "N/A"), log_path)
     except OSError as e:
         logger.error("Failed to log order to %s: %s", log_path, e)
+
 def send_alert(signal):
     ts = signal["timestamp"].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
