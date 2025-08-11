@@ -173,39 +173,27 @@ def simulate_equity(
     }
 
 
-def run_backtest(
-    csv_path,
+def generate_signals(
+    df,
     strategy='sma',
-    sma_short=DEFAULT_SMA_SHORT,
-    sma_long=DEFAULT_SMA_LONG,
-    rsi_period=DEFAULT_RSI_PERIOD,
-    macd_fast=DEFAULT_MACD_FAST,
-    macd_slow=DEFAULT_MACD_SLOW,
-    macd_signal=DEFAULT_MACD_SIGNAL,
-    bbands_window=DEFAULT_BBANDS_WINDOW,
-    bbands_std=DEFAULT_BBANDS_STD,
-    plot=False,
-    equity_out=None,
-    stats_out=None,
-    chart_out=None,
-    trade_size=DEFAULT_TRADE_SIZE,
-    fees_bps=0.0,
-    slippage_bps: float = 0.0,
-    stop_loss_pct: Optional[float] = None,
-    take_profit_rr: Optional[float] = None,
-    trailing_stop_pct: Optional[float] = None,
+    sma_short: int = DEFAULT_SMA_SHORT,
+    sma_long: int = DEFAULT_SMA_LONG,
+    rsi_period: int = DEFAULT_RSI_PERIOD,
+    macd_fast: int = DEFAULT_MACD_FAST,
+    macd_slow: int = DEFAULT_MACD_SLOW,
+    macd_signal: int = DEFAULT_MACD_SIGNAL,
+    bbands_window: int = DEFAULT_BBANDS_WINDOW,
+    bbands_std: int = DEFAULT_BBANDS_STD,
     confluence_members=None,
-    confluence_required=2,
+    confluence_required: int = 2,
 ):
-    """Run backtest on CSV data using specified strategy."""
-    df = load_csv_data(csv_path)
+    """Generate trading signals using the specified strategy."""
 
     if strategy not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy")
 
     strategy_fn = cast(Callable[..., list[dict[str, Any]]], STRATEGY_REGISTRY[strategy])
 
-    # Map of all possible strategy parameters
     available_params = {
         'df': df,
         'sma_short': sma_short,
@@ -220,7 +208,6 @@ def run_backtest(
         'required': confluence_required,
     }
 
-    # Only pass parameters accepted by the strategy function
     sig = inspect.signature(strategy_fn)
     strategy_kwargs = {
         name: value
@@ -228,23 +215,18 @@ def run_backtest(
         if name in sig.parameters and value is not None
     }
 
-    signals = strategy_fn(**strategy_kwargs)
+    return strategy_fn(**strategy_kwargs)
 
-    equity_curve, stats = simulate_equity(
-        df,
-        signals,
-        trade_size=trade_size,
-        fees_bps=fees_bps,
-        slippage_bps=slippage_bps,
-        stop_loss_pct=stop_loss_pct,
-        take_profit_rr=take_profit_rr,
-        trailing_stop_pct=trailing_stop_pct,
-    )
 
-    eq_df = pd.DataFrame({
-        'timestamp': df['timestamp'],
-        'equity': equity_curve,
-    })
+def save_backtest_outputs(
+    eq_df: pd.DataFrame,
+    stats: dict[str, Any],
+    equity_out: Optional[str] = None,
+    stats_out: Optional[str] = None,
+    plot: bool = False,
+    chart_out: Optional[str] = None,
+):
+    """Persist equity curve, stats and optional chart to disk."""
 
     if equity_out:
         try:
@@ -282,5 +264,73 @@ def run_backtest(
             logger.info(f"Equity chart saved to {chart_out}")
         except OSError as e:  # pragma: no cover - I/O errors are uncommon
             logger.error("Failed to save equity chart to %s: %s", chart_out, e)
+
+
+def run_backtest(
+    csv_path,
+    strategy='sma',
+    sma_short=DEFAULT_SMA_SHORT,
+    sma_long=DEFAULT_SMA_LONG,
+    rsi_period=DEFAULT_RSI_PERIOD,
+    macd_fast=DEFAULT_MACD_FAST,
+    macd_slow=DEFAULT_MACD_SLOW,
+    macd_signal=DEFAULT_MACD_SIGNAL,
+    bbands_window=DEFAULT_BBANDS_WINDOW,
+    bbands_std=DEFAULT_BBANDS_STD,
+    plot=False,
+    equity_out=None,
+    stats_out=None,
+    chart_out=None,
+    trade_size=DEFAULT_TRADE_SIZE,
+    fees_bps=0.0,
+    slippage_bps: float = 0.0,
+    stop_loss_pct: Optional[float] = None,
+    take_profit_rr: Optional[float] = None,
+    trailing_stop_pct: Optional[float] = None,
+    confluence_members=None,
+    confluence_required=2,
+):
+    """Run backtest on CSV data using specified strategy."""
+    df = load_csv_data(csv_path)
+
+    signals = generate_signals(
+        df,
+        strategy=strategy,
+        sma_short=sma_short,
+        sma_long=sma_long,
+        rsi_period=rsi_period,
+        macd_fast=macd_fast,
+        macd_slow=macd_slow,
+        macd_signal=macd_signal,
+        bbands_window=bbands_window,
+        bbands_std=bbands_std,
+        confluence_members=confluence_members,
+        confluence_required=confluence_required,
+    )
+
+    equity_curve, stats = simulate_equity(
+        df,
+        signals,
+        trade_size=trade_size,
+        fees_bps=fees_bps,
+        slippage_bps=slippage_bps,
+        stop_loss_pct=stop_loss_pct,
+        take_profit_rr=take_profit_rr,
+        trailing_stop_pct=trailing_stop_pct,
+    )
+
+    eq_df = pd.DataFrame({
+        'timestamp': df['timestamp'],
+        'equity': equity_curve,
+    })
+
+    save_backtest_outputs(
+        eq_df,
+        stats,
+        equity_out=equity_out,
+        stats_out=stats_out,
+        plot=plot,
+        chart_out=chart_out,
+    )
 
     return stats
