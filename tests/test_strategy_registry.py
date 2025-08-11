@@ -23,6 +23,11 @@ def test_list_strategies_function():
 
 def test_strategy_naming_convention():
     for key, fn in STRATEGY_REGISTRY.items():
+    if hasattr(fn, "__name__"):
         assert fn.__name__ == f"{key}_strategy"
         module_name = fn.__module__.split(".")[-1]
+        assert module_name == f"{key}_strategy"
+    elif hasattr(fn, "func") and hasattr(fn.func, "__name__"):
+        assert fn.func.__name__ == f"{key}_strategy"
+        module_name = fn.func.__module__.split(".")[-1]
         assert module_name == f"{key}_strategy"
