@@ -6,12 +6,13 @@ import os
 import json
 from typing import Any, Callable, Optional, cast
 
-# ? Absolute import for package compatibility
 from trading_bot.signal_logger import log_signals_to_db
 from trading_bot.strategies import STRATEGY_REGISTRY
 from trading_bot.portfolio import Portfolio
 from trading_bot.utils.config import get_config
 
+
+logger = logging.getLogger(__name__)
 
 CONFIG = get_config()
 DEFAULT_INITIAL_CAPITAL = 10000.0
@@ -85,7 +86,6 @@ def simulate_equity(
         ts = row['timestamp']
         close_price = row['close']
 
-        # Check for stop-loss / take-profit before new signals
         pos = portfolio.positions.get(symbol)
         if pos and pos.qty > 0:
             if trailing_stop_pct is not None:
@@ -237,18 +237,18 @@ def run_backtest(
 
     if equity_out:
         eq_df.to_csv(equity_out, index=False)
-        logging.debug("Equity curve saved to %s", equity_out)
+        logger.info(f"Equity curve saved to {equity_out}")
     else:
-        logging.debug("Equity curve:\n%s", eq_df.tail().to_string(index=False))
+        logger.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
 
     if stats_out:
         with open(stats_out, 'w') as f:
             json.dump(stats, f, indent=2)
-        logging.debug("Summary stats saved to %s", stats_out)
+        logger.info(f"Summary stats saved to {stats_out}")
 
-    logging.info(f"Net PnL: {stats['net_pnl']:.2f}")
-    logging.info(f"Win rate: {stats['win_rate']:.2f}%")
-    logging.info(f"Max drawdown: {stats['max_drawdown']:.2f}%")
+    logger.info(f"Net PnL: {stats['net_pnl']:.2f}")
+    logger.info(f"Win rate: {stats['win_rate']:.2f}%")
+    logger.info(f"Max drawdown: {stats['max_drawdown']:.2f}%")
 
     if plot and chart_out:
         import matplotlib
@@ -261,6 +261,6 @@ def run_backtest(
         plt.title('Equity Curve')
         plt.tight_layout()
         plt.savefig(chart_out)
-        logging.debug("Equity chart saved to %s", chart_out)
+        logger.info(f"Equity chart saved to {chart_out}")
 
     return stats

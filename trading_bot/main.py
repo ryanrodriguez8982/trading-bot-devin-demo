@@ -1,29 +1,31 @@
-import logging
-import json
 import argparse
+import json
+import logging
 import os
-import time
 import signal as sig
 import sys
+import time
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any, Dict, List, Optional
 
-from trading_bot.utils.state import default_state_dir
-from trading_bot.utils.config import get_config
-from trading_bot.utils.logging_config import setup_logging
-
-# ? Absolute imports for package context
 from trading_bot.backtester import run_backtest
+from trading_bot.broker import CcxtSpotBroker, PaperBroker
 from trading_bot.data_fetch import fetch_btc_usdt_data
 from trading_bot.exchange import create_exchange, execute_trade
-from trading_bot.signal_logger import log_signals_to_db, mark_signal_handled
-from trading_bot.signal_logger import log_signals_to_db, log_trade_to_db
+from trading_bot.notify import configure as configure_alerts
 from trading_bot.portfolio import Portfolio
 from trading_bot.risk.position_sizing import calculate_position_size
-from trading_bot.broker import PaperBroker, CcxtSpotBroker
-from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
-from trading_bot.notify import configure as configure_alerts
 from trading_bot.risk_config import get_risk_config
+from trading_bot.signal_logger import (
+    log_signals_to_db,
+    log_trade_to_db,
+    mark_signal_handled,
+)
+from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.utils.config import get_config
+from trading_bot.utils.logging_config import setup_logging
+from trading_bot.utils.state import default_state_dir
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -36,9 +38,7 @@ try:
 except ImportError:
     notification = None
 
-
 logger = logging.getLogger(__name__)
-
 
 
 def parse_args():
@@ -55,124 +55,151 @@ def parse_args():
         help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config files.",
     )
     try:
-        pkg_version = version('trading-bot')
+        pkg_version = version("trading-bot")
     except PackageNotFoundError:
         try:
             from trading_bot import __version__ as pkg_version
-        except ImportError:
-            pkg_version = '0.0.0'
+        except Exception:
+            pkg_version = "0.0.0"
 
-    parser.add_argument('--version', action='version', version=f'%(prog)s {pkg_version}')
-    parser.add_argument('--symbol', type=str, help='Trading pair symbol (e.g., BTC/USDT). Overrides config files.')
-    parser.add_argument('--timeframe', type=str, help='Timeframe for candles (e.g., 1m, 5m). Overrides config files.')
-    parser.add_argument('--limit', type=int, help='Number of candles to fetch. Overrides config files.')
-    parser.add_argument('--sma-short', type=int, help='Short-period SMA window. Overrides config files.')
-    parser.add_argument('--sma-long', type=int, help='Long-period SMA window. Overrides config files.')
-    parser.add_argument('--live', action='store_true', help='Enable live trading simulation mode')
-    parser.add_argument('--live-trade', action='store_true', help='Execute real orders when in live mode')
-    parser.add_argument('--dry-run', action='store_true', help='Print order payload without executing')
-    parser.add_argument('--api-key', type=str, help='Exchange API key')
-    parser.add_argument('--api-secret', type=str, help='Exchange API secret')
-    parser.add_argument('--api-passphrase', type=str, help='Exchange API passphrase (if required)')
-    parser.add_argument('--broker', type=str, help='Broker type to use (paper or ccxt)')
-    parser.add_argument('--strategy', type=str, default='sma', help='Trading strategy to use')
-    parser.add_argument('--list-strategies', action='store_true', help='List available strategies and exit')
-    parser.add_argument('--alert-mode', action='store_true', help='Enable alert notifications for BUY/SELL signals')
-    parser.add_argument('--backtest', type=str, help='Path to CSV file for historical backtesting')
-    parser.add_argument('--tune', action='store_true', help='Run parameter tuning over a range of values')
-    parser.add_argument('--optimize', nargs='*', help='Run grid search optimization with validation split')
-    parser.add_argument('--save-chart', action='store_true', help='Save equity curve CSV/JSON and chart during backtest')
-    parser.add_argument('--trade-size', type=float, default=None,
-                        help='Default trade size in asset units. Overrides config files.')
-    parser.add_argument('--fee-bps', type=float, default=None,
-                        help='Trading fee in basis points. Overrides config files.')
-    parser.add_argument('--position-sizing', type=str, choices=['fixed_fraction', 'fixed_cash'],
-                        help='Position sizing mode. Overrides config files.')
-    parser.add_argument('--fixed-fraction', type=float,
-                        help='Fraction of equity to use per trade. Overrides config files.')
-    parser.add_argument('--fixed-cash', type=float,
-                        help='Fixed cash amount to use per trade. Overrides config files.')
+    parser.add_argument("--version", action="version", version=f"%(prog)s {pkg_version}")
+    parser.add_argument("--symbol", type=str, help="Trading pair symbol (e.g., BTC/USDT). Overrides config files.")
+    parser.add_argument("--timeframe", type=str, help="Timeframe for candles (e.g., 1m, 5m). Overrides config files.")
+    parser.add_argument("--limit", type=int, help="Number of candles to fetch. Overrides config files.")
+    parser.add_argument("--sma-short", type=int, help="Short-period SMA window. Overrides config files.")
+    parser.add_argument("--sma-long", type=int, help="Long-period SMA window. Overrides config files.")
+    parser.add_argument("--live", action="store_true", help="Enable live trading simulation mode")
+    parser.add_argument("--live-trade", action="store_true", help="Execute real orders when in live mode")
+    parser.add_argument("--dry-run", action="store_true", help="Print order payload without executing")
+    parser.add_argument("--api-key", type=str, help="Exchange API key")
+    parser.add_argument("--api-secret", type=str, help="Exchange API secret")
+    parser.add_argument("--api-passphrase", type=str, help="Exchange API passphrase (if required)")
+    parser.add_argument("--broker", type=str, help="Broker type to use (paper or ccxt)")
+    parser.add_argument("--strategy", type=str, default="sma", help="Trading strategy to use")
+    parser.add_argument("--list-strategies", action="store_true", help="List available strategies and exit")
+    parser.add_argument("--alert-mode", action="store_true", help="Enable alert notifications for BUY/SELL signals")
+    parser.add_argument("--backtest", type=str, help="Path to CSV file for historical backtesting")
+    parser.add_argument("--tune", action="store_true", help="Run parameter tuning over a range of values")
+    parser.add_argument("--optimize", nargs="*", help="Run grid search optimization with validation split")
+    parser.add_argument("--save-chart", action="store_true", help="Save equity curve CSV/JSON and chart during backtest")
     parser.add_argument(
-        '--interval-seconds',
+        "--trade-size",
+        type=float,
+        default=None,
+        help="Default trade size in asset units. Overrides config files.",
+    )
+    parser.add_argument(
+        "--fee-bps",
+        type=float,
+        default=None,
+        help="Trading fee in basis points. Overrides config files.",
+    )
+    parser.add_argument(
+        "--position-sizing",
+        type=str,
+        choices=["fixed_fraction", "fixed_cash"],
+        help="Position sizing mode. Overrides config files.",
+    )
+    parser.add_argument(
+        "--fixed-fraction",
+        type=float,
+        help="Fraction of equity to use per trade. Overrides config files.",
+    )
+    parser.add_argument(
+        "--fixed-cash",
+        type=float,
+        help="Fixed cash amount to use per trade. Overrides config files.",
+    )
+    parser.add_argument(
+        "--interval-seconds",
         type=int,
         default=60,
-        help='Polling interval for live mode in seconds',
+        help="Polling interval for live mode in seconds",
     )
     parser.add_argument(
-        '--symbols',
+        "--symbols",
         type=str,
-        help='Comma-separated list of trading symbols for live mode',
+        help="Comma-separated list of trading symbols for live mode",
     )
-    parser.add_argument('--risk-profile', type=str, help='Risk profile name. Overrides config files.')
-    parser.add_argument('--state-dir', type=str, help='Directory for logs and database state')
+    parser.add_argument("--risk-profile", type=str, help="Risk profile name. Overrides config files.")
+    parser.add_argument("--state-dir", type=str, help="Directory for logs and database state")
     parser.add_argument(
-        '--log-level',
+        "--log-level",
         type=str.upper,
-        default='INFO',
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-        help='Logging level for the application',
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level for the application",
     )
-    parser.add_argument(
-        '--json-logs',
-        action='store_true',
-        help='Output logs in JSON format',
-    )
+    parser.add_argument("--json-logs", action="store_true", help="Output logs in JSON format")
+
+    # Parse known and collect --risk.* overrides
     args, unknown = parser.parse_known_args()
 
     risk_overrides = {}
     it = iter(unknown)
     for token in it:
-        if token.startswith('--risk.'):
-            key = token[2 + len('risk.') :]
+        if token.startswith("--risk."):
+            key = token[2 + len("risk.") :]
             value = next(it, None)
             if value is None:
                 raise SystemExit(f"Missing value for {token}")
             risk_overrides[key] = value
-    if getattr(args, 'position_sizing', None):
-        risk_overrides['position_sizing.mode'] = args.position_sizing
-    if getattr(args, 'fixed_fraction', None) is not None:
-        risk_overrides['position_sizing.fraction_of_equity'] = args.fixed_fraction
-    if getattr(args, 'fixed_cash', None) is not None:
-        risk_overrides['position_sizing.fixed_cash_amount'] = args.fixed_cash
-    setattr(args, 'risk_overrides', risk_overrides)
+    if getattr(args, "position_sizing", None):
+        risk_overrides["position_sizing.mode"] = args.position_sizing
+    if getattr(args, "fixed_fraction", None) is not None:
+        risk_overrides["position_sizing.fraction_of_equity"] = args.fixed_fraction
+    if getattr(args, "fixed_cash", None) is not None:
+        risk_overrides["position_sizing.fixed_cash_amount"] = args.fixed_cash
+    setattr(args, "risk_overrides", risk_overrides)
     return args
 
 
-def log_signals_to_file(signals, symbol, state_dir=None):
+
+def log_signals_to_file(
+    signals: List[Dict[str, Any]],
+    symbol: str,
+    state_dir: Optional[str] = None,
+) -> None:
     if not signals:
         return
     state_dir = state_dir or default_state_dir()
-    logs_dir = os.path.join(state_dir, 'logs')
+    logs_dir = os.path.join(state_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(logs_dir, f"{timestamp}_signals.log")
-    with open(log_path, 'w') as f:
+    with open(log_path, "w", encoding="utf-8") as f:
         f.write(f"Trading Signals Log - {symbol}\n")
         f.write(f"Generated at: {datetime.now(timezone.utc).isoformat()}\n")
         f.write("=" * 50 + "\n")
         for signal in signals:
-            ts = signal['timestamp'].isoformat()
-            f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
-    logging.debug("Logged %d signals to %s", len(signals), log_path)
+            ts = signal["timestamp"].isoformat()
+            f.write(
+                f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n"
+            )
+    logger.info("Logged %d signals to %s", len(signals), log_path)
 
-def log_order_to_file(order, symbol, state_dir=None):
+
+def log_order_to_file(
+    order: Dict[str, Any],
+    symbol: str,
+    state_dir: Optional[str] = None,
+) -> None:
     if not order:
         return
     state_dir = state_dir or default_state_dir()
-    logs_dir = os.path.join(state_dir, 'logs')
+    logs_dir = os.path.join(state_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
-    log_path = os.path.join(logs_dir, 'orders.log')
-    with open(log_path, 'a') as f:
+    log_path = os.path.join(logs_dir, "orders.log")
+    with open(log_path, "a", encoding="utf-8") as f:
         ts = datetime.now(timezone.utc).isoformat()
-        order_id = order.get('id', 'N/A')
-        amount = order.get('amount')
-        price = order.get('price')
-        side = order.get('side')
+        order_id = order.get("id", "N/A")
+        amount = order.get("amount")
+        price = order.get("price")
+        side = order.get("side")
         f.write(f"{ts} | {order_id} | {side} | {symbol} | {amount} @ {price}\n")
-    logging.debug("Logged order %s to %s", order_id, log_path)
-
+    logger.info("Logged order %s to %s", order.get("id", "N/A"), log_path)
 def send_alert(signal):
-    ts = signal['timestamp'].isoformat()
+    ts = signal["timestamp"].isoformat()
     message = f"ALERT: {signal['action'].upper()} at {ts} price ${signal['price']:.2f}"
     logger.info(message)
     if notification:
@@ -181,10 +208,12 @@ def send_alert(signal):
         except Exception as e:
             logger.exception("Notification error: %s", e)
 
-def signal_handler(signum, frame):
-    logging.info("Received interrupt signal. Shutting down live trading mode gracefully...")
+
+def signal_handler(signum, frame):  # noqa: ARG001 (frame unused)
+    logger.info("Received interrupt signal. Shutting down live trading mode gracefully...")
     logger.info("=== Live Trading Mode Shutdown ===")
     sys.exit(0)
+
 
 def run_single_analysis(
     symbol,
@@ -207,7 +236,7 @@ def run_single_analysis(
             data = fetch_btc_usdt_data(symbol, timeframe, limit, exchange=exchange)
         else:
             data = fetch_btc_usdt_data(symbol, timeframe, limit)
-        logging.debug("Fetched %d data points", len(data))
+        logger.info("Fetched %d data points for %s (%s)", len(data), symbol, timeframe)
 
         strategy_fn = STRATEGY_REGISTRY[strategy]
         if strategy == "rsi":
@@ -231,21 +260,22 @@ def run_single_analysis(
                 members=confluence_members,
                 required=confluence_required,
             )
-        else:
+        else:  # SMA, EMA, etc. that accept two windows
             signals = strategy_fn(data, sma_short, sma_long)
 
-        logging.debug("Generated %d trading signals", len(signals))
+        logger.info("Generated %d trading signals for %s", len(signals), symbol)
         if signals:
             log_signals_to_file(signals, symbol, state_dir)
-            db_path = os.path.join(state_dir or default_state_dir(), 'signals.db')
+            db_path = os.path.join(state_dir or default_state_dir(), "signals.db")
             log_signals_to_db(signals, symbol, db_path=db_path)
             if alert_mode:
                 for s in signals:
                     send_alert(s)
         return signals
-    except Exception as e:
-        logging.exception("Error in analysis cycle")
+    except Exception:
+        logger.exception("Error in analysis cycle for %s", symbol)
         return []
+
 
 def run_live_mode(
     symbols,
@@ -266,16 +296,17 @@ def run_live_mode(
     state_dir=None,
 ):
     state_dir = state_dir or default_state_dir()
-    db_path = os.path.join(state_dir, 'signals.db')
+    db_path = os.path.join(state_dir, "signals.db")
     live_limit = 25
     sig.signal(sig.SIGINT, signal_handler)
+
     if strategy not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
     logger.info("=== Live Trading Mode Started ===")
-    logger.info(f"Symbols: {', '.join(symbols)}")
-    logger.info(f"Strategy: {strategy.upper()}")
-    logger.info(f"Fetching {live_limit} candles every {interval_seconds} seconds")
+    logger.info("Symbols: %s", ", ".join(symbols))
+    logger.info("Strategy: %s", strategy.upper())
+    logger.info("Fetching %d candles every %d seconds", live_limit, interval_seconds)
     logger.info("Press Ctrl+C to stop gracefully")
     logger.info("=" * 50)
 
@@ -287,7 +318,7 @@ def run_live_mode(
     guardrails = None
     if risk_config is not None:
         md_cfg = getattr(risk_config, "max_drawdown", None)
-        if md_cfg and (md_cfg.monthly_pct > 0 or md_cfg.cooldown_bars > 0):
+        if md_cfg and (getattr(md_cfg, "monthly_pct", 0) > 0 or getattr(md_cfg, "cooldown_bars", 0) > 0):
             from trading_bot.risk.guardrails import Guardrails
 
             guardrails = Guardrails(
@@ -302,17 +333,19 @@ def run_live_mode(
         if guardrails and portfolio:
             eq = portfolio.equity()
             if guardrails.should_halt(eq):
-                logging.warning("Guardrails triggered - halting trading")
+                logger.warning("Guardrails triggered - halting trading")
                 break
             if guardrails.cooling_down():
-                logging.debug("Guardrails active - skipping iteration")
+                logger.info("Guardrails active - skipping iteration")
                 time.sleep(interval_seconds)
                 continue
 
-        logger.info(f"[{datetime.now(timezone.utc).isoformat()}] Iteration #{iteration}")
-        for symbol in symbols:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        logger.info("[%s] Iteration #%d", now_iso, iteration)
+
+        for sym in symbols:
             signals = run_single_analysis(
-                symbol,
+                sym,
                 timeframe,
                 live_limit,
                 sma_short,
@@ -324,122 +357,91 @@ def run_live_mode(
                 confluence_required=confluence_required,
                 state_dir=state_dir,
             )
-            if signals:
-                logger.info(f"?? NEW SIGNALS for {symbol} ({len(signals)}):")
-                for signal in signals[-3:]:
-                    ts = signal["timestamp"].isoformat()
-                    if mark_signal_handled(
-                        symbol,
-                        strategy,
-                        timeframe,
-                        signal["timestamp"].isoformat(),
-                        signal["action"],
-                        db_path=db_path,
-                    ):
-                        logging.debug(
-                            json.dumps(
-                                {
-                                    "symbol": symbol,
-                                    "action": signal["action"],
-                                    "timestamp": signal["timestamp"].isoformat(),
-                                    "status": "duplicate",
-                                }
-                            )
-                        )
-                        continue
+
+            if not signals:
+                logger.info("No new signals for %s.", sym)
+                continue
+
+            logger.info("✅ NEW SIGNALS for %s (%d)", sym, len(signals))
+
+            for signal in signals[-3:]:  # show last few
+                ts = signal["timestamp"].isoformat()
+                action = signal["action"]
+                price = signal["price"]
+
+                if mark_signal_handled(
+                    sym,
+                    strategy,
+                    timeframe,
+                    ts,
+                    action,
+                    db_path=db_path,
+                ):
                     logger.info(
-                        f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}"
-                    )
-                    if live_trade and exchange:
-                        order = execute_trade(exchange, symbol, signal["action"], trade_amount)
-                        log_order_to_file(order, symbol, state_dir)
-                        logging.debug(
-                            json.dumps(
-                                {
-                                    "symbol": symbol,
-                                    "action": signal["action"],
-                                    "timestamp": signal["timestamp"].isoformat(),
-                                    "status": "placed",
-                                }
-                            )
+                        json.dumps(
+                            {
+                                "symbol": sym,
+                                "action": action,
+                                "timestamp": ts,
+                                "status": "duplicate",
+                            }
                         )
-                    else:
-                        try:
-                            if signal["action"] == "buy":
-                                portfolio.buy(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
-                            else:
-                                portfolio.sell(symbol, trade_amount, signal["price"], fee_bps=fee_bps)
-                            logging.debug(
-                                json.dumps(
-                                    {
-                                        "symbol": symbol,
-                                        "action": signal["action"],
-                                        "timestamp": signal["timestamp"].isoformat(),
-                                        "status": "executed",
-                                    }
-                                )
-                            )
-                        except ValueError:
-                            logging.debug("Trade skipped due to portfolio constraints")
-            else:
-                logger.info(f"No new signals for {symbol}.")
-        logger.info(f"Next analysis in {interval_seconds} seconds...")
-        time.sleep(interval_seconds)
-        signals = run_single_analysis(
-            symbol,
-            timeframe,
-            live_limit,
-            sma_short,
-            sma_long,
-            strategy=strategy,
-            alert_mode=alert_mode,
-            exchange=exchange,
-            confluence_members=confluence_members,
-            confluence_required=confluence_required,
-            state_dir=state_dir,
-        )
-        if signals:
-            logger.info(f"?? NEW SIGNALS ({len(signals)}):")
-            for signal in signals[-3:]:
-                ts = signal['timestamp'].isoformat()
-                logger.info(f"  {ts} - {signal['action'].upper()} at ${signal['price']:.2f}")
-                price = signal['price']
+                    )
+                    continue
+
+                logger.info("  %s - %s at $%.2f", ts, action.upper(), price)
+
+                # Determine quantity
+                qty = 0.0
                 if trade_amount:
                     qty = trade_amount
                 elif risk_config:
-                    equity = portfolio.equity({symbol: price})
-                    qty = calculate_position_size(
-                        risk_config.position_sizing, price, equity
+                    equity = portfolio.equity({sym: price}) if portfolio else 0
+                    qty = calculate_position_size(risk_config.position_sizing, price, equity)
+
+                # Execute trade
+                if live_trade and exchange:
+                    order = execute_trade(exchange, sym, action, qty)
+                    log_order_to_file(order, sym, state_dir)
+                    logger.info(
+                        json.dumps(
+                            {
+                                "symbol": sym,
+                                "action": action,
+                                "timestamp": ts,
+                                "status": "placed",
+                            }
+                        )
                     )
                 else:
-                    qty = 0
-                if qty <= 0:
-                    continue
-                if live_trade and exchange:
-                    order = execute_trade(exchange, symbol, signal['action'], qty)
-                    log_order_to_file(order, symbol, state_dir)
-                else:
                     try:
-                        if signal['action'] == 'buy':
-                            portfolio.buy(symbol, qty, price, fee_bps=fee_bps)
-                        else:
-                            portfolio.sell(symbol, qty, price, fee_bps=fee_bps)
                         if broker:
-                            broker.set_price(symbol, signal['price'])
-                            trade = broker.create_order(signal['action'], symbol, trade_amount)
-                            trade['strategy'] = strategy
+                            # Price update + broker order
+                            broker.set_price(sym, price)
+                            trade = broker.create_order(action, sym, qty)
+                            trade["strategy"] = strategy
                             log_trade_to_db(trade, db_path=db_path)
-                        else:
-                            if signal['action'] == 'buy':
-                                portfolio.buy(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                        elif portfolio:
+                            if action == "buy":
+                                portfolio.buy(sym, qty, price, fee_bps=fee_bps)
                             else:
-                                portfolio.sell(symbol, trade_amount, signal['price'], fee_bps=fee_bps)
+                                portfolio.sell(sym, qty, price, fee_bps=fee_bps)
+                        logger.info(
+                            json.dumps(
+                                {
+                                    "symbol": sym,
+                                    "action": action,
+                                    "timestamp": ts,
+                                    "status": "executed",
+                                }
+                            )
+                        )
                     except ValueError:
-                        logging.debug("Trade skipped due to portfolio/broker constraints")
-        else:
-            logger.info("No new signals.")
-        logger.info("Next analysis in 60 seconds...")
-        time.sleep(60)
+                        logger.debug("Trade skipped due to portfolio/broker constraints")
+
+        logger.info("Next analysis in %d seconds...", interval_seconds)
+        time.sleep(interval_seconds)
+
 
 def main():
     args = parse_args()
@@ -447,95 +449,104 @@ def main():
     setup_logging(level=args.log_level, state_dir=state_dir, json_logs=args.json_logs)
     config = get_config()
     configure_alerts(config)
-    risk_config = get_risk_config(config.get('risk'), getattr(args, 'risk_overrides', {}))
+    risk_config = get_risk_config(config.get("risk"), getattr(args, "risk_overrides", {}))
 
-    symbol = args.symbol or config['symbol']
-    symbols = args.symbols.split(',') if getattr(args, 'symbols', None) else [symbol]
-    timeframe = args.timeframe or config['timeframe']
-    limit = args.limit or config['limit']
-    sma_short = getattr(args, 'sma_short') or config['sma_short']
-    sma_long = getattr(args, 'sma_long') or config['sma_long']
-    strategy_choice = getattr(args, 'strategy', 'sma')
-    alert_mode = getattr(args, 'alert_mode', False)
-    interval_seconds = getattr(args, 'interval_seconds', 60)
+    symbol = args.symbol or config["symbol"]
+    symbols = args.symbols.split(",") if getattr(args, "symbols", None) else [symbol]
+    timeframe = args.timeframe or config["timeframe"]
+    limit = args.limit or config["limit"]
+    sma_short = getattr(args, "sma_short") or config["sma_short"]
+    sma_long = getattr(args, "sma_long") or config["sma_long"]
+    strategy_choice = getattr(args, "strategy", "sma")
+    alert_mode = getattr(args, "alert_mode", False)
+    interval_seconds = getattr(args, "interval_seconds", 60)
 
     confluence_cfg = config.get("confluence", {})
     confluence_members = confluence_cfg.get("members", ["sma", "rsi", "macd"])
     confluence_required = confluence_cfg.get("required", 2)
 
     os.makedirs(state_dir, exist_ok=True)
-    api_key = args.api_key or config.get('api_key')
-    api_secret = args.api_secret or config.get('api_secret')
-    api_passphrase = args.api_passphrase or config.get('api_passphrase')
-    trade_size = args.trade_size if args.trade_size is not None else config.get('trade_size', 1.0)
-    broker_cfg = config.get('broker', {})
-    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get('fees_bps', 0.0)
-    slippage_bps = broker_cfg.get('slippage_bps', 5.0)
-    broker_type = getattr(args, 'broker', None) or broker_cfg.get('type', 'paper')
+    api_key = args.api_key or config.get("api_key")
+    api_secret = args.api_secret or config.get("api_secret")
+    api_passphrase = args.api_passphrase or config.get("api_passphrase")
+    trade_size = args.trade_size if args.trade_size is not None else config.get("trade_size", 1.0)
+    broker_cfg = config.get("broker", {})
+    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get("fees_bps", 0.0)
+    slippage_bps = broker_cfg.get("slippage_bps", 5.0)
+    broker_type = getattr(args, "broker", None) or broker_cfg.get("type", "paper")
     exchange_name = args.exchange or config.get("exchange", "binance")
-    exchange = None
 
+    # Exchange
     if api_key and api_secret:
         exchange = create_exchange(api_key, api_secret, api_passphrase, exchange_name)
     else:
         exchange = create_exchange(exchange_name=exchange_name)
-    broker = None
-    if broker_type == 'paper':
-        broker = PaperBroker(starting_cash=trade_size * 100 if trade_size else 0,
-                             fees_bps=fee_bps,
-                             slippage_bps=slippage_bps)
-    elif broker_type == 'ccxt':
-        broker = CcxtSpotBroker(exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, 'dry_run', False))
 
-    if getattr(args, 'list_strategies', False):
+    # Broker
+    broker = None
+    if broker_type == "paper":
+        broker = PaperBroker(
+            starting_cash=trade_size * 100 if trade_size else 0,
+            fees_bps=fee_bps,
+            slippage_bps=slippage_bps,
+        )
+    elif broker_type == "ccxt":
+        broker = CcxtSpotBroker(exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, "dry_run", False))
+
+    # List strategies and exit
+    if getattr(args, "list_strategies", False):
         logger.info("Available strategies:")
         for name in list_strategies():
-            logger.info(f"- {name}")
+            logger.info("- %s", name)
         return
 
     if strategy_choice not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
     try:
-        if getattr(args, 'optimize', None):
+        if getattr(args, "optimize", None):
             if not args.backtest:
                 raise ValueError("--backtest CSV path required for optimization")
             from trading_bot.backtest.optimizer import parse_optimize_args, optimize
+
             opt_opts = parse_optimize_args(args.optimize)
             base = os.path.splitext(args.backtest)[0]
-            results_csv = base + '_opt_results.csv'
-            best_json = base + '_best_params.json'
+            results_csv = base + "_opt_results.csv"
+            best_json = base + "_best_params.json"
             optimize(
                 args.backtest,
-                strategy=opt_opts['strategy'],
-                param_grid=opt_opts['param_grid'],
-                split=opt_opts['split'],
-                metric=opt_opts['metric'],
+                strategy=opt_opts["strategy"],
+                param_grid=opt_opts["param_grid"],
+                split=opt_opts["split"],
+                metric=opt_opts["metric"],
                 results_csv=results_csv,
                 best_json=best_json,
             )
-            logger.info(f"Optimization results saved to {results_csv}")
-            logger.info(f"Best parameters saved to {best_json}")
+            logger.info("Optimization results saved to %s", results_csv)
+            logger.info("Best parameters saved to %s", best_json)
             return
-        if getattr(args, 'tune', False):
+
+        if getattr(args, "tune", False):
             if not args.backtest:
                 raise ValueError("--backtest CSV path required for tuning")
             from trading_bot.tuner import tune
+
             results = tune(args.backtest, strategy=strategy_choice)
             logger.info("=== Tuning Results ===")
             for res in results:
-                params_str = ", ".join(f"{k}={v}" for k, v in res['params'].items())
+                params_str = ", ".join(f"{k}={v}" for k, v in res["params"].items())
                 logger.info(
                     f"{params_str} -> PnL {res['net_pnl']:.2f}, Win {res['win_rate']:.2f}%"
                 )
             if results:
-                logger.info(f"Best parameters: {results[0]['params']}")
+                logger.info("Best parameters: %s", results[0]["params"])
             return
+
         if args.backtest:
             base = os.path.splitext(args.backtest)[0]
-            equity_out = base + '_equity_curve.csv' if args.save_chart else None
-            stats_out = base + '_summary_stats.json' if args.save_chart else None
-            chart_out = base + '_equity_chart.png' if args.save_chart else None
+            equity_out = base + "_equity_curve.csv" if args.save_chart else None
+            stats_out = base + "_summary_stats.json" if args.save_chart else None
+            chart_out = base + "_equity_chart.png" if args.save_chart else None
             run_backtest(
                 args.backtest,
                 strategy=strategy_choice,
@@ -582,19 +593,20 @@ def main():
                 state_dir=state_dir,
             )
 
-            logger.info(f"=== Trading Bot Results for {symbol} ===")
-            logger.info(f"Strategy: {strategy_choice.upper()}")
-            logger.info(f"Total signals: {len(signals)}")
+            logger.info("=== Trading Bot Results for %s ===", symbol)
+            logger.info("Strategy: %s", strategy_choice.upper())
+            logger.info("Total signals: %d", len(signals))
             if signals:
                 logger.info("Last 5 signals:")
                 for i, s in enumerate(signals[-5:], 1):
-                    ts = s['timestamp'].isoformat()
-                    logger.info(f"{i}. {ts} - {s['action'].upper()} @ ${s['price']:.2f}")
+                    ts = s["timestamp"].isoformat()
+                    logger.info("%d. %s - %s @ $%.2f", i, ts, s["action"].upper(), s["price"])
             else:
                 logger.info("No trading signals generated.")
-    except Exception as e:
-        logging.exception("Error in main")
+    except Exception:
+        logger.exception("Error in main")
         raise
+
 
 if __name__ == "__main__":
     main()

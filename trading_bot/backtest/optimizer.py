@@ -8,6 +8,9 @@ import pandas as pd
 from trading_bot.backtester import load_csv_data, simulate_equity
 from trading_bot.strategies import STRATEGY_REGISTRY
 
+
+logger = logging.getLogger(__name__)
+
 # Mapping for CLI param aliases to strategy function arguments
 PARAM_ALIASES: Dict[str, Dict[str, str]] = {
     "macd": {
@@ -122,7 +125,11 @@ def optimize(csv_path: str, strategy: str, param_grid: Dict[str, List], split: T
         json.dump(best, f, indent=2)
 
     if best and best["train_metric"] > best["valid_metric"] * 1.5:
-        logging.warning("Possible overfitting: train metric %.4f >> valid metric %.4f", best["train_metric"], best["valid_metric"])
+        logger.warning(
+            "Possible overfitting: train metric %.4f >> valid metric %.4f",
+            best["train_metric"],
+            best["valid_metric"],
+        )
 
     return df_results, best
 

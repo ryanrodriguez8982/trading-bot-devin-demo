@@ -1,10 +1,12 @@
 import logging
 import itertools
+from typing import List, Dict, Any, Optional
 
 from trading_bot.backtester import run_backtest
 
+logger = logging.getLogger(__name__)
 
-DEFAULT_GRIDS = {
+DEFAULT_GRIDS: Dict[str, Dict[str, List[Any]]] = {
     "sma": {
         "sma_short": [5, 10, 15],
         "sma_long": [20, 30, 50],
@@ -23,23 +25,16 @@ DEFAULT_GRIDS = {
     },
 }
 
-
-def tune(csv_path, strategy="sma", param_grid=None):
+def tune(csv_path: str, strategy: str = "sma", param_grid: Optional[Dict[str, List[Any]]] = None) -> List[Dict[str, Any]]:
     """Run parameter tuning for a given strategy using backtesting.
 
-    Parameters
-    ----------
-    csv_path : str
-        Path to historical CSV file.
-    strategy : str
-        Strategy name.
-    param_grid : dict, optional
-        Dictionary mapping parameter names to lists of values.
+    Args:
+        csv_path: Path to historical CSV file.
+        strategy: Strategy name.
+        param_grid: Dictionary mapping parameter names to lists of values.
 
-    Returns
-    -------
-    list of dict
-        Sorted list of results with parameters and metrics.
+    Returns:
+        Sorted list of results (dict) with parameters and backtest metrics.
     """
     if param_grid is None:
         if strategy not in DEFAULT_GRIDS:
@@ -49,15 +44,19 @@ def tune(csv_path, strategy="sma", param_grid=None):
     keys = list(param_grid.keys())
     values = [param_grid[k] for k in keys]
 
-    results = []
+    results: List[Dict[str, Any]] = []
     for combo in itertools.product(*values):
         params = dict(zip(keys, combo))
-        logging.debug("Testing %s", params)
-        stats = run_backtest(csv_path, strategy=strategy, **params)
+        logger.info("Testing parameters: %s", params)
+        try:
+            stats = run_backtest(csv_path, strategy=strategy, **params)
+        except Exception as e:
+            logger.exception("Error during backtest with params %s: %s", params, e)
+            continue
+
         result = {"params": params}
         result.update(stats)
         results.append(result)
 
-    results.sort(key=lambda x: x["net_pnl"], reverse=True)
+    results.sort(key=lambda x: x.get("net_pnl", float('-inf')), reverse=True)
     return results
-
