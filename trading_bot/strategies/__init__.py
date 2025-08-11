@@ -38,4 +38,9 @@ def list_strategies() -> List[str]:
     return list(STRATEGY_REGISTRY.keys())
 
 
-__all__ = ["Strategy", "STRATEGY_REGISTRY", "list_strategies"]
+__all__ = [
+    "Strategy",
+    "STRATEGY_REGISTRY",
+    "list_strategies",
+    "macd_strategy",
+]
