@@ -1,6 +1,6 @@
 import logging
 import itertools
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from trading_bot.backtester import run_backtest
 
@@ -25,7 +25,7 @@ DEFAULT_GRIDS: Dict[str, Dict[str, List[Any]]] = {
     },
 }
 
-def tune(csv_path: str, strategy: str = "sma", param_grid: Dict[str, List[Any]] = None) -> List[Dict[str, Any]]:
+def tune(csv_path: str, strategy: str = "sma", param_grid: Optional[Dict[str, List[Any]]] = None) -> List[Dict[str, Any]]:
     """Run parameter tuning for a given strategy using backtesting.
 
     Args:
