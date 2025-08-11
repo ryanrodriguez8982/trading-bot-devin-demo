@@ -14,7 +14,7 @@ DEFAULT_RSI_LOWER: float = float(CONFIG.get("rsi_lower", 30))
 DEFAULT_RSI_UPPER: float = float(CONFIG.get("rsi_upper", 70))
 
 
-def rsi_crossover_strategy(
+def rsi_strategy(
     df: pd.DataFrame,
     period: int = DEFAULT_RSI_PERIOD,
     lower_thresh: float = DEFAULT_RSI_LOWER,
@@ -92,7 +92,7 @@ def rsi_crossover_strategy(
                 'price': curr_close,
             })
 
-    logger.info("Generated %d RSI crossover signals", len(signals))
+    logger.info("Generated %d RSI signals", len(signals))
     return signals
 
 # TODO: Consider Wilder's RSI using ewm(alpha=1/period, adjust=False) for smoothing

@@ -1,4 +1,9 @@
-"""Strategy registry with metadata support."""
+"""Strategy registry with metadata support.
+
+Each strategy resides in a `<key>_strategy.py` module and exposes a
+`<key>_strategy` function. The registry maps short, lowercase keys to
+these functions and optional metadata to keep naming and structure consistent.
+"""
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List
@@ -13,7 +18,6 @@ from .confluence import confluence_strategy, METADATA as CONFLUENCE_METADATA
 @dataclass
 class Strategy:
     """Container for a strategy function and its metadata."""
-
     func: Callable[..., List[dict[str, Any]]]
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -29,7 +33,6 @@ STRATEGY_REGISTRY: Dict[str, Strategy] = {
 
 def list_strategies() -> List[str]:
     """Return the list of available strategy names."""
-
     return list(STRATEGY_REGISTRY.keys())
 
 

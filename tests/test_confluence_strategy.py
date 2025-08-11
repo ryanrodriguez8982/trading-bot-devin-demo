@@ -1,6 +1,6 @@
 import pandas as pd
 
-from trading_bot.strategies.confluence import confluence_strategy
+from trading_bot.strategies.confluence_strategy import confluence_strategy
 from trading_bot import strategies as strategies_module
 from trading_bot.strategies import Strategy
 

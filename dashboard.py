@@ -17,7 +17,7 @@ from trading_bot.signal_logger import (
     get_trades_from_db,
 )
 from trading_bot.data_fetch import fetch_btc_usdt_data
-from trading_bot.strategy import sma_crossover_strategy
+from trading_bot.strategy import sma_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
 from trading_bot.portfolio import Portfolio
@@ -97,11 +97,11 @@ def _add_indicators(
 
 st.set_page_config(
     page_title="Trading Bot Dashboard",
-    page_icon="📈",
+    page_icon="??",
     layout="wide"
 )
 
-st.title("📈 Trading Bot Dashboard")
+st.title("?? Trading Bot Dashboard")
 st.markdown(
     "Visualize trading signals and price data using SMA, RSI, MACD and "
     "Bollinger Bands strategies"
@@ -232,14 +232,17 @@ with col1:
 
             if selected_strategy == "All" or selected_strategy == "sma":
                 if sma_short and sma_long:
-                    signals = sma_crossover_strategy(df_copy,
-                                                     sma_short=sma_short,
-                                                     sma_long=sma_long)
+                    signals = sma_strategy(
+                        df_copy, sma_short=sma_short, sma_long=sma_long
+                    )
                 else:
                     signals = []
             else:
-                entry = STRATEGY_REGISTRY.get(selected_strategy)
-                strategy_fn = entry.func if entry else sma_crossover_strategy
+                # Be compatible whether STRATEGY_REGISTRY stores callables directly
+                # or registry entries with a `.func` attribute.
+                entry = STRATEGY_REGISTRY.get(selected_strategy, sma_strategy)
+                strategy_fn = entry.func if hasattr(entry, "func") else entry
+
                 if (selected_strategy == "rsi" and
                         all([rsi_period, lower_thresh, upper_thresh])):
                     signals = strategy_fn(df_copy, period=rsi_period,

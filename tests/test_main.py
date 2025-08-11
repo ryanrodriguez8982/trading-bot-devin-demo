@@ -7,7 +7,7 @@ import os
 import ccxt
 
 from trading_bot.data_fetch import fetch_btc_usdt_data
-from trading_bot.strategy import sma_crossover_strategy
+from trading_bot.strategy import sma_strategy
 
 def test_data_fetch_structure():
     """Test that data fetch returns correct structure."""
@@ -43,11 +43,11 @@ def test_strategy_with_sample_data():
         'volume': [1000] * 30
     })
     
-    signals = sma_crossover_strategy(sample_data)
+    signals = sma_strategy(sample_data)
     
     assert isinstance(signals, list), "Should return a list of signals"
     
-    signals_custom = sma_crossover_strategy(sample_data, sma_short=3, sma_long=10)
+    signals_custom = sma_strategy(sample_data, sma_short=3, sma_long=10)
     assert isinstance(signals_custom, list), "Should return a list of signals with custom parameters"
     
     for signal in signals:
@@ -70,7 +70,7 @@ def test_strategy_insufficient_data():
         'volume': [1000] * 10
     })
     
-    signals = sma_crossover_strategy(insufficient_data)
+    signals = sma_strategy(insufficient_data)
     
     assert isinstance(signals, list), "Should return a list even with insufficient data"
     assert len(signals) == 0, "Should return empty list for insufficient data"

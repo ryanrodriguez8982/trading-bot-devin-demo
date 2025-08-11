@@ -1,5 +1,5 @@
 import pandas as pd
-from trading_bot.strategies.bbands import bbands_strategy
+from trading_bot.strategies.bbands_strategy import bbands_strategy
 
 
 def test_empty_input():

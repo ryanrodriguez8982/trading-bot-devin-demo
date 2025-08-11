@@ -84,5 +84,5 @@ def macd_strategy(
                 'price': float(curr['close']),
             })
 
-    logger.info("Generated %d MACD crossover signals", len(signals))
+    logger.info("Generated %d MACD signals", len(signals))
     return signals

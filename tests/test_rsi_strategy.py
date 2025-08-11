@@ -1,10 +1,10 @@
 import pandas as pd
-from trading_bot.strategies.rsi_strategy import rsi_crossover_strategy
+from trading_bot.strategies.rsi_strategy import rsi_strategy
 
 
 def test_empty_input():
     df = pd.DataFrame(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    signals = rsi_crossover_strategy(df)
+    signals = rsi_strategy(df)
     assert signals == []
 
 
@@ -18,7 +18,7 @@ def test_flat_price_series():
         'close': [100]*20,
         'volume': [1000]*20
     })
-    signals = rsi_crossover_strategy(df)
+    signals = rsi_strategy(df)
     assert signals == []
 
 
@@ -36,6 +36,6 @@ def test_rsi_boundary_crossings():
         'close': data,
         'volume': [100]*len(data)
     })
-    signals = rsi_crossover_strategy(df, period=2, lower_thresh=30, upper_thresh=70)
+    signals = rsi_strategy(df, period=2, lower_thresh=30, upper_thresh=70)
     actions = [s['action'] for s in signals]
     assert 'buy' in actions or 'sell' in actions
