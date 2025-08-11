@@ -93,7 +93,6 @@ def parse_args():
     parser.add_argument("--alert-mode", action="store_true", help="Enable alert notifications for BUY/SELL signals")
     parser.add_argument("--backtest", type=str, help="Path to CSV file for historical backtesting")
     parser.add_argument("--tune", action="store_true", help="Run parameter tuning over a range of values")
-    parser.add_argument("--optimize", nargs="*", help="Run grid search optimization with validation split")
     parser.add_argument("--save-chart", action="store_true", help="Save equity curve CSV/JSON and chart during backtest")
     parser.add_argument(
         "--trade-size",
@@ -557,28 +556,6 @@ def main():
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
     try:
-        if getattr(args, "optimize", None):
-            if not args.backtest:
-                raise ValueError("--backtest CSV path required for optimization")
-            from trading_bot.backtest.optimizer import parse_optimize_args, optimize
-
-            opt_opts = parse_optimize_args(args.optimize)
-            base = os.path.splitext(args.backtest)[0]
-            results_csv = base + "_opt_results.csv"
-            best_json = base + "_best_params.json"
-            optimize(
-                args.backtest,
-                strategy=opt_opts["strategy"],
-                param_grid=opt_opts["param_grid"],
-                split=opt_opts["split"],
-                metric=opt_opts["metric"],
-                results_csv=results_csv,
-                best_json=best_json,
-            )
-            logger.info("Optimization results saved to %s", results_csv)
-            logger.info("Best parameters saved to %s", best_json)
-            return
-
         if getattr(args, "tune", False):
             if not args.backtest:
                 raise ValueError("--backtest CSV path required for tuning")
