@@ -12,16 +12,16 @@ __version__ = "1.2.0"
 __author__ = "Trading Bot Team"
 __email__ = "trading-bot@example.com"
 
-from .main import main
 from .data_fetch import fetch_btc_usdt_data
-from .strategy import sma_crossover_strategy
-from .signal_logger import log_signals_to_db, get_signals_from_db
+from .main import main as cli_main
 from .performance import compute_equity_curve
-from .risk_config import get_risk_config, RiskConfig
 from .portfolio import Portfolio, Position
+from .risk_config import RiskConfig, get_risk_config
+from .signal_logger import get_signals_from_db, log_signals_to_db
+from .strategy import sma_crossover_strategy
 
 __all__ = [
-    "main",
+    "cli_main",
     "fetch_btc_usdt_data",
     "sma_crossover_strategy",
     "log_signals_to_db",
