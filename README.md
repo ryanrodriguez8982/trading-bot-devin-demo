@@ -441,7 +441,7 @@ The equity curve helps gauge profitability relative to your configured starting 
 Strategies live in [`trading_bot/strategies`](trading_bot/strategies). To add one:
 
 1. Create a new module implementing your strategy logic.
-2. Import and register the strategy in `trading_bot/strategies/__init__.py` so it appears in the `STRATEGY_REGISTRY`.
+2. Import and register the strategy in `trading_bot/strategies/__init__.py` so it appears in the `STRATEGY_REGISTRY` with any optional metadata.
 3. Reference your strategy via the `--strategy` flag or in `config.json`.
 
 See [docs/adding_strategy.md](docs/adding_strategy.md) for a walkthrough.

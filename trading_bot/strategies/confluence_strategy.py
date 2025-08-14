@@ -1,13 +1,24 @@
 import logging
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Optional, Any
+from typing import Any, DefaultDict, Dict, List, Optional
+
 import pandas as pd
 
 
 logger = logging.getLogger(__name__)
 
+# Metadata describing default members and quorum for the strategy
+METADATA: Dict[str, Any] = {
+    "requires": ["sma", "rsi", "macd"],
+    "required_count": 2,
+}
 
-def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, required: int = 2):
+
+def confluence_strategy(
+    df: pd.DataFrame,
+    members: Optional[List[str]] = None,
+    required: int = METADATA["required_count"],
+):
     """Generate signals only when multiple strategies agree.
 
     Args:
@@ -20,7 +31,7 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
         list[dict]: Consolidated trading signals.
     """
     if members is None:
-        members = ["sma", "rsi", "macd"]
+        members = METADATA["requires"].copy()
 
     try:
         from trading_bot.strategies import STRATEGY_REGISTRY  # avoid circular import
@@ -31,7 +42,8 @@ def confluence_strategy(df: pd.DataFrame, members: Optional[List[str]] = None, r
     # Collect signals from member strategies
     signals_map: DefaultDict[pd.Timestamp, List[Dict[str, Any]]] = defaultdict(list)
     for name in members:
-        strategy_fn = STRATEGY_REGISTRY.get(name)
+        entry = STRATEGY_REGISTRY.get(name)
+        strategy_fn = getattr(entry, "func", None)
         if not callable(strategy_fn):
             logger.warning(f"Unknown strategy in confluence: {name}")
             continue

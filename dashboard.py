@@ -97,11 +97,11 @@ def _add_indicators(
 
 st.set_page_config(
     page_title="Trading Bot Dashboard",
-    page_icon="📈",
+    page_icon="??",
     layout="wide"
 )
 
-st.title("📈 Trading Bot Dashboard")
+st.title("?? Trading Bot Dashboard")
 st.markdown(
     "Visualize trading signals and price data using SMA, RSI, MACD and "
     "Bollinger Bands strategies"
@@ -238,9 +238,11 @@ with col1:
                 else:
                     signals = []
             else:
-                strategy_fn = STRATEGY_REGISTRY.get(
-                    selected_strategy, sma_strategy
-                )
+                # Be compatible whether STRATEGY_REGISTRY stores callables directly
+                # or registry entries with a `.func` attribute.
+                entry = STRATEGY_REGISTRY.get(selected_strategy, sma_strategy)
+                strategy_fn = entry.func if hasattr(entry, "func") else entry
+
                 if (selected_strategy == "rsi" and
                         all([rsi_period, lower_thresh, upper_thresh])):
                     signals = strategy_fn(df_copy, period=rsi_period,

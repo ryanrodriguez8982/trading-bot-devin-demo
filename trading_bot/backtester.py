@@ -4,7 +4,8 @@ import inspect
 import json
 import logging
 import os
-from typing import Any, Callable, Optional, cast
+from typing import Any, Optional
+
 
 import pandas as pd
 
@@ -230,14 +231,21 @@ def generate_signals(
     bbands_window: int = DEFAULT_BBANDS_WINDOW,
     bbands_std: int = DEFAULT_BBANDS_STD,
     confluence_members=None,
-    confluence_required: int = 2,
+    confluence_required: Optional[int] = None,
 ):
     """Generate trading signals using the specified strategy."""
 
     if strategy not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy")
 
-    strategy_fn = cast(Callable[..., list[dict[str, Any]]], STRATEGY_REGISTRY[strategy])
+    entry = STRATEGY_REGISTRY[strategy]
+    strategy_fn = entry.func
+    metadata = entry.metadata
+
+    if confluence_members is None:
+        confluence_members = metadata.get("requires")
+    if confluence_required is None:
+        confluence_required = metadata.get("required_count")
 
     available_params = {
         "df": df,
@@ -335,7 +343,7 @@ def run_backtest(
     take_profit_rr: Optional[float] = None,
     trailing_stop_pct: Optional[float] = None,
     confluence_members=None,
-    confluence_required=2,
+    confluence_required: Optional[int] = None,
 ):
     """Run backtest on CSV data using specified strategy."""
     df = load_csv_data(csv_path)
