@@ -10,7 +10,7 @@ import ccxt
 from typing import Optional
 from trading_bot.exchange import create_exchange
 
-from trading_bot.utils.config import get_config
+from trading_bot.config import get_config
 from trading_bot.signal_logger import (
     get_signals_from_db,
     log_signals_to_db,

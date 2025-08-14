@@ -15,7 +15,7 @@ from .data_fetch import fetch_market_data
 from .main import main as cli_main
 from .performance import compute_equity_curve
 from .portfolio import Portfolio, Position
-from .risk_config import RiskConfig, get_risk_config
+from .risk.config import RiskConfig, get_risk_config
 from .signal_logger import get_signals_from_db, log_signals_to_db
 from .strategy import sma_strategy
 

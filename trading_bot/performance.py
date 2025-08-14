@@ -3,7 +3,7 @@ from typing import List, Tuple, Dict
 
 from trading_bot.backtester import compute_drawdown
 from trading_bot.portfolio import Portfolio
-from trading_bot.utils.config import get_config
+from trading_bot.config import get_config
 
 
 CONFIG = get_config()

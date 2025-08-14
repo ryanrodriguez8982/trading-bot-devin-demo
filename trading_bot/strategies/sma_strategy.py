@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 
 import pandas as pd
 
-from trading_bot.utils.config import get_config
+from trading_bot.config import get_config
 from trading_bot.strategies import register_strategy
 
 logger = logging.getLogger(__name__)

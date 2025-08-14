@@ -6,7 +6,7 @@ import ccxt
 
 from trading_bot.data_fetch import fetch_market_data
 from trading_bot.utils.retry import RetryPolicy
-from trading_bot.utils.config import load_config
+from trading_bot.config import load_config
 from trading_bot.backtester import run_backtest
 
 

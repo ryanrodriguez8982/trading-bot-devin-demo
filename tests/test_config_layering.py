@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from trading_bot.utils.config import load_config
+from trading_bot.config import load_config
 from trading_bot.main import parse_args
 
 

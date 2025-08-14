@@ -18,14 +18,14 @@ from trading_bot.exchange import create_exchange, execute_trade
 from trading_bot.notify import configure as configure_alerts
 from trading_bot.portfolio import Portfolio
 from trading_bot.risk.position_sizing import calculate_position_size
-from trading_bot.risk_config import get_risk_config
+from trading_bot.risk.config import get_risk_config
 from trading_bot.signal_logger import (
     log_signals_to_db,
     log_trade_to_db,
     mark_signal_handled,
 )
 from trading_bot.strategies import STRATEGY_REGISTRY
-from trading_bot.utils.config import get_config
+from trading_bot.config import get_config
 from trading_bot.utils.logging_config import setup_logging
 from trading_bot.utils.retry import RetryPolicy, default_retry
 from trading_bot.utils.state import default_state_dir
