@@ -27,7 +27,7 @@ def test_invalid_risk_config():
 def test_cli_override():
     original = sys.argv
     try:
-        sys.argv = ["main.py", "--risk.slippage_bps", "8"]
+        sys.argv = ["main.py", "live", "--risk.slippage_bps", "8"]
         args = parse_args()
         config = load_config()
         rc = get_risk_config(config.get("risk"), args.risk_overrides)

@@ -58,18 +58,15 @@ class CLIArgsModel(BaseModel):
 
 
 def parse_args():
+    """Parse command line arguments with explicit subcommands."""
     parser = argparse.ArgumentParser(
         description=(
             "Crypto Trading Bot. Defaults come from config.json, overridden by "
             "config.local.json and finally by CLI flags."
         )
     )
-    parser.add_argument(
-        "--exchange",
-        type=str,
-        default=None,
-        help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config files.",
-    )
+
+    # version option is global
     try:
         pkg_version = version("trading-bot")
     except PackageNotFoundError:
@@ -77,157 +74,179 @@ def parse_args():
             from trading_bot import __version__ as pkg_version
         except Exception:
             pkg_version = "0.0.0"
+    parser.add_argument("--version", action="version", version=f"%(prog)s {pkg_version}")
 
-    parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {pkg_version}"
+    # Common options shared across subcommands
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--exchange",
+        type=str,
+        default=None,
+        help="Specify exchange to use (e.g., binance, coinbase, kraken). Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--symbol",
         type=str,
         help="Trading pair symbol (e.g., BTC/USDT). Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--timeframe",
         type=str,
         help="Timeframe for candles (e.g., 1m, 5m). Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--limit", type=int, help="Number of candles to fetch. Overrides config files."
     )
-    parser.add_argument(
+    common.add_argument(
         "--sma-short", type=int, help="Short-period SMA window. Overrides config files."
     )
-    parser.add_argument(
+    common.add_argument(
         "--sma-long", type=int, help="Long-period SMA window. Overrides config files."
     )
-    parser.add_argument(
-        "--live", action="store_true", help="Enable live trading simulation mode"
-    )
-    parser.add_argument(
+    common.add_argument(
         "--live-trade",
         action="store_true",
         help="Execute real orders when in live mode",
     )
-    parser.add_argument(
+    common.add_argument(
         "--dry-run", action="store_true", help="Print order payload without executing"
     )
-    parser.add_argument("--api-key", type=str, help="Exchange API key")
-    parser.add_argument("--api-secret", type=str, help="Exchange API secret")
-    parser.add_argument(
+    common.add_argument("--api-key", type=str, help="Exchange API key")
+    common.add_argument("--api-secret", type=str, help="Exchange API secret")
+    common.add_argument(
         "--api-passphrase", type=str, help="Exchange API passphrase (if required)"
     )
-    parser.add_argument("--broker", type=str, help="Broker type to use (paper or ccxt)")
-    parser.add_argument(
+    common.add_argument("--broker", type=str, help="Broker type to use (paper or ccxt)")
+    common.add_argument(
         "--strategy", type=str, default="sma", help="Trading strategy to use"
     )
-    parser.add_argument(
+    common.add_argument(
         "--list-strategies",
         action="store_true",
         help="List available strategies and exit",
     )
-    parser.add_argument(
+    common.add_argument(
         "--alert-mode",
         action="store_true",
         help="Enable alert notifications for BUY/SELL signals",
     )
-    parser.add_argument(
+    common.add_argument(
         "--metrics-port",
         type=int,
         default=None,
         help="Expose Prometheus metrics on this port",
     )
-    parser.add_argument(
+    common.add_argument(
         "--health-port",
         type=int,
         default=None,
         help="Expose simple HTTP health check on this port",
     )
-    parser.add_argument(
-        "--backtest", type=str, help="Path to CSV file for historical backtesting"
-    )
-    parser.add_argument(
-        "--tune",
-        action="store_true",
-        help="Run parameter tuning over a range of values",
-    )
-    parser.add_argument(
-        "--walk-forward",
-        action="store_true",
-        help="Run walk-forward optimization over rolling windows",
-    )
-    parser.add_argument(
-        "--train-size",
-        type=int,
-        help="Training window size for walk-forward optimization",
-    )
-    parser.add_argument(
-        "--test-size",
-        type=int,
-        help="Testing window size for walk-forward optimization",
-    )
-    parser.add_argument(
-        "--save-chart",
-        action="store_true",
-        help="Save equity curve CSV/JSON and chart during backtest",
-    )
-    parser.add_argument(
+    common.add_argument(
         "--trade-size",
         type=float,
         default=None,
         help="Default trade size in asset units. Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--fee-bps",
         type=float,
         default=None,
         help="Trading fee in basis points. Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--position-sizing",
         type=str,
         choices=["fixed_fraction", "fixed_cash"],
         help="Position sizing mode. Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--fixed-fraction",
         type=float,
         help="Fraction of equity to use per trade. Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--fixed-cash",
         type=float,
         help="Fixed cash amount to use per trade. Overrides config files.",
     )
-    parser.add_argument(
+    common.add_argument(
         "--interval-seconds",
         type=int,
         default=60,
         help="Polling interval for live mode in seconds",
     )
-    parser.add_argument(
+    common.add_argument(
         "--symbols",
         type=str,
         help="Comma-separated list of trading symbols for live mode",
     )
-    parser.add_argument(
+    common.add_argument(
         "--risk-profile", type=str, help="Risk profile name. Overrides config files."
     )
-    parser.add_argument(
+    common.add_argument(
         "--state-dir", type=str, help="Directory for logs and database state"
     )
-    parser.add_argument(
+    common.add_argument(
         "--log-level",
         type=str.upper,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level for the application",
     )
-    parser.add_argument(
+    common.add_argument(
         "--json-logs", action="store_true", help="Output logs in JSON format"
     )
 
-    # Parse known and collect --risk.* overrides
+    subparsers = parser.add_subparsers(dest="command")
+
+    # live trading subcommand
+    subparsers.add_parser("live", parents=[common], help="Run live trading")
+
+    # backtest subcommand
+    backtest_parser = subparsers.add_parser(
+        "backtest", parents=[common], help="Run a backtest on historical data"
+    )
+    backtest_parser.add_argument(
+        "--file", required=True, help="Path to CSV file for historical backtesting"
+    )
+    backtest_parser.add_argument(
+        "--save-chart",
+        action="store_true",
+        help="Save equity curve CSV/JSON and chart during backtest",
+    )
+
+    # optimization subcommand
+    opt_parser = subparsers.add_parser(
+        "optimize", parents=[common], help="Run parameter tuning or walk-forward"
+    )
+    opt_parser.add_argument(
+        "--file", required=True, help="Path to CSV file for historical backtesting"
+    )
+    opt_parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Run parameter tuning over a range of values",
+    )
+    opt_parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help="Run walk-forward optimization over rolling windows",
+    )
+    opt_parser.add_argument(
+        "--train-size",
+        type=int,
+        help="Training window size for walk-forward optimization",
+    )
+    opt_parser.add_argument(
+        "--test-size",
+        type=int,
+        help="Testing window size for walk-forward optimization",
+    )
+
     args, unknown = parser.parse_known_args()
+    if not getattr(args, "command", None):
+        parser.error("a subcommand is required")
 
     risk_overrides = {}
     it = iter(unknown)
@@ -245,6 +264,18 @@ def parse_args():
     if getattr(args, "fixed_cash", None) is not None:
         risk_overrides["position_sizing.fixed_cash_amount"] = args.fixed_cash
     setattr(args, "risk_overrides", risk_overrides)
+
+    # compatibility flags
+    if args.command == "live":
+        setattr(args, "live", True)
+        setattr(args, "backtest", None)
+    elif args.command == "backtest":
+        setattr(args, "live", False)
+        setattr(args, "backtest", args.file)
+    elif args.command == "optimize":
+        setattr(args, "live", False)
+        setattr(args, "backtest", args.file)
+
     try:
         CLIArgsModel(**vars(args))
     except ValidationError as e:
@@ -689,7 +720,7 @@ def main() -> None:
     try:
         if getattr(args, "tune", False):
             if not args.backtest:
-                raise ValueError("--backtest CSV path required for tuning")
+                raise ValueError("--file CSV path required for tuning")
             from trading_bot.tuner import tune
 
             results = tune(args.backtest, strategy=strategy_choice)
@@ -706,7 +737,7 @@ def main() -> None:
         if getattr(args, "walk_forward", False):
             if not args.backtest:
                 raise ValueError(
-                    "--backtest CSV path required for walk-forward optimization"
+                    "--file CSV path required for walk-forward optimization"
                 )
             from trading_bot.tuner import walk_forward_optimize
 

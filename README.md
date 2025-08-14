@@ -22,7 +22,7 @@ source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
 pip install -r requirements.txt
 
 # 3. Run a backtest to verify everything works
-trading-bot --backtest path/to/data.csv --strategy sma
+trading-bot backtest --file path/to/data.csv --strategy sma
 
 # 4. Launch the dashboard (optional)
 streamlit run dashboard.py
@@ -61,7 +61,7 @@ trading-bot --symbol BTC/USDT
 trading-bot --symbol ETH/USDT --timeframe 5m --sma-short 10 --sma-long 30
 
 # Live trading mode
-trading-bot --live --symbol BTC/USDT
+trading-bot live --symbol BTC/USDT
 
 # Check version
 trading-bot --version
@@ -165,20 +165,20 @@ trading-bot --trade-size 0.5 --fee-bps 10
 #### Live Trading Simulation Mode:
 ```bash
 # Run in live mode (fetches latest data every 60 seconds)
-trading-bot --live
+trading-bot live
 
 # Live mode with custom parameters
-trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
+trading-bot live --symbol ETH/USDT --sma-short 10 --sma-long 30
 
 # Expose Prometheus metrics and health check
-trading-bot --live --metrics-port 8000 --health-port 8001
+trading-bot live --metrics-port 8000 --health-port 8001
 
 # Stop live mode gracefully with Ctrl+C
 ```
 
 # Real trading example (requires API keys)
 TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
-TRADING_BOT_EXCHANGE=coinbase trading-bot --live --live-trade --symbol BTC/USDT
+TRADING_BOT_EXCHANGE=coinbase trading-bot live --live-trade --symbol BTC/USDT
 
 For a step-by-step safety checklist before enabling real trades, see [Live Trading Guide & Safety Checklist](docs/live_trading.md).
 
@@ -305,7 +305,7 @@ When set, these environment variables override any values in `config.json` or `c
 `config.json` lets you specify `api_key`, `api_secret`, `api_passphrase` and the default `trade_size` for each order along with broker fee settings (`fees_bps`). Adjust these and the dashboard's **Starting Balance** input to tune PnL calculations.
 
 
-Run the bot with `--live --live-trade` to place real orders once your keys are configured.
+Run the bot with `live --live-trade` to place real orders once your keys are configured.
 
 The Bollinger Bands strategy uses the `sma_long`/`bbands_window` value for its
 moving average window. By default this is set to 20 periods.
@@ -317,7 +317,7 @@ Available parameters:
 - `--limit`: Number of candles to fetch (ignored in live mode)
 - `--sma-short`: Short-period SMA window
 - `--sma-long`: Long-period SMA window
-- `--live`: Enable live trading simulation mode
+- `live` subcommand: Enable live trading simulation mode
 
 ## Strategy
 
@@ -344,13 +344,13 @@ The bot supports a live trading simulation mode that continuously monitors the m
 ### Usage
 ```bash
 # Start live mode with default settings (CLI tool)
-trading-bot --live
+trading-bot live
 
 # Live mode with custom parameters (CLI tool)
-trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
+trading-bot live --symbol ETH/USDT --sma-short 10 --sma-long 30
 
 # Alternative: Direct Python execution
-python trading_bot/main.py --live
+python trading_bot/main.py live
 ```
 
 ### Live Mode Output
@@ -381,7 +381,7 @@ Gracefully shutting down. Thank you for using the trading bot!
 Run a simulation on CSV price data to evaluate strategy performance:
 
 ```bash
-trading-bot --backtest path/to/data.csv --strategy sma
+trading-bot backtest --file path/to/data.csv --strategy sma
 ```
 
 The backtester outputs metrics like net PnL, win rate, and max drawdown. Use `--list-strategies` to see all supported strategies.
@@ -391,10 +391,10 @@ The backtester outputs metrics like net PnL, win rate, and max drawdown. Use `--
 You can automatically search for optimal parameters using the tuning module:
 
 ```bash
-trading-bot --tune --strategy sma --backtest path/to/data.csv
+trading-bot optimize --tune --file path/to/data.csv --strategy sma
 
 # Results show the best parameter set
-trading-bot --tune --strategy bbands --backtest btc.csv
+trading-bot optimize --tune --file btc.csv --strategy bbands
 ```
 
 This runs a grid search over sensible defaults and prints the performance of each
@@ -406,7 +406,7 @@ Use walk-forward analysis to evaluate parameter robustness on rolling
 train/test windows:
 
 ```bash
-trading-bot --walk-forward --strategy sma --backtest data.csv --train-size 100 --test-size 20
+trading-bot optimize --walk-forward --file data.csv --strategy sma --train-size 100 --test-size 20
 ```
 
 The optimizer selects the best parameters on each training window and reports
@@ -417,7 +417,7 @@ performance on the subsequent test window.
 Run a Bollinger Bands backtest on BTC data:
 
 ```bash
-trading-bot --backtest btc_data.csv --strategy bbands \
+trading-bot backtest --file btc_data.csv --strategy bbands \
   --bbands-window 20 --bbands-std 2
 ```
 
@@ -425,7 +425,7 @@ Connect to Binance for live trading:
 
 ```bash
 TRADING_BOT_API_KEY=your_key TRADING_BOT_API_SECRET=your_secret \
-TRADING_BOT_EXCHANGE=coinbase trading-bot --live --live-trade
+TRADING_BOT_EXCHANGE=coinbase trading-bot live --live-trade
 ```
 
 ## Dashboard

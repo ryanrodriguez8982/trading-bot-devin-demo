@@ -31,7 +31,7 @@ def test_config_overlays_and_cli_precedence(tmp_path):
 
     original = sys.argv
     try:
-        sys.argv = ["main.py", "--symbol", "DOGE/USDT"]
+        sys.argv = ["main.py", "live", "--symbol", "DOGE/USDT"]
         args = parse_args()
     finally:
         sys.argv = original

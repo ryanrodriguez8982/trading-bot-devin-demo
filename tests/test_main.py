@@ -110,20 +110,22 @@ def test_signal_logging():
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 def test_live_mode_argument_parsing():
-    """Test that --live flag is parsed correctly."""
+    """Test that the live subcommand is parsed correctly."""
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'trading_bot'))
     from main import parse_args
     
     original_argv = sys.argv
     try:
-        sys.argv = ['main.py', '--live', '--symbol', 'ETH/USDT']
+        sys.argv = ['main.py', 'live', '--symbol', 'ETH/USDT']
         args = parse_args()
-        assert args.live is True, "Live flag should be True when --live is passed"
+        assert args.command == 'live'
+        assert args.live is True, "Live flag should be True when using live subcommand"
         assert args.symbol == 'ETH/USDT', "Symbol should be parsed correctly"
-        
-        sys.argv = ['main.py', '--symbol', 'BTC/USDT']
+
+        sys.argv = ['main.py', 'live', '--symbol', 'BTC/USDT']
         args = parse_args()
-        assert args.live is False, "Live flag should be False when --live is not passed"
+        assert args.command == 'live'
+        assert args.live is True
 
     finally:
         sys.argv = original_argv
@@ -135,11 +137,11 @@ def test_alert_mode_argument_parsing():
 
     original_argv = sys.argv
     try:
-        sys.argv = ['main.py', '--alert-mode']
+        sys.argv = ['main.py', 'live', '--alert-mode']
         args = parse_args()
         assert args.alert_mode is True, "Alert mode should be True when flag present"
 
-        sys.argv = ['main.py']
+        sys.argv = ['main.py', 'live']
         args = parse_args()
         assert args.alert_mode is False, "Alert mode should be False by default"
 

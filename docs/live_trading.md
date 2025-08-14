@@ -18,7 +18,7 @@ Keep these secrets secure and never commit them to source control. When set, the
 Run the bot in live mode **without** enabling real trades to verify behaviour and logging:
 
 ```bash
-trading-bot --live --symbol BTC/USDT
+trading-bot live --symbol BTC/USDT
 ```
 Confirm that orders are not executed and outputs look correct.
 
@@ -30,7 +30,7 @@ When confident, place the smallest possible trade to ensure everything works end
 
 ```bash
 TRADING_BOT_API_KEY=your_api_key TRADING_BOT_API_SECRET=your_api_secret \
-trading-bot --live --live-trade --symbol BTC/USDT --trade-size 0.001
+trading-bot live --live-trade --symbol BTC/USDT --trade-size 0.001
 ```
 Monitor the trade result and logs closely.
 
@@ -44,7 +44,7 @@ Be prepared to disable API keys or stop the bot immediately if unexpected behavi
 Expose Prometheus metrics and a simple health endpoint to track the bot during live runs:
 
 ```bash
-trading-bot --live --metrics-port 8000 --health-port 8001
+trading-bot live --metrics-port 8000 --health-port 8001
 ```
 
 The metrics endpoint reports counters for generated signals, executed trades, errors and realised P&L, while `/health` returns `ok` for quick liveness probes.
