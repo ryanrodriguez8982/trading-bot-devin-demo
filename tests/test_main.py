@@ -6,13 +6,13 @@ import sys
 import os
 import ccxt
 
-from trading_bot.data_fetch import fetch_btc_usdt_data
+from trading_bot.data_fetch import fetch_market_data
 from trading_bot.strategy import sma_strategy
 
 def test_data_fetch_structure():
     """Test that data fetch returns correct structure."""
     try:
-        df = fetch_btc_usdt_data()
+        df = fetch_market_data()
 
         assert isinstance(df, pd.DataFrame), "Should return a pandas DataFrame"
 
@@ -78,7 +78,7 @@ def test_strategy_insufficient_data():
 def test_data_fetch_with_parameters():
     """Test that data fetch accepts custom parameters."""
     try:
-        df = fetch_btc_usdt_data(symbol="BTC/USDT", timeframe="1m", limit=100)
+        df = fetch_market_data(symbol="BTC/USDT", timeframe="1m", limit=100)
 
         assert isinstance(df, pd.DataFrame), "Should return a pandas DataFrame"
         assert len(df) <= 100, "Should respect limit parameter"

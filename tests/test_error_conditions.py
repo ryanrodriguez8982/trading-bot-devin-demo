@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import ccxt
 
-from trading_bot.data_fetch import fetch_btc_usdt_data
+from trading_bot.data_fetch import fetch_market_data
 from trading_bot.utils.retry import RetryPolicy
 from trading_bot.utils.config import load_config
 from trading_bot.backtester import run_backtest
@@ -26,7 +26,7 @@ def test_fetch_raises_after_retries_logs_error(caplog):
     policy = RetryPolicy(retries=2, backoff=0, jitter=0)
     with caplog.at_level(logging.ERROR):
         with pytest.raises(ccxt.NetworkError):
-            fetch_btc_usdt_data(exchange=exch, retry_policy=policy)
+            fetch_market_data(exchange=exch, retry_policy=policy)
     assert exch.calls == 3  # retries + initial attempt
     error_messages = [rec.message for rec in caplog.records]
     assert any("network error after 2 retries" in msg for msg in error_messages)

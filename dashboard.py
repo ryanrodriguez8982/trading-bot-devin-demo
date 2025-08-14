@@ -16,7 +16,7 @@ from trading_bot.signal_logger import (
     log_signals_to_db,
     get_trades_from_db,
 )
-from trading_bot.data_fetch import fetch_btc_usdt_data
+from trading_bot.data_fetch import fetch_market_data
 from trading_bot.strategy import sma_strategy
 from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
 from trading_bot.performance import compute_equity_curve
@@ -37,15 +37,15 @@ DEFAULT_RSI_UPPER = config.get("rsi_upper", 70)
 DEFAULT_MACD_FAST = config.get("macd_fast", 12)
 DEFAULT_MACD_SLOW = config.get("macd_slow", 26)
 DEFAULT_MACD_SIGNAL = config.get("macd_signal", 9)
-DEFAULT_BOLL_WINDOW = config.get("bbands_window", 20)
-DEFAULT_BOLL_STD = config.get("bbands_std", 2.0)
+DEFAULT_BBANDS_WINDOW = config.get("bbands_window", 20)
+DEFAULT_BBANDS_STD = config.get("bbands_std", 2.0)
 
 # Optional debug line in sidebar:
 st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
 
 @st.cache_data(show_spinner=False)
 def _fetch_price_data(symbol: str):
-    return fetch_btc_usdt_data(
+    return fetch_market_data(
         symbol=symbol,
         timeframe="1m",
         limit=500,
@@ -66,8 +66,8 @@ def _add_indicators(
     macd_fast: Optional[int] = None,
     macd_slow: Optional[int] = None,
     macd_signal: Optional[int] = None,
-    boll_window: Optional[int] = None,
-    boll_std: Optional[float] = None,
+    bbands_window: Optional[int] = None,
+    bbands_std: Optional[float] = None,
 ):
     """Return copy of df with strategy-specific indicator columns."""
     df = df.copy()
@@ -88,11 +88,11 @@ def _add_indicators(
         df["ema_slow"] = df["close"].ewm(span=macd_slow, adjust=False).mean()
         df["macd"] = df["ema_fast"] - df["ema_slow"]
         df["signal_line"] = df["macd"].ewm(span=macd_signal, adjust=False).mean()
-    elif strategy == "bbands" and all([boll_window, boll_std]):
-        df["middle_band"] = df["close"].rolling(window=boll_window).mean()
-        df["std_dev"] = df["close"].rolling(window=boll_window).std()
-        df["upper_band"] = df["middle_band"] + boll_std * df["std_dev"]
-        df["lower_band"] = df["middle_band"] - boll_std * df["std_dev"]
+    elif strategy == "bbands" and all([bbands_window, bbands_std]):
+        df["middle_band"] = df["close"].rolling(window=bbands_window).mean()
+        df["std_dev"] = df["close"].rolling(window=bbands_window).std()
+        df["upper_band"] = df["middle_band"] + bbands_std * df["std_dev"]
+        df["lower_band"] = df["middle_band"] - bbands_std * df["std_dev"]
     return df
 
 st.set_page_config(
@@ -135,7 +135,7 @@ starting_balance = st.sidebar.number_input(
 sma_short = sma_long = None
 rsi_period = lower_thresh = upper_thresh = None
 macd_fast = macd_slow = macd_signal = None
-boll_window = boll_std = None
+bbands_window = bbands_std = None
 
 if selected_strategy in ("All", "sma"):
     sma_short = st.sidebar.number_input(
@@ -157,13 +157,13 @@ elif selected_strategy == "macd":
     macd_signal = st.sidebar.number_input(
         "MACD Signal Period", min_value=1, max_value=100, value=DEFAULT_MACD_SIGNAL)
 elif selected_strategy == "bbands":
-    boll_window = st.sidebar.number_input(
-        "Bollinger Window", min_value=1, max_value=200, value=DEFAULT_BOLL_WINDOW)
-    boll_std = st.sidebar.number_input(
+    bbands_window = st.sidebar.number_input(
+        "Bollinger Window", min_value=1, max_value=200, value=DEFAULT_BBANDS_WINDOW)
+    bbands_std = st.sidebar.number_input(
         "Bollinger Std Dev",
         min_value=0.5,
         max_value=5.0,
-        value=DEFAULT_BOLL_STD,
+        value=DEFAULT_BBANDS_STD,
         step=0.1,
     )
 
@@ -226,8 +226,8 @@ with col1:
                 macd_fast=macd_fast,
                 macd_slow=macd_slow,
                 macd_signal=macd_signal,
-                boll_window=boll_window,
-                boll_std=boll_std,
+                bbands_window=bbands_window,
+                bbands_std=bbands_std,
             )
 
             if selected_strategy == "All" or selected_strategy == "sma":
@@ -254,9 +254,9 @@ with col1:
                                           slow_period=macd_slow,
                                           signal_period=macd_signal)
                 elif (selected_strategy == "bbands" and
-                      all([boll_window, boll_std])):
-                    signals = strategy_fn(df_copy, window=boll_window,
-                                          num_std=boll_std)
+                      all([bbands_window, bbands_std])):
+                    signals = strategy_fn(df_copy, window=bbands_window,
+                                          num_std=bbands_std)
                 elif sma_short and sma_long:
                     signals = strategy_fn(
                         df_copy, sma_short=sma_short, sma_long=sma_long

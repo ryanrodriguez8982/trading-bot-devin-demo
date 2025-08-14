@@ -11,7 +11,7 @@ __version__ = "1.2.0"
 __author__ = "Trading Bot Team"
 __email__ = "trading-bot@example.com"
 
-from .data_fetch import fetch_btc_usdt_data
+from .data_fetch import fetch_market_data
 from .main import main as cli_main
 from .performance import compute_equity_curve
 from .portfolio import Portfolio, Position
@@ -21,7 +21,7 @@ from .strategy import sma_strategy
 
 __all__ = [
     "cli_main",
-    "fetch_btc_usdt_data",
+    "fetch_market_data",
     "sma_strategy",
     "log_signals_to_db",
     "get_signals_from_db",
