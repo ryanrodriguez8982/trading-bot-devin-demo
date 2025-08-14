@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Union
 import logging
 
 from trading_bot.broker import Broker
+from trading_bot.risk.exits import ExitManager
 
 
 logger = logging.getLogger(__name__)
@@ -19,10 +20,13 @@ class LiveTrader:
 
     The trader serialises broker calls to respect API rate limits while
     keeping per-symbol state isolated.  Stop-loss and take-profit levels can
-    be attached on buys via the broker's underlying portfolio.
+    be attached on buys via the broker's underlying portfolio.  When an
+    :class:`~trading_bot.risk.exits.ExitManager` is supplied protective exits
+    are automatically evaluated on each price update.
     """
 
     broker: Broker
+    exits: Optional[ExitManager] = None
 
     def process_signal(
         self,
@@ -49,6 +53,8 @@ class LiveTrader:
         """
         price = float(signal["price"])
         action = str(signal["action"])
+
+        self.update_price(symbol, price)
         self.broker.set_price(symbol, price)
         order = self.broker.create_order(action, symbol, qty)
         logger.info(
@@ -59,7 +65,7 @@ class LiveTrader:
             qty,
             signal.get("strategy", ""),
         )
-        if action == "buy" and (stop_loss is not None or take_profit is not None):
+        if action == "buy":
             pos = getattr(self.broker, "portfolio", None)
             if pos and symbol in pos.positions:
                 p = pos.positions[symbol]
@@ -67,6 +73,10 @@ class LiveTrader:
                     p.stop_loss = stop_loss
                 if take_profit is not None:
                     p.take_profit = take_profit
+            if self.exits is not None:
+                self.exits.arm(symbol, price)
+        elif action == "sell" and self.exits is not None:
+            self.exits.disarm(symbol)
         return order
 
     def run_batch(
@@ -85,6 +95,31 @@ class LiveTrader:
                 if i >= len(sigs):
                     continue
                 self.process_signal(symbol, sigs[i], qtys.get(symbol, 0.0))
+
+    def update_price(self, symbol: str, price: float) -> bool:
+        """Update price and trigger protective exits.
+
+        Returns ``True`` if an exit was executed.
+        """
+        self.broker.set_price(symbol, price)
+        if self.exits is None:
+            return False
+        portfolio = getattr(self.broker, "portfolio", None)
+        if not portfolio or symbol not in portfolio.positions:
+            return False
+        exit_price = self.exits.check(symbol, price)
+        if exit_price is None:
+            return False
+        qty = portfolio.positions[symbol].qty
+        self.broker.set_price(symbol, exit_price)
+        self.broker.create_order("sell", symbol, qty)
+        logger.info(
+            "Protective exit triggered: symbol=%s price=%.4f qty=%f",
+            symbol,
+            exit_price,
+            qty,
+        )
+        return True
 
 
 __all__ = ["LiveTrader"]

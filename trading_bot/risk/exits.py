@@ -57,31 +57,44 @@ class ExitManager:
         """Remove tracking for ``symbol`` if present."""
         self.arms.pop(symbol, None)
 
-    def check(self, symbol: str, price: float) -> bool:
-        """Return ``True`` if an exit is triggered for ``symbol`` at ``price``.
+    def check_ohlc(self, symbol: str, high: float, low: float) -> Optional[float]:
+        """Return exit price if any protective exit triggers for ``symbol``.
 
-        The order of evaluation is stop-loss, take-profit then trailing stop.
-        Once an exit triggers the arm is removed.
+        ``high`` and ``low`` are the bar's extreme prices.  The evaluation
+        order mirrors exchange priority: stop-loss, then take-profit, then
+        trailing stop.  If an exit is triggered the arm is removed and the
+        corresponding price level is returned.
         """
         arm = self.arms.get(symbol)
         if not arm:
-            return False
-        arm.highest_price = max(arm.highest_price, price)
+            return None
+        arm.highest_price = max(arm.highest_price, high)
 
-        # Check fixed stop-loss: price drops more than configured percentage
         if self.stop_loss_pct is not None:
-            if price <= arm.entry_price * (1 - self.stop_loss_pct / 100):
+            stop_price = arm.entry_price * (1 - self.stop_loss_pct / 100)
+            if low <= stop_price:
                 self.disarm(symbol)
-                return True
-        # Check take-profit: price rises the configured percentage above entry
+                return stop_price
+
         if self.take_profit_pct is not None:
-            if price >= arm.entry_price * (1 + self.take_profit_pct / 100):
+            take_price = arm.entry_price * (1 + self.take_profit_pct / 100)
+            if high >= take_price:
                 self.disarm(symbol)
-                return True
-        # Check trailing stop: stop follows the highest price seen
+                return take_price
+
         if self.trailing_stop_pct is not None:
-            trail = arm.highest_price * (1 - self.trailing_stop_pct / 100)
-            if price <= trail:
+            trail_price = arm.highest_price * (1 - self.trailing_stop_pct / 100)
+            if low <= trail_price:
                 self.disarm(symbol)
-                return True
-        return False
+                return trail_price
+
+        return None
+
+    def check(self, symbol: str, price: float) -> Optional[float]:
+        """Return exit price if an exit triggers at ``price``.
+
+        Convenience wrapper that treats ``price`` as both the high and low for
+        the period.  This is suitable for tick-by-tick evaluation in live
+        trading where only the latest price is available.
+        """
+        return self.check_ohlc(symbol, price, price)
