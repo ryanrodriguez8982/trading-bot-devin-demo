@@ -29,7 +29,7 @@ def test_negative_trade_size_config(tmp_path):
 def test_cli_trade_size_validation():
     original = sys.argv
     try:
-        sys.argv = ["main.py", "--trade-size", "-1"]
+        sys.argv = ["main.py", "live", "--trade-size", "-1"]
         with pytest.raises(SystemExit):
             parse_args()
     finally:
