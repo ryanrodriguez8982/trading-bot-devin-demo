@@ -400,6 +400,18 @@ trading-bot --tune --strategy bbands --backtest btc.csv
 This runs a grid search over sensible defaults and prints the performance of each
 combination, highlighting the best set of parameters.
 
+### Walk-Forward Optimization
+
+Use walk-forward analysis to evaluate parameter robustness on rolling
+train/test windows:
+
+```bash
+trading-bot --walk-forward --strategy sma --backtest data.csv --train-size 100 --test-size 20
+```
+
+The optimizer selects the best parameters on each training window and reports
+performance on the subsequent test window.
+
 ### Example Scenarios
 
 Run a Bollinger Bands backtest on BTC data:
