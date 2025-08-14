@@ -29,6 +29,7 @@ from trading_bot.config import get_config
 from trading_bot.utils.logging_config import setup_logging
 from trading_bot.utils.retry import RetryPolicy, default_retry
 from trading_bot.utils.state import default_state_dir
+from trading_bot import metrics
 
 CONFIG = get_config()
 DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
@@ -128,6 +129,18 @@ def parse_args():
         help="Enable alert notifications for BUY/SELL signals",
     )
     parser.add_argument(
+        "--metrics-port",
+        type=int,
+        default=None,
+        help="Expose Prometheus metrics on this port",
+    )
+    parser.add_argument(
+        "--health-port",
+        type=int,
+        default=None,
+        help="Expose simple HTTP health check on this port",
+    )
+    parser.add_argument(
         "--backtest", type=str, help="Path to CSV file for historical backtesting"
     )
     parser.add_argument(
@@ -203,7 +216,7 @@ def parse_args():
     it = iter(unknown)
     for token in it:
         if token.startswith("--risk."):
-            key = token[2 + len("risk.") :]
+            key = token[2 + len("risk."):]
             value = next(it, None)
             if value is None:
                 raise SystemExit(f"Missing value for {token}")
@@ -388,6 +401,8 @@ def run_live_mode(
     confluence_required: Optional[int] = None,
     state_dir=None,
     retry_policy: Optional[RetryPolicy] = None,
+    metrics_port: Optional[int] = None,
+    health_port: Optional[int] = None,
 ):
     state_dir = state_dir or default_state_dir()
     retry_policy = retry_policy or default_retry()
@@ -404,6 +419,11 @@ def run_live_mode(
     logger.info("Fetching %d candles every %d seconds", live_limit, interval_seconds)
     logger.info("Press Ctrl+C to stop gracefully")
     logger.info("=" * 50)
+
+    if metrics_port is not None:
+        metrics.start_metrics_server(metrics_port)
+    if health_port is not None:
+        metrics.start_health_server(health_port)
 
     iteration = 0
     portfolio = None
@@ -456,7 +476,7 @@ def run_live_mode(
                     confluence_required=confluence_required,
                     state_dir=state_dir,
                 )
-
+                metrics.SIGNALS_GENERATED.inc(len(signals))
                 if not signals:
                     logger.info("No new signals for %s.", sym)
                     continue
@@ -524,6 +544,7 @@ def run_live_mode(
                                 }
                             )
                         )
+                        metrics.TRADES_EXECUTED.inc()
                     else:
                         try:
                             if broker:
@@ -550,6 +571,7 @@ def run_live_mode(
                                     }
                                 )
                             )
+                            metrics.TRADES_EXECUTED.inc()
                         except ValueError:
                             logger.debug(
                                 "Trade skipped due to portfolio/broker constraints"
@@ -558,7 +580,11 @@ def run_live_mode(
         try:
             retry_policy.call(_iteration_body)
         except Exception:
+            metrics.ERRORS_TOTAL.inc()
             logger.error("Error during live trading iteration", exc_info=True)
+
+        if portfolio:
+            metrics.PNL_GAUGE.set(portfolio.realized_pnl)
 
         logger.info("Next analysis in %d seconds...", interval_seconds)
         time.sleep(interval_seconds)
@@ -695,6 +721,8 @@ def main():
                 confluence_members=confluence_members,
                 confluence_required=confluence_required,
                 state_dir=state_dir,
+                metrics_port=args.metrics_port,
+                health_port=args.health_port,
             )
         else:
             signals = run_single_analysis(
