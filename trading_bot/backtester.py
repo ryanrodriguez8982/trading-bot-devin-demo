@@ -11,6 +11,7 @@ import pandas as pd
 from trading_bot.portfolio import Portfolio
 from trading_bot.strategies import STRATEGY_REGISTRY
 from trading_bot.utils.config import get_config
+from trading_bot.risk.exits import ExitManager
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,17 @@ def simulate_equity(
     portfolio = Portfolio(cash=initial_capital)
     equity_history: list[float] = []
     trade_profits: list[float] = []
-    # Track highest prices per symbol to update trailing stops
-    highest_prices: dict[str, float] = {}
+
+    exits: Optional[ExitManager] = None
+    if any([stop_loss_pct, take_profit_rr, trailing_stop_pct]):
+        take_pct = None
+        if stop_loss_pct is not None and take_profit_rr is not None:
+            take_pct = stop_loss_pct * take_profit_rr * 100
+        exits = ExitManager(
+            stop_loss_pct=stop_loss_pct * 100 if stop_loss_pct is not None else None,
+            take_profit_pct=take_pct,
+            trailing_stop_pct=trailing_stop_pct * 100 if trailing_stop_pct is not None else None,
+        )
 
     signal_iter = iter(sorted(signals, key=lambda x: x["timestamp"]))
     current_signal = next(signal_iter, None)
@@ -119,33 +129,14 @@ def simulate_equity(
         close_price = row["close"]
 
         pos = portfolio.positions.get(symbol)
-        if pos and pos.qty > 0:
-            if trailing_stop_pct is not None:
-                # Maintain the highest price seen to compute the trailing level
-                prev_high = highest_prices.get(symbol, pos.avg_cost)
-                curr_high = max(prev_high, row["high"])
-                highest_prices[symbol] = curr_high
-                trail = curr_high * (1 - trailing_stop_pct)
-                # Only move the stop upwards; never loosen it
-                if pos.stop_loss is None or trail > pos.stop_loss:
-                    pos.stop_loss = trail
-            stop_hit = pos.stop_loss is not None and row["low"] <= pos.stop_loss
-            tp_hit = pos.take_profit is not None and row["high"] >= pos.take_profit
-            exit_price = None
-            if stop_hit and tp_hit:
-                exit_price = pos.stop_loss
-            elif stop_hit:
-                exit_price = pos.stop_loss
-            elif tp_hit:
-                exit_price = pos.take_profit
+        if pos and pos.qty > 0 and exits is not None:
+            exit_price = exits.check_ohlc(symbol, row["high"], row["low"])
             if exit_price is not None:
-                # Apply slippage to the exit price and realise the trade
                 exec_price = exit_price * (1 - slippage_bps / 10_000)
                 exit_avg_cost = pos.avg_cost
                 qty = pos.qty
                 portfolio.sell(symbol, qty, exec_price, fee_bps=fees_bps)
                 trade_profits.append((exec_price - exit_avg_cost) * qty)
-                highest_prices.pop(symbol, None)
 
         while current_signal is not None and current_signal["timestamp"] <= ts:
             action = current_signal["action"]
@@ -154,22 +145,18 @@ def simulate_equity(
                     buy_price = close_price * (1 + slippage_bps / 10_000)
                     stop_price = None
                     take_price = None
-                    if stop_loss_pct:
-                        # Derive stop-loss below the executed buy price
+                    if stop_loss_pct is not None:
                         stop_price = buy_price * (1 - stop_loss_pct)
-                        if take_profit_rr:
-                            # Take-profit based on configured reward-to-risk
+                        if take_profit_rr is not None:
                             risk = buy_price - stop_price
                             take_price = buy_price + risk * take_profit_rr
-                    if trailing_stop_pct:
-                        # Start trailing stop at a fixed distance from entry
+                    if trailing_stop_pct is not None:
                         trail_price = buy_price * (1 - trailing_stop_pct)
                         stop_price = (
                             max(stop_price, trail_price)
                             if stop_price is not None
                             else trail_price
                         )
-                        highest_prices[symbol] = buy_price
                     portfolio.buy(
                         symbol,
                         trade_size,
@@ -178,6 +165,8 @@ def simulate_equity(
                         stop_loss=stop_price,
                         take_profit=take_price,
                     )
+                    if exits is not None:
+                        exits.arm(symbol, buy_price)
                 elif action == "sell":
                     sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
@@ -185,7 +174,8 @@ def simulate_equity(
                         pos.avg_cost if pos and pos.qty >= trade_size else None
                     )
                     portfolio.sell(symbol, trade_size, sell_price, fee_bps=fees_bps)
-                    highest_prices.pop(symbol, None)
+                    if exits is not None:
+                        exits.disarm(symbol)
                     if avg_cost is not None:
                         trade_profits.append((sell_price - avg_cost) * trade_size)
             except ValueError:
