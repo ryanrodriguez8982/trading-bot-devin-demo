@@ -41,7 +41,7 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
         Merged configuration dictionary.
     """
     base_dir = config_dir or os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        os.path.dirname(os.path.dirname(__file__))
     )
     config_path = os.path.join(base_dir, "config.json")
     try:

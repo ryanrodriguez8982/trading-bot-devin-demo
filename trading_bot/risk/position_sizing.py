@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 from typing import Optional
 
-from trading_bot.risk_config import PositionSizingConfig
+from trading_bot.risk.config import PositionSizingConfig
 
 
 def _floor_to_step(value: float, step: float) -> float:

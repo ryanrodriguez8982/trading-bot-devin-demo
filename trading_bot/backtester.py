@@ -10,7 +10,7 @@ import pandas as pd
 
 from trading_bot.portfolio import Portfolio
 from trading_bot.strategies import STRATEGY_REGISTRY
-from trading_bot.utils.config import get_config
+from trading_bot.config import get_config
 from trading_bot.risk.exits import ExitManager
 
 logger = logging.getLogger(__name__)
