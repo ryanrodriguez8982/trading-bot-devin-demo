@@ -4,6 +4,8 @@ from typing import Any, DefaultDict, Dict, List, Optional
 
 import pandas as pd
 
+from trading_bot.strategies import register_strategy
+
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,7 @@ METADATA: Dict[str, Any] = {
 }
 
 
+@register_strategy("confluence", METADATA)
 def confluence_strategy(
     df: pd.DataFrame,
     members: Optional[List[str]] = None,

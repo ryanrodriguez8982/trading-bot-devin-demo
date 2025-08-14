@@ -1,19 +1,17 @@
-"""Strategy registry with metadata support.
+"""Dynamic strategy registry with automatic discovery.
 
-Each strategy resides in a `<key>_strategy.py` module and exposes a
-`<key>_strategy` function. The registry maps short, lowercase keys to
-these functions and optional metadata to keep naming and structure consistent.
+Strategies can register themselves via the :func:`register_strategy`
+decorator. When this package is imported, all modules inside
+``trading_bot.strategies`` are imported so that any decorated strategies are
+automatically added to :const:`STRATEGY_REGISTRY`.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List
-
-from .bbands_strategy import bbands_strategy
-from .confluence_strategy import METADATA as CONFLUENCE_METADATA
-from .confluence_strategy import confluence_strategy
-from .macd_strategy import macd_strategy
-from .rsi_strategy import rsi_strategy
-from .sma_strategy import sma_strategy
+import importlib
+import pkgutil
 
 
 @dataclass
@@ -24,23 +22,43 @@ class Strategy:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
-STRATEGY_REGISTRY: Dict[str, Strategy] = {
-    "sma": Strategy(sma_strategy),
-    "rsi": Strategy(rsi_strategy),
-    "macd": Strategy(macd_strategy),
-    "bbands": Strategy(bbands_strategy),
-    "confluence": Strategy(confluence_strategy, CONFLUENCE_METADATA),
-}
+# Global registry populated by the decorator below
+STRATEGY_REGISTRY: Dict[str, Strategy] = {}
+
+
+def register_strategy(name: str, metadata: Dict[str, Any] | None = None):
+    """Decorator to register a strategy function.
+
+    Parameters
+    ----------
+    name:
+        Key under which the strategy will be registered.
+    metadata:
+        Optional metadata to associate with the strategy.
+    """
+
+    def decorator(func: Callable[..., List[dict[str, Any]]]):
+        STRATEGY_REGISTRY[name] = Strategy(func, metadata or {})
+        return func
+
+    return decorator
 
 
 def list_strategies() -> List[str]:
     """Return the list of available strategy names."""
+
     return list(STRATEGY_REGISTRY.keys())
+
+
+# Automatically import all modules in this package so that any decorated
+# strategies are registered upon package import.
+for _finder, module_name, _ispkg in pkgutil.iter_modules(__path__):
+    importlib.import_module(f"{__name__}.{module_name}")
 
 
 __all__ = [
     "Strategy",
     "STRATEGY_REGISTRY",
+    "register_strategy",
     "list_strategies",
-    "macd_strategy",
 ]

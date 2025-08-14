@@ -3,9 +3,12 @@ from typing import List, Dict, Any
 
 import pandas as pd
 
+from trading_bot.strategies import register_strategy
+
 logger = logging.getLogger(__name__)
 
 
+@register_strategy("macd")
 def macd_strategy(
     df: pd.DataFrame,
     fast_period: int = 12,

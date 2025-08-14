@@ -1,11 +1,14 @@
-from typing import List, Dict, Any
-
 import logging
+from typing import Any, Dict, List
+
 import pandas as pd
+
+from trading_bot.strategies import register_strategy
 
 logger = logging.getLogger(__name__)
 
 
+@register_strategy("bbands")
 def bbands_strategy(df: pd.DataFrame, window: int = 20, num_std: float = 2) -> List[Dict[str, Any]]:
     """Generate trading signals using Bollinger Bands crossovers.
 
