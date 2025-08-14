@@ -52,6 +52,12 @@ def test_negative_values_raise():
         TrailingConfig(trail_pct=-0.1)
     with pytest.raises(ValueError):
         MaxDrawdownConfig(monthly_pct=-0.1)
+    with pytest.raises(ValueError):
+        MaxDrawdownConfig(max_trades_per_day=-1)
+    with pytest.raises(ValueError):
+        MaxDrawdownConfig(max_position_pct=-0.1)
+    with pytest.raises(ValueError):
+        MaxDrawdownConfig(trading_start_hour=25)
 
 
 def test_nested_override_non_numeric():

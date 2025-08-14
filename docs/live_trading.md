@@ -49,5 +49,18 @@ trading-bot --live --metrics-port 8000 --health-port 8001
 
 The metrics endpoint reports counters for generated signals, executed trades, errors and realised P&L, while `/health` returns `ok` for quick liveness probes.
 
+## 8. Enable Additional Risk Controls
+
+The bot supports extra guardrails to keep risk in check during live runs. You
+can limit the number of trades per day, cap the portion of equity used for any
+single trade and restrict trading to a specific window of hours. Example:
+
+```bash
+trading-bot --live --max-trades-per-day 5 --max-position-pct 0.1 --trading-window 9-17
+```
+
+These safeguards complement stop-loss and take-profit rules by preventing
+over-trading in unfavourable conditions.
+
 Following this checklist helps reduce risk as you transition from simulation to real markets.
 

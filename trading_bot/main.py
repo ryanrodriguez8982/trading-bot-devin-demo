@@ -199,6 +199,21 @@ def parse_args():
         help="Fixed cash amount to use per trade. Overrides config files.",
     )
     parser.add_argument(
+        "--max-trades-per-day",
+        type=int,
+        help="Maximum number of trades allowed per day",
+    )
+    parser.add_argument(
+        "--max-position-pct",
+        type=float,
+        help="Maximum fraction of equity allowed per trade (0-1)",
+    )
+    parser.add_argument(
+        "--trading-window",
+        type=str,
+        help="Allowed trading window as START-END hours in UTC (e.g., 9-17)",
+    )
+    parser.add_argument(
         "--interval-seconds",
         type=int,
         default=60,
@@ -244,6 +259,17 @@ def parse_args():
         risk_overrides["position_sizing.fraction_of_equity"] = args.fixed_fraction
     if getattr(args, "fixed_cash", None) is not None:
         risk_overrides["position_sizing.fixed_cash_amount"] = args.fixed_cash
+    if getattr(args, "max_trades_per_day", None) is not None:
+        risk_overrides["max_drawdown.max_trades_per_day"] = args.max_trades_per_day
+    if getattr(args, "max_position_pct", None) is not None:
+        risk_overrides["max_drawdown.max_position_pct"] = args.max_position_pct
+    if getattr(args, "trading_window", None):
+        try:
+            start, end = [int(x) for x in args.trading_window.split("-")]
+        except ValueError as e:  # noqa: F841
+            raise SystemExit("Invalid --trading-window format. Use START-END")
+        risk_overrides["max_drawdown.trading_start_hour"] = start
+        risk_overrides["max_drawdown.trading_end_hour"] = end
     setattr(args, "risk_overrides", risk_overrides)
     try:
         CLIArgsModel(**vars(args))
@@ -459,6 +485,10 @@ def run_live_mode(
             guardrails = Guardrails(
                 max_dd_pct=md_cfg.monthly_pct,
                 cooldown_minutes=md_cfg.cooldown_bars,
+                max_trades_per_day=md_cfg.max_trades_per_day,
+                max_position_pct=md_cfg.max_position_pct,
+                trading_start_hour=md_cfg.trading_start_hour,
+                trading_end_hour=md_cfg.trading_end_hour,
             )
             if portfolio:
                 guardrails.reset_month(portfolio.equity())
@@ -467,10 +497,11 @@ def run_live_mode(
         iteration += 1
         if guardrails and portfolio:
             eq = portfolio.equity()
+            now = datetime.now(timezone.utc)
             if guardrails.should_halt(eq):
                 logger.warning("Guardrails triggered - halting trading")
                 break
-            if guardrails.cooling_down():
+            if not guardrails.allow_trade(eq, now=now):
                 logger.info("Guardrails active - skipping iteration")
                 time.sleep(interval_seconds)
                 continue
@@ -525,15 +556,19 @@ def run_live_mode(
                         )
                         continue
 
-                    # Determine quantity
-                    qty = 0.0
-                    if trade_amount:
-                        qty = trade_amount
-                    elif risk_config:
-                        equity = portfolio.equity({sym: price}) if portfolio else 0
+                    # Determine quantity and equity
+                    equity = portfolio.equity({sym: price}) if portfolio else 0
+                    qty = trade_amount or 0.0
+                    if not trade_amount and risk_config:
                         qty = calculate_position_size(
                             risk_config.position_sizing, price, equity
                         )
+
+                    if guardrails and not guardrails.allow_trade(
+                        equity, price=price, qty=qty
+                    ):
+                        logger.info("Guardrails blocked trade due to limits")
+                        continue
 
                     logger.info(
                         "Processing signal: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
@@ -593,6 +628,9 @@ def run_live_mode(
                             logger.debug(
                                 "Trade skipped due to portfolio/broker constraints"
                             )
+
+                    if guardrails and qty > 0:
+                        guardrails.record_trade(0)
 
         try:
             retry_policy.call(_iteration_body)

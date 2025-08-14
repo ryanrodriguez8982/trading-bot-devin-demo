@@ -48,3 +48,29 @@ def test_alert_emitted_on_drawdown(caplog):
         assert g.should_halt(880)
     assert any("Max drawdown exceeded" in r.message for r in caplog.records)
 
+
+def test_max_trades_per_day_limit():
+    g = Guardrails(max_trades_per_day=2)
+    now = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    assert g.allow_trade(1000, now=now)
+    g.record_trade(0, now=now)
+    g.record_trade(0, now=now)
+    assert not g.allow_trade(1000, now=now)
+    # Next day resets the counter
+    assert g.allow_trade(1000, now=now + timedelta(days=1))
+
+
+def test_max_position_pct_limit():
+    g = Guardrails(max_position_pct=0.1)
+    equity = 1000
+    price = 100
+    assert g.allow_trade(equity, price=price, qty=0.5)
+    assert not g.allow_trade(equity, price=price, qty=2)
+
+
+def test_trading_window():
+    g = Guardrails(trading_start_hour=9, trading_end_hour=17)
+    morning = datetime(2025, 1, 1, 10, tzinfo=timezone.utc)
+    evening = datetime(2025, 1, 1, 18, tzinfo=timezone.utc)
+    assert g.allow_trade(1000, now=morning)
+    assert not g.allow_trade(1000, now=evening)
