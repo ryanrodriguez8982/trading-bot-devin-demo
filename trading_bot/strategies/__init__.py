@@ -8,10 +8,10 @@ these functions and optional metadata to keep naming and structure consistent.
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List
 
-from .bbands import bbands_strategy
-from .confluence import METADATA as CONFLUENCE_METADATA
-from .confluence import confluence_strategy
-from .macd import macd_strategy
+from .bbands_strategy import bbands_strategy
+from .confluence_strategy import METADATA as CONFLUENCE_METADATA
+from .confluence_strategy import confluence_strategy
+from .macd_strategy import macd_strategy
 from .rsi_strategy import rsi_strategy
 from .sma_strategy import sma_strategy
 
