@@ -40,5 +40,14 @@ The live trading loop logs unexpected errors with traceback and retries, so tran
 ## 6. Have a Rollback Plan
 Be prepared to disable API keys or stop the bot immediately if unexpected behaviour occurs. Keep a manual record of changes and trades so you can revert settings or positions quickly.
 
+## 7. Monitor with Metrics and Health Checks
+Expose Prometheus metrics and a simple health endpoint to track the bot during live runs:
+
+```bash
+trading-bot --live --metrics-port 8000 --health-port 8001
+```
+
+The metrics endpoint reports counters for generated signals, executed trades, errors and realised P&L, while `/health` returns `ok` for quick liveness probes.
+
 Following this checklist helps reduce risk as you transition from simulation to real markets.
 

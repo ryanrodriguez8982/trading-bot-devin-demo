@@ -163,6 +163,9 @@ trading-bot --live
 # Live mode with custom parameters
 trading-bot --live --symbol ETH/USDT --sma-short 10 --sma-long 30
 
+# Expose Prometheus metrics and health check
+trading-bot --live --metrics-port 8000 --health-port 8001
+
 # Stop live mode gracefully with Ctrl+C
 ```
 

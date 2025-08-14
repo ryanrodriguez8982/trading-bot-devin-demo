@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Optional Prometheus metrics and health check endpoints for live trading.
+
 ### Changed
 - Refactored backtester strategy dispatch to remove duplicated conditional logic.
 
