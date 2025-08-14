@@ -7,7 +7,9 @@ import sys
 import time
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
+
+from ccxt.base.exchange import Exchange
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -256,7 +258,7 @@ def log_signals_to_file(
     state_dir: Optional[str] = None,
 ) -> None:
     if not signals:
-        return
+        return None
     state_dir = state_dir or default_state_dir()
     logs_dir = os.path.join(state_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
@@ -321,18 +323,18 @@ def signal_handler(signum, frame):  # noqa: ARG001 (frame unused)
 
 
 def run_single_analysis(
-    symbol,
-    timeframe,
-    limit,
-    sma_short,
-    sma_long,
-    strategy="sma",
-    alert_mode=False,
-    exchange=None,
-    confluence_members=None,
+    symbol: str,
+    timeframe: str,
+    limit: int,
+    sma_short: int,
+    sma_long: int,
+    strategy: str = "sma",
+    alert_mode: bool = False,
+    exchange: Optional[Exchange] = None,
+    confluence_members: Optional[Sequence[str]] = None,
     confluence_required: Optional[int] = None,
-    state_dir=None,
-):
+    state_dir: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     try:
         if strategy not in STRATEGY_REGISTRY:
             raise ValueError("Unknown strategy. Use --list-strategies to view options.")
@@ -399,26 +401,26 @@ def run_single_analysis(
 
 
 def run_live_mode(
-    symbols,
-    timeframe,
-    sma_short,
-    sma_long,
-    strategy="sma",
-    alert_mode=False,
-    exchange=None,
-    live_trade=False,
-    trade_amount=0.0,
-    fee_bps=0.0,
-    risk_config=None,
-    interval_seconds=60,
-    broker=None,
-    confluence_members=None,
+    symbols: Sequence[str],
+    timeframe: str,
+    sma_short: int,
+    sma_long: int,
+    strategy: str = "sma",
+    alert_mode: bool = False,
+    exchange: Optional[Exchange] = None,
+    live_trade: bool = False,
+    trade_amount: float = 0.0,
+    fee_bps: float = 0.0,
+    risk_config: Optional[Any] = None,
+    interval_seconds: int = 60,
+    broker: Optional[Any] = None,
+    confluence_members: Optional[Sequence[str]] = None,
     confluence_required: Optional[int] = None,
-    state_dir=None,
+    state_dir: Optional[str] = None,
     retry_policy: Optional[RetryPolicy] = None,
     metrics_port: Optional[int] = None,
     health_port: Optional[int] = None,
-):
+) -> None:
     state_dir = state_dir or default_state_dir()
     retry_policy = retry_policy or default_retry()
     db_path = os.path.join(state_dir, "signals.db")
@@ -605,7 +607,7 @@ def run_live_mode(
         time.sleep(interval_seconds)
 
 
-def main():
+def main() -> None:
     args = parse_args()
     state_dir = args.state_dir or default_state_dir()
     setup_logging(level=args.log_level, state_dir=state_dir, json_logs=args.json_logs)
@@ -658,7 +660,7 @@ def main():
         exchange = create_exchange(exchange_name=exchange_name)
 
     # Broker
-    broker = None
+    broker: Optional[Any] = None
     if broker_type == "paper":
         broker = PaperBroker(
             starting_cash=trade_size * 100 if trade_size else 0,
