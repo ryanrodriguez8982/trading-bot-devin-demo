@@ -33,7 +33,7 @@ def test_end_to_end_integration(monkeypatch, tmp_path, caplog):
         call["i"] += 1
         return df
 
-    monkeypatch.setattr(main, "fetch_btc_usdt_data", fake_fetch)
+    monkeypatch.setattr(main, "fetch_market_data", fake_fetch)
 
     sleep_calls = {"count": 0}
 

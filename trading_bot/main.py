@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from trading_bot.backtester import run_backtest
 from trading_bot.broker import CcxtSpotBroker, PaperBroker
-from trading_bot.data_fetch import fetch_btc_usdt_data
+from trading_bot.data_fetch import fetch_market_data
 from trading_bot.exchange import create_exchange, execute_trade
 from trading_bot.notify import configure as configure_alerts
 from trading_bot.portfolio import Portfolio
@@ -310,9 +310,9 @@ def run_single_analysis(
             raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
         if exchange:
-            data = fetch_btc_usdt_data(symbol, timeframe, limit, exchange=exchange)
+            data = fetch_market_data(symbol, timeframe, limit, exchange=exchange)
         else:
-            data = fetch_btc_usdt_data(symbol, timeframe, limit)
+            data = fetch_market_data(symbol, timeframe, limit)
         logger.info("Fetched %d data points for %s (%s)", len(data), symbol, timeframe)
 
         entry = STRATEGY_REGISTRY[strategy]

@@ -10,7 +10,7 @@ from trading_bot.utils.retry import RetryPolicy, default_retry
 
 logger = logging.getLogger(__name__)
 
-def fetch_btc_usdt_data(
+def fetch_market_data(
     symbol: str = "BTC/USDT",
     timeframe: str = "1m",
     limit: int = 500,
