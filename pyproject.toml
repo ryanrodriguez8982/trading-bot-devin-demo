@@ -43,7 +43,7 @@ dependencies = [
 include = ["trading_bot"]
 
 [tool.setuptools.package-data]
-"trading_bot" = ["*.json"]
+"trading_bot" = ["*.json", "py.typed"]
 
 [tool.ruff]
 line-length = 120
