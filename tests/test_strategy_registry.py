@@ -57,3 +57,41 @@ def test_register_strategy_decorator():
         assert STRATEGY_REGISTRY["dummy"].func is dummy_strategy
     finally:
         del STRATEGY_REGISTRY["dummy"]
+
+
+def test_registry_executes_registered_strategies():
+    """Ensure strategies retrieved from the registry execute correctly."""
+    import numpy as np
+    import pandas as pd
+    from trading_bot.strategies.sma_strategy import sma_strategy
+    from trading_bot.strategies.rsi_strategy import rsi_strategy
+    from trading_bot.strategies.macd_strategy import macd_strategy
+    from trading_bot.strategies.bbands_strategy import bbands_strategy
+    from trading_bot.strategies.confluence_strategy import confluence_strategy
+
+    periods = 60
+    timestamps = pd.date_range("2024-01-01", periods=periods, freq="1min")
+    prices = np.sin(np.linspace(0, 4 * np.pi, periods)) * 10 + 100
+    df = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "open": prices,
+            "high": prices + 1,
+            "low": prices - 1,
+            "close": prices,
+            "volume": 1_000,
+        }
+    )
+
+    strategy_map = {
+        "sma": sma_strategy,
+        "rsi": rsi_strategy,
+        "macd": macd_strategy,
+        "bbands": bbands_strategy,
+        "confluence": confluence_strategy,
+    }
+
+    for name, func in strategy_map.items():
+        registry_func = STRATEGY_REGISTRY[name].func
+        assert registry_func is func
+        assert registry_func(df) == func(df)
