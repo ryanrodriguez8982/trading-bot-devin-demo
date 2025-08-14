@@ -1,4 +1,8 @@
-from trading_bot.strategies import STRATEGY_REGISTRY, list_strategies
+from trading_bot.strategies import (
+    STRATEGY_REGISTRY,
+    list_strategies,
+    register_strategy,
+)
 
 
 def test_registry_contains_expected_strategies():
@@ -18,21 +22,38 @@ def test_confluence_metadata():
 
 def test_list_strategies_function():
     strategies = list_strategies()
-    assert all(name in strategies for name in ["sma", "rsi", "macd", "bbands", "confluence"])
+    expected = ["sma", "rsi", "macd", "bbands", "confluence"]
+    assert all(name in strategies for name in expected)
 
 
 def test_strategy_naming_convention():
     for key, strategy in STRATEGY_REGISTRY.items():
         func = getattr(strategy, "func", None)
-        assert callable(func), f"Strategy '{key}' does not have a callable 'func'"
-        
+        assert callable(func), (
+            f"Strategy '{key}' does not have a callable 'func'"
+        )
+
         func_name = getattr(func, "__name__", "<missing>")
-        expected = f"{key}_strategy"
-        assert func_name == expected, (
-            f"Strategy '{key}' has mismatched function name: expected '{expected}', got '{func_name}'"
+        expected_name = f"{key}_strategy"
+        assert func_name == expected_name, (
+            f"Strategy '{key}' has mismatched function name: expected "
+            f"'{expected_name}', got '{func_name}'"
         )
 
         module_name = getattr(func, "__module__", "").split(".")[-1]
-        assert module_name == expected, (
-            f"Strategy '{key}' is in incorrect module: expected '{expected}.py', got '{module_name}.py'"
+        assert module_name == expected_name, (
+            f"Strategy '{key}' is in incorrect module: expected "
+            f"'{expected_name}.py', got '{module_name}.py'"
         )
+
+
+def test_register_strategy_decorator():
+    @register_strategy("dummy")
+    def dummy_strategy(df):
+        return []
+
+    try:
+        assert "dummy" in STRATEGY_REGISTRY
+        assert STRATEGY_REGISTRY["dummy"].func is dummy_strategy
+    finally:
+        del STRATEGY_REGISTRY["dummy"]

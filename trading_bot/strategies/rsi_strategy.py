@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from trading_bot.utils.config import get_config
+from trading_bot.strategies import register_strategy
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ DEFAULT_RSI_LOWER: float = float(CONFIG.get("rsi_lower", 30))
 DEFAULT_RSI_UPPER: float = float(CONFIG.get("rsi_upper", 70))
 
 
+@register_strategy("rsi")
 def rsi_strategy(
     df: pd.DataFrame,
     period: int = DEFAULT_RSI_PERIOD,
