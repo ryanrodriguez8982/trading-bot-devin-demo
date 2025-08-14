@@ -21,6 +21,7 @@ def rsi_strategy(
     period: int = DEFAULT_RSI_PERIOD,
     lower_thresh: float = DEFAULT_RSI_LOWER,
     upper_thresh: float = DEFAULT_RSI_UPPER,
+    **_kwargs,
 ) -> List[Dict[str, Any]]:
     """Generate trading signals based on RSI threshold crossovers.
 

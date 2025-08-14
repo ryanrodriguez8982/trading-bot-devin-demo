@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from typing import Any
 
 from trading_bot.backtester import (
     load_csv_data,
@@ -96,6 +97,34 @@ def test_generate_signals_dispatch(tmp_path):
         del STRATEGY_REGISTRY['minimal']
 
     assert called.get('yes') is True
+
+
+def test_run_backtest_accepts_strategy_kwargs(tmp_path):
+    """run_backtest should forward kwargs to the chosen strategy."""
+    timestamps = pd.date_range('2024-01-01', periods=5, freq='1min')
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'open': [100] * 5,
+        'high': [105] * 5,
+        'low': [95] * 5,
+        'close': [100 + i for i in range(5)],
+        'volume': [1000] * 5,
+    })
+    csv_file = write_csv(tmp_path, df)
+
+    captured: dict[str, Any] = {}
+
+    def custom_strategy(df, foo=None, **kwargs):
+        captured['foo'] = foo
+        return []
+
+    STRATEGY_REGISTRY['custom'] = Strategy(custom_strategy)
+    try:
+        run_backtest(str(csv_file), strategy='custom', foo=42)
+    finally:
+        del STRATEGY_REGISTRY['custom']
+
+    assert captured.get('foo') == 42
 
 
 def test_backtest_saves_outputs(tmp_path):

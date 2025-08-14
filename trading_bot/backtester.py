@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 import json
 import logging
 import os
@@ -18,14 +17,6 @@ logger = logging.getLogger(__name__)
 CONFIG = get_config()
 DEFAULT_INITIAL_CAPITAL = 10000.0
 DEFAULT_TRADE_SIZE = CONFIG.get("trade_size", 1.0)
-DEFAULT_SMA_SHORT = CONFIG.get("sma_short", 5)
-DEFAULT_SMA_LONG = CONFIG.get("sma_long", 20)
-DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
-DEFAULT_MACD_FAST = CONFIG.get("macd_fast", 12)
-DEFAULT_MACD_SLOW = CONFIG.get("macd_slow", 26)
-DEFAULT_MACD_SIGNAL = CONFIG.get("macd_signal", 9)
-DEFAULT_BBANDS_WINDOW = CONFIG.get("bbands_window", 20)
-DEFAULT_BBANDS_STD = CONFIG.get("bbands_std", 2)
 
 REQUIRED_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 
@@ -221,19 +212,15 @@ def simulate_equity(
 
 def generate_signals(
     df,
-    strategy="sma",
-    sma_short: int = DEFAULT_SMA_SHORT,
-    sma_long: int = DEFAULT_SMA_LONG,
-    rsi_period: int = DEFAULT_RSI_PERIOD,
-    macd_fast: int = DEFAULT_MACD_FAST,
-    macd_slow: int = DEFAULT_MACD_SLOW,
-    macd_signal: int = DEFAULT_MACD_SIGNAL,
-    bbands_window: int = DEFAULT_BBANDS_WINDOW,
-    bbands_std: int = DEFAULT_BBANDS_STD,
-    confluence_members=None,
-    confluence_required: Optional[int] = None,
+    strategy: str = "sma",
+    **strategy_kwargs,
 ):
-    """Generate trading signals using the specified strategy."""
+    """Generate trading signals using the specified strategy.
+
+    Extra keyword arguments are forwarded directly to the strategy
+    function.  Strategies are expected to declare the parameters they need
+    and may accept ``**kwargs`` to ignore irrelevant ones.
+    """
 
     if strategy not in STRATEGY_REGISTRY:
         raise ValueError("Unknown strategy")
@@ -242,33 +229,14 @@ def generate_signals(
     strategy_fn = entry.func
     metadata = entry.metadata
 
-    if confluence_members is None:
-        confluence_members = metadata.get("requires")
-    if confluence_required is None:
-        confluence_required = metadata.get("required_count")
+    # Provide default confluence parameters from metadata when not
+    # explicitly supplied
+    if "requires" in metadata and "members" not in strategy_kwargs:
+        strategy_kwargs["members"] = metadata["requires"]
+    if "required_count" in metadata and "required" not in strategy_kwargs:
+        strategy_kwargs["required"] = metadata["required_count"]
 
-    available_params = {
-        "df": df,
-        "sma_short": sma_short,
-        "sma_long": sma_long,
-        "period": rsi_period,
-        "fast_period": macd_fast,
-        "slow_period": macd_slow,
-        "signal_period": macd_signal,
-        "window": bbands_window,
-        "num_std": bbands_std,
-        "members": confluence_members,
-        "required": confluence_required,
-    }
-
-    sig = inspect.signature(strategy_fn)
-    strategy_kwargs = {
-        name: value
-        for name, value in available_params.items()
-        if name in sig.parameters and value is not None
-    }
-
-    return strategy_fn(**strategy_kwargs)
+    return strategy_fn(df, **strategy_kwargs)
 
 
 def save_backtest_outputs(
@@ -323,44 +291,29 @@ def save_backtest_outputs(
 
 def run_backtest(
     csv_path,
-    strategy="sma",
-    sma_short=DEFAULT_SMA_SHORT,
-    sma_long=DEFAULT_SMA_LONG,
-    rsi_period=DEFAULT_RSI_PERIOD,
-    macd_fast=DEFAULT_MACD_FAST,
-    macd_slow=DEFAULT_MACD_SLOW,
-    macd_signal=DEFAULT_MACD_SIGNAL,
-    bbands_window=DEFAULT_BBANDS_WINDOW,
-    bbands_std=DEFAULT_BBANDS_STD,
-    plot=False,
+    strategy: str = "sma",
+    plot: bool = False,
     equity_out=None,
     stats_out=None,
     chart_out=None,
-    trade_size=DEFAULT_TRADE_SIZE,
-    fees_bps=0.0,
+    trade_size: float = DEFAULT_TRADE_SIZE,
+    fees_bps: float = 0.0,
     slippage_bps: float = 0.0,
     stop_loss_pct: Optional[float] = None,
     take_profit_rr: Optional[float] = None,
     trailing_stop_pct: Optional[float] = None,
-    confluence_members=None,
-    confluence_required: Optional[int] = None,
+    **strategy_kwargs,
 ):
-    """Run backtest on CSV data using specified strategy."""
+    """Run backtest on CSV data using specified strategy.
+
+    Additional keyword arguments are forwarded to the strategy function.
+    """
     df = load_csv_data(csv_path)
 
     signals = generate_signals(
         df,
         strategy=strategy,
-        sma_short=sma_short,
-        sma_long=sma_long,
-        rsi_period=rsi_period,
-        macd_fast=macd_fast,
-        macd_slow=macd_slow,
-        macd_signal=macd_signal,
-        bbands_window=bbands_window,
-        bbands_std=bbands_std,
-        confluence_members=confluence_members,
-        confluence_required=confluence_required,
+        **strategy_kwargs,
     )
 
     equity_curve, stats = simulate_equity(

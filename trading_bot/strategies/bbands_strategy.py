@@ -9,7 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 @register_strategy("bbands")
-def bbands_strategy(df: pd.DataFrame, window: int = 20, num_std: float = 2) -> List[Dict[str, Any]]:
+def bbands_strategy(
+    df: pd.DataFrame,
+    window: int = 20,
+    num_std: float = 2,
+    **_kwargs,
+) -> List[Dict[str, Any]]:
     """Generate trading signals using Bollinger Bands crossovers.
 
     Args:
