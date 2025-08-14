@@ -83,10 +83,18 @@ class StopsConfig:
 class MaxDrawdownConfig:
     monthly_pct: float = 0.10
     cooldown_bars: int = 0
+    max_trades_per_day: int = 0
+    max_position_pct: float = 1.0
+    trading_start_hour: int = 0
+    trading_end_hour: int = 24
 
     def __post_init__(self) -> None:
         if self.monthly_pct < 0 or self.cooldown_bars < 0:
             raise ValueError("max_drawdown values must be non-negative")
+        if self.max_trades_per_day < 0 or self.max_position_pct < 0:
+            raise ValueError("trade limit values must be non-negative")
+        if not (0 <= self.trading_start_hour <= 23 and 0 <= self.trading_end_hour <= 24):
+            raise ValueError("trading hours must be within 0-24")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MaxDrawdownConfig":
@@ -127,7 +135,14 @@ DEFAULT_RISK_DICT: Dict[str, Any] = {
         "take_profit": {"type": "rr", "rr": 2.0},
         "trailing": {"enabled": True, "trail_pct": 0.02},
     },
-    "max_drawdown": {"monthly_pct": 0.10, "cooldown_bars": 0},
+    "max_drawdown": {
+        "monthly_pct": 0.10,
+        "cooldown_bars": 0,
+        "max_trades_per_day": 0,
+        "max_position_pct": 1.0,
+        "trading_start_hour": 0,
+        "trading_end_hour": 24,
+    },
 }
 
 DEFAULT_RISK_CONFIG = RiskConfig.from_dict(DEFAULT_RISK_DICT)
@@ -172,4 +187,3 @@ def get_risk_config(
     if overrides:
         _apply_overrides(merged, overrides)
     return RiskConfig.from_dict(merged)
-

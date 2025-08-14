@@ -15,7 +15,7 @@ the live trading loop and in unit tests where behaviour is simulated.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from trading_bot.notify import send as notify_send
@@ -36,16 +36,30 @@ class Guardrails:
     cooldown_minutes:
         Duration of the cooldown period in minutes.  A value of ``0``
         disables the cooldown behaviour.
+    max_trades_per_day:
+        Maximum number of trades allowed per day. ``0`` disables the check.
+    max_position_pct:
+        Maximum fraction of current equity allowed per trade. ``1.0`` allows
+        using the full equity.
+    trading_start_hour / trading_end_hour:
+        UTC hours defining when trading is allowed. Defaults permit trading
+        all day.
     """
 
     max_dd_pct: float = 0.0
     loss_limit: int = 3
     cooldown_minutes: int = 0
+    max_trades_per_day: int = 0
+    max_position_pct: float = 1.0
+    trading_start_hour: int = 0
+    trading_end_hour: int = 24
 
     # Internal state
     month_start_equity: Optional[float] = None
     consecutive_losses: int = 0
     cooldown_until: Optional[datetime] = None
+    trades_today: int = 0
+    last_trade_day: Optional[date] = None
 
     def reset_month(self, equity: float) -> None:
         """Reset the month starting equity."""
@@ -73,14 +87,25 @@ class Guardrails:
 
     # ------------------------------------------------------------------
     # Cooldown checks
+    def _reset_day(self, now: datetime) -> None:
+        """Reset daily counters if the day has changed."""
+        day = now.date()
+        if self.last_trade_day != day:
+            self.last_trade_day = day
+            self.trades_today = 0
+
     def record_trade(self, pnl: float, *, now: Optional[datetime] = None) -> None:
         """Record the outcome of a trade.
 
         Negative ``pnl`` values count as losses and may trigger a cooldown
-        period after ``loss_limit`` consecutive losses.
+        period after ``loss_limit`` consecutive losses. Also increments the
+        per‑day trade counter.
         """
 
         now = now or datetime.now(timezone.utc)
+        self._reset_day(now)
+        if self.max_trades_per_day > 0:
+            self.trades_today += 1
         if pnl < 0:
             self.consecutive_losses += 1
             if self.cooldown_minutes > 0 and self.consecutive_losses >= self.loss_limit:
@@ -95,17 +120,51 @@ class Guardrails:
         now = now or datetime.now(timezone.utc)
         return now < self.cooldown_until
 
+    def trades_limit_reached(self, *, now: Optional[datetime] = None) -> bool:
+        """Return ``True`` if the daily trade limit has been hit."""
+        if self.max_trades_per_day <= 0:
+            return False
+        now = now or datetime.now(timezone.utc)
+        self._reset_day(now)
+        return self.trades_today >= self.max_trades_per_day
+
+    def within_trading_window(self, *, now: Optional[datetime] = None) -> bool:
+        """Return ``True`` if current time is within allowed trading hours."""
+        now = now or datetime.now(timezone.utc)
+        if self.trading_start_hour == 0 and self.trading_end_hour == 24:
+            return True
+        return self.trading_start_hour <= now.hour < self.trading_end_hour
+
     # ------------------------------------------------------------------
-    def allow_trade(self, equity: float, *, now: Optional[datetime] = None) -> bool:
+    def allow_trade(
+        self,
+        equity: float,
+        *,
+        price: Optional[float] = None,
+        qty: Optional[float] = None,
+        now: Optional[datetime] = None,
+    ) -> bool:
         """Return ``True`` if trading is allowed.
 
-        Trading is disallowed if either the drawdown threshold has been
-        breached or the system is in a cooldown period.
+        All configured guardrails are evaluated including drawdown, cooldown,
+        daily trade limits, trading windows and maximum position size.
         """
 
+        now = now or datetime.now(timezone.utc)
         if self.should_halt(equity):
             return False
         if self.cooling_down(now=now):
+            return False
+        if not self.within_trading_window(now=now):
+            return False
+        if self.trades_limit_reached(now=now):
+            return False
+        if (
+            price is not None
+            and qty is not None
+            and self.max_position_pct < 1.0
+            and price * qty > equity * self.max_position_pct
+        ):
             return False
         return True
 
