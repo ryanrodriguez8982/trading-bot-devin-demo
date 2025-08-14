@@ -1,5 +1,5 @@
 import pandas as pd
-from trading_bot.strategies.macd_strategy_strategy import macd_strategy
+from trading_bot.strategies.macd_strategy import macd_strategy
 
 
 def test_empty_input():
