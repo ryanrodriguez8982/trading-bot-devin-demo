@@ -149,6 +149,21 @@ def parse_args():
         help="Run parameter tuning over a range of values",
     )
     parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help="Run walk-forward optimization over rolling windows",
+    )
+    parser.add_argument(
+        "--train-size",
+        type=int,
+        help="Training window size for walk-forward optimization",
+    )
+    parser.add_argument(
+        "--test-size",
+        type=int,
+        help="Testing window size for walk-forward optimization",
+    )
+    parser.add_argument(
         "--save-chart",
         action="store_true",
         help="Save equity curve CSV/JSON and chart during backtest",
@@ -684,6 +699,33 @@ def main():
                 )
             if results:
                 logger.info("Best parameters: %s", results[0]["params"])
+            return
+
+        if getattr(args, "walk_forward", False):
+            if not args.backtest:
+                raise ValueError(
+                    "--backtest CSV path required for walk-forward optimization"
+                )
+            from trading_bot.tuner import walk_forward_optimize
+
+            train_size = getattr(args, "train_size", None) or 100
+            test_size = getattr(args, "test_size", None) or 20
+            results = walk_forward_optimize(
+                args.backtest,
+                strategy=strategy_choice,
+                train_size=train_size,
+                test_size=test_size,
+            )
+            logger.info("=== Walk-Forward Results ===")
+            for res in results:
+                params_str = ", ".join(
+                    f"{k}={v}" for k, v in res["best_params"].items()
+                )
+                stats = res["test_stats"]
+                logger.info(
+                    f"{params_str} -> Test PnL {stats.get('net_pnl', 0.0):.2f}, "
+                    f"Win {stats.get('win_rate', 0.0):.2f}%"
+                )
             return
 
         if args.backtest:
