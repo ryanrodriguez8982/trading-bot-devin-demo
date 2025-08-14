@@ -21,6 +21,7 @@ def confluence_strategy(
     df: pd.DataFrame,
     members: Optional[List[str]] = None,
     required: int = METADATA["required_count"],
+    **_kwargs,
 ):
     """Generate signals only when multiple strategies agree.
 

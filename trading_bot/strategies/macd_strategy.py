@@ -14,6 +14,7 @@ def macd_strategy(
     fast_period: int = 12,
     slow_period: int = 26,
     signal_period: int = 9,
+    **_kwargs,
 ) -> List[Dict[str, Any]]:
     """Generate trading signals based on MACD crossovers.
 

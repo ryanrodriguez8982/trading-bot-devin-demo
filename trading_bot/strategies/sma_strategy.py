@@ -18,6 +18,7 @@ def sma_strategy(
     df: pd.DataFrame,
     sma_short: int = DEFAULT_SMA_SHORT,
     sma_long: int = DEFAULT_SMA_LONG,
+    **_kwargs,
 ) -> List[Dict[str, Any]]:
     """
     SMA crossover strategy.
