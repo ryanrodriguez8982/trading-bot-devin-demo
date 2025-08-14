@@ -30,6 +30,13 @@ streamlit run dashboard.py
 
 The sections below describe installation, configuration, and usage in more detail.
 
+## Asynchronous Exchange Support
+
+The project includes an `AsyncExchange` helper built on top of
+`ccxt.async_support`. It allows fetching market data and placing orders
+concurrently using `asyncio` and shuts down cleanly when the process
+receives `SIGINT` or `SIGTERM`.
+
 ## Installation
 
 ### Option 1: Pip Installation (Recommended)
