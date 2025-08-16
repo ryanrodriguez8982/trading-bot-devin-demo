@@ -34,4 +34,3 @@ def test_cli_trade_size_validation():
             parse_args()
     finally:
         sys.argv = original
-

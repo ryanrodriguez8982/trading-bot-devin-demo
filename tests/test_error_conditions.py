@@ -51,14 +51,16 @@ def test_load_config_missing_required_field(tmp_path):
 
 
 def test_run_backtest_unknown_strategy(tmp_path):
-    df = pd.DataFrame({
-        "timestamp": pd.date_range("2024-01-01", periods=3, freq="1min"),
-        "open": [1, 1, 1],
-        "high": [1, 1, 1],
-        "low": [1, 1, 1],
-        "close": [1, 1, 1],
-        "volume": [1, 1, 1],
-    })
+    df = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01", periods=3, freq="1min"),
+            "open": [1, 1, 1],
+            "high": [1, 1, 1],
+            "low": [1, 1, 1],
+            "close": [1, 1, 1],
+            "volume": [1, 1, 1],
+        }
+    )
     csv_path = tmp_path / "data.csv"
     df.to_csv(csv_path, index=False)
     with pytest.raises(ValueError) as exc:

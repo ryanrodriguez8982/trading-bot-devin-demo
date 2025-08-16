@@ -1,4 +1,5 @@
 """Prometheus metrics and health check utilities for live trading."""
+
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -7,16 +8,10 @@ import threading
 from prometheus_client import Counter, Gauge, start_http_server
 
 # Prometheus metric instances
-SIGNALS_GENERATED = Counter(
-    "signals_generated_total", "Total number of trading signals generated"
-)
-TRADES_EXECUTED = Counter(
-    "trades_executed_total", "Total number of trades executed"
-)
+SIGNALS_GENERATED = Counter("signals_generated_total", "Total number of trading signals generated")
+TRADES_EXECUTED = Counter("trades_executed_total", "Total number of trades executed")
 ERRORS_TOTAL = Counter("error_total", "Total number of errors encountered")
-PNL_GAUGE = Gauge(
-    "pnl", "Realized profit and loss of the portfolio"
-)
+PNL_GAUGE = Gauge("pnl", "Realized profit and loss of the portfolio")
 
 
 def start_metrics_server(port: int) -> None:

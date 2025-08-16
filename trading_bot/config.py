@@ -40,9 +40,7 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
     dict
         Merged configuration dictionary.
     """
-    base_dir = config_dir or os.path.join(
-        os.path.dirname(os.path.dirname(__file__))
-    )
+    base_dir = config_dir or os.path.join(os.path.dirname(os.path.dirname(__file__)))
     config_path = os.path.join(base_dir, "config.json")
     try:
         with open(config_path, "r") as f:
@@ -113,9 +111,7 @@ class ConfluenceModel(BaseModel):
     @model_validator(mode="after")
     def check_required(self) -> "ConfluenceModel":
         if self.required > len(self.members):
-            raise ValueError(
-                "confluence.required cannot exceed number of members"
-            )
+            raise ValueError("confluence.required cannot exceed number of members")
         return self
 
 

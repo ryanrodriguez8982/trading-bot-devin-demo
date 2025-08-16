@@ -30,9 +30,7 @@ def test_risk_per_trade_mode():
 
 def test_precision_flooring():
     cfg = PositionSizingConfig(mode="fixed_fraction", fraction_of_equity=0.5)
-    qty = calculate_position_size(
-        cfg, price=3, equity=100, lot_size=0.1, precision=2
-    )
+    qty = calculate_position_size(cfg, price=3, equity=100, lot_size=0.1, precision=2)
     assert qty == pytest.approx(16.6)
 
 

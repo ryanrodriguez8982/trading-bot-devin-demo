@@ -69,9 +69,7 @@ class CcxtSpotBroker(Broker):
         self.backoff = backoff
         self.prices: Dict[str, float] = {}
         self.name = "ccxt"
-        self._rate_limiter = rate_limiter or (
-            RateLimiter(rate_limit) if rate_limit else None
-        )
+        self._rate_limiter = rate_limiter or (RateLimiter(rate_limit) if rate_limit else None)
 
     # ------------------------------------------------------------------
     def set_price(self, symbol: str, price: float) -> None:
@@ -122,9 +120,7 @@ class CcxtSpotBroker(Broker):
             )
         return qty
 
-    def create_order(
-        self, side: str, symbol: str, qty: float, type: str = "market"
-    ) -> Dict[str, Any]:
+    def create_order(self, side: str, symbol: str, qty: float, type: str = "market") -> Dict[str, Any]:
         if type != "market":
             raise NotImplementedError("CcxtSpotBroker only supports market orders")
 

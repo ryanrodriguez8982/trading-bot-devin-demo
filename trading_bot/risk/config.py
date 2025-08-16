@@ -159,7 +159,7 @@ def _deep_merge(base: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]
 
 def _apply_overrides(config: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in overrides.items():
-        parts = key.split('.')
+        parts = key.split(".")
         d = config
         for part in parts[:-1]:
             d = d.setdefault(part, {})

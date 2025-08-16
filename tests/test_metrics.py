@@ -25,15 +25,11 @@ def test_metrics_and_health_endpoints():
     metrics.PNL_GAUGE.set(1.5)
 
     time.sleep(0.1)
-    data = urllib.request.urlopen(
-        f"http://localhost:{m_port}/"
-    ).read().decode()
+    data = urllib.request.urlopen(f"http://localhost:{m_port}/").read().decode()
     assert "signals_generated_total" in data
     assert "trades_executed_total" in data
     assert "error_total" in data
     assert "pnl" in data
 
-    resp = urllib.request.urlopen(
-        f"http://localhost:{h_port}/health"
-    ).read().decode()
+    resp = urllib.request.urlopen(f"http://localhost:{h_port}/health").read().decode()
     assert resp == "ok"

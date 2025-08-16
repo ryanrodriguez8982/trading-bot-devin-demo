@@ -196,9 +196,7 @@ def get_trades_from_db(
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
-            query = (
-                "SELECT timestamp, symbol, side, qty, price, fee, strategy, broker FROM trades"
-            )
+            query = "SELECT timestamp, symbol, side, qty, price, fee, strategy, broker FROM trades"
             params: List[Any] = []
             conditions: List[str] = []
 

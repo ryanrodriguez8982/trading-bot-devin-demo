@@ -21,9 +21,7 @@ class DummyExchange:
 
 def test_fetch_tickers_concurrently(monkeypatch):
     dummy = DummyExchange()
-    monkeypatch.setattr(
-        "ccxt.async_support.binance", lambda params=None: dummy
-    )
+    monkeypatch.setattr("ccxt.async_support.binance", lambda params=None: dummy)
 
     async def runner():
         exch = create_async_exchange()
@@ -38,9 +36,7 @@ def test_fetch_tickers_concurrently(monkeypatch):
 
 def test_wait_closed_handles_signal(monkeypatch):
     dummy = DummyExchange()
-    monkeypatch.setattr(
-        "ccxt.async_support.binance", lambda params=None: dummy
-    )
+    monkeypatch.setattr("ccxt.async_support.binance", lambda params=None: dummy)
 
     async def runner():
         exch = create_async_exchange()

@@ -1,4 +1,5 @@
 """Utility for computing position size based on risk configuration."""
+
 from __future__ import annotations
 
 import math
@@ -57,7 +58,7 @@ def calculate_position_size(
     if lot_size:
         qty = _floor_to_step(qty, lot_size)
     if precision is not None:
-        factor = 10 ** precision
+        factor = 10**precision
         qty = math.floor(qty * factor) / factor
 
     if lot_size and qty < lot_size:

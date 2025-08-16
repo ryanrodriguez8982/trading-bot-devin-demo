@@ -24,9 +24,7 @@ class StrategyProtocol(Protocol):
     size.
     """
 
-    def __call__(
-        self, df: pd.DataFrame
-    ) -> List[dict[str, Any]]:  # pragma: no cover
+    def __call__(self, df: pd.DataFrame) -> List[dict[str, Any]]:  # pragma: no cover
         ...
 
 

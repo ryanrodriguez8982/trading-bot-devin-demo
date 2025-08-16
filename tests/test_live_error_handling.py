@@ -2,10 +2,11 @@ import logging
 import pytest
 
 
-
 def test_live_mode_handles_iteration_errors(monkeypatch, tmp_path, caplog):
     import importlib
+
     main = importlib.import_module("trading_bot.main")
+
     def bad_analysis(*args, **kwargs):
         raise RuntimeError("boom")
 

@@ -29,21 +29,17 @@ def test_list_strategies_function():
 def test_strategy_naming_convention():
     for key, strategy in STRATEGY_REGISTRY.items():
         func = getattr(strategy, "func", None)
-        assert callable(func), (
-            f"Strategy '{key}' does not have a callable 'func'"
-        )
+        assert callable(func), f"Strategy '{key}' does not have a callable 'func'"
 
         func_name = getattr(func, "__name__", "<missing>")
         expected_name = f"{key}_strategy"
         assert func_name == expected_name, (
-            f"Strategy '{key}' has mismatched function name: expected "
-            f"'{expected_name}', got '{func_name}'"
+            f"Strategy '{key}' has mismatched function name: expected '{expected_name}', got '{func_name}'"
         )
 
         module_name = getattr(func, "__module__", "").split(".")[-1]
         assert module_name == expected_name, (
-            f"Strategy '{key}' is in incorrect module: expected "
-            f"'{expected_name}.py', got '{module_name}.py'"
+            f"Strategy '{key}' is in incorrect module: expected '{expected_name}.py', got '{module_name}.py'"
         )
 
 
