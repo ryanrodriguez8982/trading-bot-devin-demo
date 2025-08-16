@@ -38,7 +38,7 @@ def rsi_strategy(
         logger.warning("Empty dataframe provided to RSI strategy")
         return []
 
-    if 'close' not in df.columns or 'timestamp' not in df.columns:
+    if "close" not in df.columns or "timestamp" not in df.columns:
         raise KeyError("DataFrame must include 'timestamp' and 'close' columns")
 
     if len(df) < period:
@@ -48,11 +48,11 @@ def rsi_strategy(
     d = df.copy()
 
     # Ensure timestamp is pandas datetime for consistency
-    if not pd.api.types.is_datetime64_any_dtype(d['timestamp']):
-        d['timestamp'] = pd.to_datetime(d['timestamp'], utc=True, errors='coerce')
+    if not pd.api.types.is_datetime64_any_dtype(d["timestamp"]):
+        d["timestamp"] = pd.to_datetime(d["timestamp"], utc=True, errors="coerce")
 
     # RSI (simple rolling mean variant; Wilder's smoothing can be added later if desired)
-    delta = d['close'].diff()  # price change between consecutive closes
+    delta = d["close"].diff()  # price change between consecutive closes
     gain = delta.clip(lower=0.0)  # positive gains
     loss = -delta.clip(upper=0.0)  # negative losses as positive numbers
 
@@ -63,7 +63,7 @@ def rsi_strategy(
     # Avoid division by zero then compute relative strength and RSI oscillator
     avg_loss = avg_loss.replace(0, np.nan)
     rs = avg_gain / avg_loss  # relative strength
-    d['rsi'] = 100.0 - (100.0 / (1.0 + rs))
+    d["rsi"] = 100.0 - (100.0 / (1.0 + rs))
 
     signals: List[Dict[str, Any]] = []
 
@@ -71,31 +71,36 @@ def rsi_strategy(
         prev = d.iloc[i - 1]
         curr = d.iloc[i]
 
-        if pd.isna(prev.get('rsi')) or pd.isna(curr.get('rsi')):
+        if pd.isna(prev.get("rsi")) or pd.isna(curr.get("rsi")):
             continue
 
-        prev_rsi = float(prev['rsi'])
-        curr_rsi = float(curr['rsi'])
-        curr_close = float(curr['close'])
+        prev_rsi = float(prev["rsi"])
+        curr_rsi = float(curr["rsi"])
+        curr_close = float(curr["close"])
 
-        logger.debug("t=%s rsi=%.2f prev_rsi=%.2f", curr['timestamp'], curr_rsi, prev_rsi)
+        logger.debug("t=%s rsi=%.2f prev_rsi=%.2f", curr["timestamp"], curr_rsi, prev_rsi)
 
         # Cross up from below lower_thresh -> BUY
         if prev_rsi <= lower_thresh and curr_rsi > lower_thresh:
-            signals.append({
-                'timestamp': curr['timestamp'],
-                'action': 'buy',
-                'price': curr_close,
-            })
+            signals.append(
+                {
+                    "timestamp": curr["timestamp"],
+                    "action": "buy",
+                    "price": curr_close,
+                }
+            )
         # Cross down from above upper_thresh -> SELL
         elif prev_rsi >= upper_thresh and curr_rsi < upper_thresh:
-            signals.append({
-                'timestamp': curr['timestamp'],
-                'action': 'sell',
-                'price': curr_close,
-            })
+            signals.append(
+                {
+                    "timestamp": curr["timestamp"],
+                    "action": "sell",
+                    "price": curr_close,
+                }
+            )
 
     logger.info("Generated %d RSI signals", len(signals))
     return signals
+
 
 # TODO: Consider Wilder's RSI using ewm(alpha=1/period, adjust=False) for smoothing

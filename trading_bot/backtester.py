@@ -129,15 +129,9 @@ def simulate_equity(
         if stop_loss_pct is not None and take_profit_rr is not None:
             take_pct = stop_loss_pct * take_profit_rr * 100
         exits = ExitManager(
-            stop_loss_pct=(
-                stop_loss_pct * 100 if stop_loss_pct is not None else None
-            ),
+            stop_loss_pct=(stop_loss_pct * 100 if stop_loss_pct is not None else None),
             take_profit_pct=take_pct,
-            trailing_stop_pct=(
-                trailing_stop_pct * 100
-                if trailing_stop_pct is not None
-                else None
-            ),
+            trailing_stop_pct=(trailing_stop_pct * 100 if trailing_stop_pct is not None else None),
         )
 
     signal_iter = iter(sorted(signals, key=lambda x: x["timestamp"]))
@@ -171,11 +165,7 @@ def simulate_equity(
                             take_price = buy_price + risk * take_profit_rr
                     if trailing_stop_pct is not None:
                         trail_price = buy_price * (1 - trailing_stop_pct)
-                        stop_price = (
-                            max(stop_price, trail_price)
-                            if stop_price is not None
-                            else trail_price
-                        )
+                        stop_price = max(stop_price, trail_price) if stop_price is not None else trail_price
                     portfolio.buy(
                         symbol,
                         trade_size,
@@ -189,18 +179,12 @@ def simulate_equity(
                 elif action == "sell":
                     sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
-                    avg_cost: Optional[float] = (
-                        pos.avg_cost if pos and pos.qty >= trade_size else None
-                    )
-                    portfolio.sell(
-                        symbol, trade_size, sell_price, fee_bps=fees_bps
-                    )
+                    avg_cost: Optional[float] = pos.avg_cost if pos and pos.qty >= trade_size else None
+                    portfolio.sell(symbol, trade_size, sell_price, fee_bps=fees_bps)
                     if exits is not None:
                         exits.disarm(symbol)
                     if avg_cost is not None:
-                        trade_profits.append(
-                            (sell_price - avg_cost) * trade_size
-                        )
+                        trade_profits.append((sell_price - avg_cost) * trade_size)
             except ValueError:
                 pass
             current_signal = next(signal_iter, None)
@@ -267,9 +251,7 @@ def save_backtest_outputs(
             eq_df.to_csv(equity_out, index=False)
             logger.info(f"Equity curve saved to {equity_out}")
         except OSError as e:  # pragma: no cover - I/O errors are uncommon
-            logger.error(
-                "Failed to save equity curve to %s: %s", equity_out, e
-            )
+            logger.error("Failed to save equity curve to %s: %s", equity_out, e)
     else:
         logger.info("Equity curve:\n%s", eq_df.tail().to_string(index=False))
 
@@ -279,9 +261,7 @@ def save_backtest_outputs(
                 json.dump(stats, f, indent=2)
             logger.info(f"Summary stats saved to {stats_out}")
         except OSError as e:  # pragma: no cover - I/O errors are uncommon
-            logger.error(
-                "Failed to save summary stats to %s: %s", stats_out, e
-            )
+            logger.error("Failed to save summary stats to %s: %s", stats_out, e)
 
     logger.info(f"Net PnL: {stats['net_pnl']:.2f}")
     logger.info(f"Win rate: {stats['win_rate']:.2f}%")

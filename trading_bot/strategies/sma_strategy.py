@@ -55,11 +55,11 @@ def sma_strategy(
     d = df.copy()
 
     # Ensure timestamp is datetime for consistency
-    if not pd.api.types.is_datetime64_any_dtype(d['timestamp']):
-        d['timestamp'] = pd.to_datetime(d['timestamp'], utc=True, errors='coerce')
+    if not pd.api.types.is_datetime64_any_dtype(d["timestamp"]):
+        d["timestamp"] = pd.to_datetime(d["timestamp"], utc=True, errors="coerce")
 
-    d[f'sma_{sma_short}'] = d['close'].rolling(window=sma_short, min_periods=sma_short).mean()
-    d[f'sma_{sma_long}'] = d['close'].rolling(window=sma_long, min_periods=sma_long).mean()
+    d[f"sma_{sma_short}"] = d["close"].rolling(window=sma_short, min_periods=sma_short).mean()
+    d[f"sma_{sma_long}"] = d["close"].rolling(window=sma_long, min_periods=sma_long).mean()
 
     signals: List[Dict[str, Any]] = []
 
@@ -68,36 +68,40 @@ def sma_strategy(
         curr = d.iloc[i]
 
         # Skip until both SMAs are available
-        if pd.isna(curr[f'sma_{sma_short}']) or pd.isna(curr[f'sma_{sma_long}']):
+        if pd.isna(curr[f"sma_{sma_short}"]) or pd.isna(curr[f"sma_{sma_long}"]):
             continue
 
-        prev_short = prev[f'sma_{sma_short}']
-        prev_long = prev[f'sma_{sma_long}']
-        curr_short = curr[f'sma_{sma_short}']
-        curr_long = curr[f'sma_{sma_long}']
+        prev_short = prev[f"sma_{sma_short}"]
+        prev_long = prev[f"sma_{sma_long}"]
+        curr_short = curr[f"sma_{sma_short}"]
+        curr_long = curr[f"sma_{sma_long}"]
 
         logger.debug(
             "t=%s price=%.6f short=%.6f long=%.6f",
-            curr['timestamp'],
-            float(curr['close']),
+            curr["timestamp"],
+            float(curr["close"]),
             float(curr_short),
             float(curr_long),
         )
 
         # Bullish crossover: short crosses above long
         if (prev_short <= prev_long) and (curr_short > curr_long):
-            signals.append({
-                'timestamp': curr['timestamp'],
-                'action': 'buy',
-                'price': float(curr['close']),
-            })
+            signals.append(
+                {
+                    "timestamp": curr["timestamp"],
+                    "action": "buy",
+                    "price": float(curr["close"]),
+                }
+            )
         # Bearish crossover: short crosses below long
         elif (prev_short >= prev_long) and (curr_short < curr_long):
-            signals.append({
-                'timestamp': curr['timestamp'],
-                'action': 'sell',
-                'price': float(curr['close']),
-            })
+            signals.append(
+                {
+                    "timestamp": curr["timestamp"],
+                    "action": "sell",
+                    "price": float(curr["close"]),
+                }
+            )
 
     logger.info("Generated %d SMA signals", len(signals))
     return signals

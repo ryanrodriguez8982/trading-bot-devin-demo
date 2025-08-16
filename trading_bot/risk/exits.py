@@ -6,6 +6,7 @@ of arms for open positions and, given a stream of prices, decides when an
 exit should trigger.  State is kept in-memory; callers may persist the
 ``arms`` dictionary to durable storage if needed to survive restarts.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

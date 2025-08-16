@@ -89,4 +89,3 @@ class RetryPolicy:
 def default_retry() -> RetryPolicy:
     """Return a default RetryPolicy instance."""
     return RetryPolicy()
-

@@ -43,6 +43,7 @@ DEFAULT_BBANDS_STD = config.get("bbands_std", 2.0)
 # Optional debug line in sidebar:
 st.sidebar.markdown(f"**Exchange:** `{exchange_name}`")
 
+
 @st.cache_data(show_spinner=False)
 def _fetch_price_data(symbol: str):
     return fetch_market_data(
@@ -50,7 +51,7 @@ def _fetch_price_data(symbol: str):
         timeframe="1m",
         limit=500,
         exchange=exchange,
-        exchange_name=exchange_name  # not strictly needed since exchange is passed
+        exchange_name=exchange_name,  # not strictly needed since exchange is passed
     )
 
 
@@ -95,17 +96,11 @@ def _add_indicators(
         df["lower_band"] = df["middle_band"] - bbands_std * df["std_dev"]
     return df
 
-st.set_page_config(
-    page_title="Trading Bot Dashboard",
-    page_icon="??",
-    layout="wide"
-)
+
+st.set_page_config(page_title="Trading Bot Dashboard", page_icon="??", layout="wide")
 
 st.title("?? Trading Bot Dashboard")
-st.markdown(
-    "Visualize trading signals and price data using SMA, RSI, MACD and "
-    "Bollinger Bands strategies"
-)
+st.markdown("Visualize trading signals and price data using SMA, RSI, MACD and Bollinger Bands strategies")
 
 st.sidebar.header("Filters")
 
@@ -138,27 +133,18 @@ macd_fast = macd_slow = macd_signal = None
 bbands_window = bbands_std = None
 
 if selected_strategy in ("All", "sma"):
-    sma_short = st.sidebar.number_input(
-        "Short SMA Period", min_value=1, max_value=50, value=DEFAULT_SMA_SHORT)
-    sma_long = st.sidebar.number_input(
-        "Long SMA Period", min_value=1, max_value=200, value=DEFAULT_SMA_LONG)
+    sma_short = st.sidebar.number_input("Short SMA Period", min_value=1, max_value=50, value=DEFAULT_SMA_SHORT)
+    sma_long = st.sidebar.number_input("Long SMA Period", min_value=1, max_value=200, value=DEFAULT_SMA_LONG)
 elif selected_strategy == "rsi":
-    rsi_period = st.sidebar.number_input(
-        "RSI Period", min_value=2, max_value=100, value=DEFAULT_RSI_PERIOD)
-    lower_thresh = st.sidebar.number_input(
-        "RSI Lower Threshold", min_value=1, max_value=100, value=DEFAULT_RSI_LOWER)
-    upper_thresh = st.sidebar.number_input(
-        "RSI Upper Threshold", min_value=1, max_value=100, value=DEFAULT_RSI_UPPER)
+    rsi_period = st.sidebar.number_input("RSI Period", min_value=2, max_value=100, value=DEFAULT_RSI_PERIOD)
+    lower_thresh = st.sidebar.number_input("RSI Lower Threshold", min_value=1, max_value=100, value=DEFAULT_RSI_LOWER)
+    upper_thresh = st.sidebar.number_input("RSI Upper Threshold", min_value=1, max_value=100, value=DEFAULT_RSI_UPPER)
 elif selected_strategy == "macd":
-    macd_fast = st.sidebar.number_input(
-        "MACD Fast Period", min_value=1, max_value=100, value=DEFAULT_MACD_FAST)
-    macd_slow = st.sidebar.number_input(
-        "MACD Slow Period", min_value=1, max_value=200, value=DEFAULT_MACD_SLOW)
-    macd_signal = st.sidebar.number_input(
-        "MACD Signal Period", min_value=1, max_value=100, value=DEFAULT_MACD_SIGNAL)
+    macd_fast = st.sidebar.number_input("MACD Fast Period", min_value=1, max_value=100, value=DEFAULT_MACD_FAST)
+    macd_slow = st.sidebar.number_input("MACD Slow Period", min_value=1, max_value=200, value=DEFAULT_MACD_SLOW)
+    macd_signal = st.sidebar.number_input("MACD Signal Period", min_value=1, max_value=100, value=DEFAULT_MACD_SIGNAL)
 elif selected_strategy == "bbands":
-    bbands_window = st.sidebar.number_input(
-        "Bollinger Window", min_value=1, max_value=200, value=DEFAULT_BBANDS_WINDOW)
+    bbands_window = st.sidebar.number_input("Bollinger Window", min_value=1, max_value=200, value=DEFAULT_BBANDS_WINDOW)
     bbands_std = st.sidebar.number_input(
         "Bollinger Std Dev",
         min_value=0.5,
@@ -170,19 +156,15 @@ elif selected_strategy == "bbands":
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    strategy_title = (selected_strategy.upper()
-                      if selected_strategy != "All" else "SMA")
+    strategy_title = selected_strategy.upper() if selected_strategy != "All" else "SMA"
     st.subheader(f"Price Chart with {strategy_title} Signals")
 
     def create_mock_data(symbol, limit=500):
         import numpy as np
         from datetime import datetime, timedelta, timezone
 
-        base_price = 50000 if 'BTC' in symbol else 3000
-        timestamps = [
-            datetime.now(timezone.utc) - timedelta(minutes=i)
-            for i in range(limit, 0, -1)
-        ]
+        base_price = 50000 if "BTC" in symbol else 3000
+        timestamps = [datetime.now(timezone.utc) - timedelta(minutes=i) for i in range(limit, 0, -1)]
 
         prices = []
         current_price = base_price
@@ -191,17 +173,16 @@ with col1:
             current_price += change
             prices.append(current_price)
 
-        return pd.DataFrame({
-            'timestamp': timestamps,
-            'open': prices,
-            'high': [p * (1 + abs(np.random.normal(0, 0.002)))
-                     for p in prices],
-            'low': [p * (1 - abs(np.random.normal(0, 0.002)))
-                    for p in prices],
-            'close': prices,
-            'volume': [np.random.uniform(100, 1000)
-                       for _ in range(limit)]
-        })
+        return pd.DataFrame(
+            {
+                "timestamp": timestamps,
+                "open": prices,
+                "high": [p * (1 + abs(np.random.normal(0, 0.002))) for p in prices],
+                "low": [p * (1 - abs(np.random.normal(0, 0.002))) for p in prices],
+                "close": prices,
+                "volume": [np.random.uniform(100, 1000) for _ in range(limit)],
+            }
+        )
 
     try:
         with st.spinner("Fetching price data..."):
@@ -209,9 +190,7 @@ with col1:
                 df = _fetch_price_data(selected_symbol)
             except (ccxt.BaseError, RuntimeError) as api_error:
                 logger.exception("Price data fetch failed")
-                st.warning(
-                    f"API unavailable ({str(api_error)[:50]}...), using mock data for demonstration"
-                )
+                st.warning(f"API unavailable ({str(api_error)[:50]}...), using mock data for demonstration")
                 df = create_mock_data(selected_symbol, 500)
 
         if not df.empty:
@@ -232,9 +211,7 @@ with col1:
 
             if selected_strategy == "All" or selected_strategy == "sma":
                 if sma_short and sma_long:
-                    signals = sma_strategy(
-                        df_copy, sma_short=sma_short, sma_long=sma_long
-                    )
+                    signals = sma_strategy(df_copy, sma_short=sma_short, sma_long=sma_long)
                 else:
                     signals = []
             else:
@@ -243,90 +220,68 @@ with col1:
                 entry = STRATEGY_REGISTRY.get(selected_strategy, sma_strategy)
                 strategy_fn = entry.func if hasattr(entry, "func") else entry
 
-                if (selected_strategy == "rsi" and
-                        all([rsi_period, lower_thresh, upper_thresh])):
-                    signals = strategy_fn(df_copy, period=rsi_period,
-                                          lower_thresh=lower_thresh,
-                                          upper_thresh=upper_thresh)
-                elif (selected_strategy == "macd" and
-                      all([macd_fast, macd_slow, macd_signal])):
-                    signals = strategy_fn(df_copy, fast_period=macd_fast,
-                                          slow_period=macd_slow,
-                                          signal_period=macd_signal)
-                elif (selected_strategy == "bbands" and
-                      all([bbands_window, bbands_std])):
-                    signals = strategy_fn(df_copy, window=bbands_window,
-                                          num_std=bbands_std)
-                elif sma_short and sma_long:
+                if selected_strategy == "rsi" and all([rsi_period, lower_thresh, upper_thresh]):
                     signals = strategy_fn(
-                        df_copy, sma_short=sma_short, sma_long=sma_long
+                        df_copy, period=rsi_period, lower_thresh=lower_thresh, upper_thresh=upper_thresh
                     )
+                elif selected_strategy == "macd" and all([macd_fast, macd_slow, macd_signal]):
+                    signals = strategy_fn(
+                        df_copy, fast_period=macd_fast, slow_period=macd_slow, signal_period=macd_signal
+                    )
+                elif selected_strategy == "bbands" and all([bbands_window, bbands_std]):
+                    signals = strategy_fn(df_copy, window=bbands_window, num_std=bbands_std)
+                elif sma_short and sma_long:
+                    signals = strategy_fn(df_copy, sma_short=sma_short, sma_long=sma_long)
                 else:
                     signals = []
 
             if selected_strategy == "rsi":
-                fig, (ax, ax_rsi) = plt.subplots(2, 1, sharex=True,
-                                                 figsize=(12, 8))
-                ax_rsi.plot(df_copy['timestamp'], df_copy['rsi'],
-                            label='RSI', color='purple')
-                ax_rsi.axhline(lower_thresh, color='green',
-                               linestyle='--', label='Lower')
-                ax_rsi.axhline(upper_thresh, color='red',
-                               linestyle='--', label='Upper')
-                ax_rsi.set_ylabel('RSI')
+                fig, (ax, ax_rsi) = plt.subplots(2, 1, sharex=True, figsize=(12, 8))
+                ax_rsi.plot(df_copy["timestamp"], df_copy["rsi"], label="RSI", color="purple")
+                ax_rsi.axhline(lower_thresh, color="green", linestyle="--", label="Lower")
+                ax_rsi.axhline(upper_thresh, color="red", linestyle="--", label="Upper")
+                ax_rsi.set_ylabel("RSI")
                 ax_rsi.set_ylim(0, 100)
                 ax_rsi.legend()
             elif selected_strategy == "macd":
-                fig, (ax, ax_macd) = plt.subplots(2, 1, sharex=True,
-                                                  figsize=(12, 8))
-                ax_macd.plot(df_copy['timestamp'], df_copy['macd'],
-                             label='MACD', color='blue')
-                ax_macd.plot(df_copy['timestamp'], df_copy['signal_line'],
-                             label='Signal', color='orange')
-                hist = df_copy['macd'] - df_copy['signal_line']
-                ax_macd.bar(df_copy['timestamp'], hist, label='Histogram',
-                            color='gray', alpha=0.3)
-                ax_macd.set_ylabel('MACD')
+                fig, (ax, ax_macd) = plt.subplots(2, 1, sharex=True, figsize=(12, 8))
+                ax_macd.plot(df_copy["timestamp"], df_copy["macd"], label="MACD", color="blue")
+                ax_macd.plot(df_copy["timestamp"], df_copy["signal_line"], label="Signal", color="orange")
+                hist = df_copy["macd"] - df_copy["signal_line"]
+                ax_macd.bar(df_copy["timestamp"], hist, label="Histogram", color="gray", alpha=0.3)
+                ax_macd.set_ylabel("MACD")
                 ax_macd.legend()
             else:
                 fig, ax = plt.subplots(figsize=(12, 6))
 
-            ax.plot(df_copy['timestamp'], df_copy['close'], label='Price',
-                    color='black', linewidth=1)
+            ax.plot(df_copy["timestamp"], df_copy["close"], label="Price", color="black", linewidth=1)
 
             if sma_short and sma_long:
-                ax.plot(df_copy['timestamp'], df_copy[f'sma_{sma_short}'],
-                        label=f'SMA {sma_short}', color='blue', alpha=0.7)
-                ax.plot(df_copy['timestamp'], df_copy[f'sma_{sma_long}'],
-                        label=f'SMA {sma_long}', color='red', alpha=0.7)
+                ax.plot(
+                    df_copy["timestamp"], df_copy[f"sma_{sma_short}"], label=f"SMA {sma_short}", color="blue", alpha=0.7
+                )
+                ax.plot(
+                    df_copy["timestamp"], df_copy[f"sma_{sma_long}"], label=f"SMA {sma_long}", color="red", alpha=0.7
+                )
 
             if selected_strategy == "bbands":
-                ax.plot(df_copy['timestamp'], df_copy['upper_band'],
-                        label='Upper Band', color='orange', alpha=0.6)
-                ax.plot(df_copy['timestamp'], df_copy['middle_band'],
-                        label='Middle Band', color='green', alpha=0.6)
-                ax.plot(df_copy['timestamp'], df_copy['lower_band'],
-                        label='Lower Band', color='orange', alpha=0.6)
+                ax.plot(df_copy["timestamp"], df_copy["upper_band"], label="Upper Band", color="orange", alpha=0.6)
+                ax.plot(df_copy["timestamp"], df_copy["middle_band"], label="Middle Band", color="green", alpha=0.6)
+                ax.plot(df_copy["timestamp"], df_copy["lower_band"], label="Lower Band", color="orange", alpha=0.6)
 
             for signal in signals:
-                color = 'green' if signal['action'] == 'buy' else 'red'
-                marker = '^' if signal['action'] == 'buy' else 'v'
-                ax.scatter(signal['timestamp'], signal['price'],
-                           color=color, marker=marker, s=100, alpha=0.8,
-                           zorder=5)
+                color = "green" if signal["action"] == "buy" else "red"
+                marker = "^" if signal["action"] == "buy" else "v"
+                ax.scatter(signal["timestamp"], signal["price"], color=color, marker=marker, s=100, alpha=0.8, zorder=5)
 
-            ax.set_xlabel('Time')
-            ax.set_ylabel('Price (USDT)')
-            title_strategy = (
-                selected_strategy.upper() if selected_strategy != "All"
-                else "SMA"
-            )
-            ax.set_title(f'{selected_symbol} Price with {title_strategy} '
-                         f'Signals')
+            ax.set_xlabel("Time")
+            ax.set_ylabel("Price (USDT)")
+            title_strategy = selected_strategy.upper() if selected_strategy != "All" else "SMA"
+            ax.set_title(f"{selected_symbol} Price with {title_strategy} Signals")
             ax.legend()
             ax.grid(True, alpha=0.3)
 
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
             plt.xticks(rotation=45)
 
@@ -334,12 +289,8 @@ with col1:
             st.pyplot(fig)
 
             # Equity curve based on stored signals
-            db_strategy = (
-                None if selected_strategy == "All" else selected_strategy
-            )
-            db_signals = get_signals_from_db(
-                symbol=selected_symbol, strategy_id=db_strategy, limit=None
-            )
+            db_strategy = None if selected_strategy == "All" else selected_strategy
+            db_signals = get_signals_from_db(symbol=selected_symbol, strategy_id=db_strategy, limit=None)
             eq_df, stats = compute_equity_curve(
                 [
                     {
@@ -385,17 +336,12 @@ with col1:
                 st.info("No signals available for equity curve")
 
             if signals:
-                st.success(f"Generated {len(signals)} signals from current "
-                           f"data")
+                st.success(f"Generated {len(signals)} signals from current data")
                 if st.button("Save Signals to Database"):
                     try:
-                        strategy_id = (
-                            selected_strategy if selected_strategy != "All" else "sma"
-                        )
+                        strategy_id = selected_strategy if selected_strategy != "All" else "sma"
                         log_signals_to_db(signals, selected_symbol, strategy_id)
-                        st.success(
-                            f"Saved {len(signals)} signals to database!"
-                        )
+                        st.success(f"Saved {len(signals)} signals to database!")
                         st.rerun()
                     except sqlite3.Error as e:
                         logger.exception("Error saving signals to database")
@@ -439,9 +385,7 @@ with col2:
     md = risk_cfg.get("max_drawdown", {}).get("monthly_pct", 0.0)
     cooldown = risk_cfg.get("max_drawdown", {}).get("cooldown_bars", 0)
     if md or cooldown:
-        st.info(
-            f"Guardrails active: max DD {md*100:.1f}% | cooldown {cooldown}"
-        )
+        st.info(f"Guardrails active: max DD {md * 100:.1f}% | cooldown {cooldown}")
     else:
         st.info("Guardrails disabled")
 
@@ -463,21 +407,13 @@ with col2:
 
             signals_df["Price"] = signals_df["Price"].apply(lambda x: f"${x:,.2f}")
             signals_df["Timestamp"] = pd.to_datetime(signals_df["Timestamp"], utc=True)
-            signals_df["Timestamp"] = signals_df["Timestamp"].dt.strftime(
-                "%Y-%m-%d %H:%M:%S%z"
-            )
+            signals_df["Timestamp"] = signals_df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S%z")
 
             def highlight_action(row):
                 if row["Action"].lower() == "buy":
-                    return [
-                        "background-color: lightgreen" if col == "Action" else ""
-                        for col in row.index
-                    ]
+                    return ["background-color: lightgreen" if col == "Action" else "" for col in row.index]
                 elif row["Action"].lower() == "sell":
-                    return [
-                        "background-color: lightcoral" if col == "Action" else ""
-                        for col in row.index
-                    ]
+                    return ["background-color: lightcoral" if col == "Action" else "" for col in row.index]
                 return ["" for col in row.index]
 
             styled_df = signals_df.style.apply(highlight_action, axis=1)
@@ -523,12 +459,8 @@ with col2:
             )
             trades_df["Timestamp"] = pd.to_datetime(trades_df["Timestamp"], utc=True)
             display_df = trades_df.copy()
-            display_df["Price"] = display_df["Price"].apply(
-                lambda x: f"${x:,.2f}"
-            )
-            display_df["Timestamp"] = display_df["Timestamp"].dt.strftime(
-                "%Y-%m-%d %H:%M:%S%z"
-            )
+            display_df["Price"] = display_df["Price"].apply(lambda x: f"${x:,.2f}")
+            display_df["Timestamp"] = display_df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S%z")
             st.dataframe(display_df, use_container_width=True, height=300)
 
             portfolio = Portfolio(cash=starting_balance)
@@ -582,9 +514,7 @@ with col2:
                 df_pos = pd.DataFrame(pos_rows)
                 if not df_pos.empty:
                     for col in ["Avg Cost", "Last Price", "Unrealized PnL"]:
-                        df_pos[col] = df_pos[col].apply(
-                            lambda x: f"${x:,.2f}" if pd.notnull(x) else "N/A"
-                        )
+                        df_pos[col] = df_pos[col].apply(lambda x: f"${x:,.2f}" if pd.notnull(x) else "N/A")
                     df_pos["Unrealized PnL %"] = df_pos["Unrealized PnL %"].apply(
                         lambda x: f"{x:.2f}%" if pd.notnull(x) else "N/A"
                     )
@@ -605,7 +535,5 @@ with col2:
         st.info("No log file found")
 
 st.markdown("---")
-st.markdown(
-    "**Note:** Run the trading bot to generate signals that will appear in this dashboard."
-)
+st.markdown("**Note:** Run the trading bot to generate signals that will appear in this dashboard.")
 st.code("python trading_bot/main.py --symbol BTC/USDT", language="bash")

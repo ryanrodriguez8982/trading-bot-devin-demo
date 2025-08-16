@@ -61,9 +61,7 @@ def tune(
         try:
             stats = run_backtest(csv_path, strategy=strategy, **params)
         except Exception as e:  # pragma: no cover - log and continue
-            logger.exception(
-                "Error during backtest with params %s: %s", params, e
-            )
+            logger.exception("Error during backtest with params %s: %s", params, e)
             continue
 
         result = {"params": params}
@@ -108,10 +106,8 @@ def walk_forward_optimize(
     total_len = len(df)
 
     while start + train_size + test_size <= total_len:
-        train_df = df.iloc[start:start + train_size].reset_index(drop=True)
-        test_df = df.iloc[
-            start + train_size:start + train_size + test_size
-        ].reset_index(drop=True)
+        train_df = df.iloc[start : start + train_size].reset_index(drop=True)
+        test_df = df.iloc[start + train_size : start + train_size + test_size].reset_index(drop=True)
 
         best_params: Optional[Dict[str, Any]] = None
         best_stats: Optional[Dict[str, Any]] = None
@@ -120,19 +116,13 @@ def walk_forward_optimize(
             params = dict(zip(keys, combo))
             signals = generate_signals(train_df, strategy=strategy, **params)
             _, stats = simulate_equity(train_df, signals)
-            if (
-                best_stats is None
-                or stats.get("net_pnl", float("-inf"))
-                > best_stats.get("net_pnl", float("-inf"))
-            ):
+            if best_stats is None or stats.get("net_pnl", float("-inf")) > best_stats.get("net_pnl", float("-inf")):
                 best_stats = stats
                 best_params = params
 
         assert best_params is not None
 
-        test_signals = generate_signals(
-            test_df, strategy=strategy, **best_params
-        )
+        test_signals = generate_signals(test_df, strategy=strategy, **best_params)
         _, test_stats = simulate_equity(test_df, test_signals)
 
         results.append(

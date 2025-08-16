@@ -14,6 +14,7 @@ MAX_DD_PCT: float = 0.0
 
 logger = logging.getLogger(__name__)
 
+
 def configure(config: Optional[dict]) -> None:
     """Configure alert settings from ``config`` dictionary."""
     global ALERTS_ENABLED, HEARTBEAT_LAPSE, MAX_DD_PCT

@@ -78,9 +78,7 @@ def compute_equity_curve(
             # Skip trades that violate portfolio constraints
             pass
 
-        equity_curve.append(
-            {"timestamp": ts, "equity": portfolio.equity({symbol: price})}
-        )
+        equity_curve.append({"timestamp": ts, "equity": portfolio.equity({symbol: price})})
 
     final_price = float(sorted_signals[-1]["price"])
     final_equity = portfolio.equity({symbol: final_price})

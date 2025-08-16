@@ -10,6 +10,7 @@ from trading_bot.utils.retry import RetryPolicy, default_retry
 
 logger = logging.getLogger(__name__)
 
+
 def fetch_market_data(
     symbol: str = "BTC/USDT",
     timeframe: str = "1m",
@@ -45,8 +46,8 @@ def fetch_market_data(
         policy = retry_policy or default_retry()
         ohlcv = policy.call(exchange.fetch_ohlcv, symbol, timeframe, limit=limit)
 
-        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
+        df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
 
         logger.info(f"Successfully fetched {len(df)} candles for {symbol} from {exchange.id}")
         return df

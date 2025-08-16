@@ -18,6 +18,7 @@ def test_plugin_discovery(tmp_path, monkeypatch):
     monkeypatch.setenv("TRADING_BOT_PLUGIN_PATH", str(plugin_dir))
 
     import trading_bot.strategies as strategies
+
     importlib.reload(strategies)
 
     try:

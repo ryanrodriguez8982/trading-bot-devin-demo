@@ -71,11 +71,13 @@ def confluence_strategy(
         for action, prices in counts.items():
             if len(prices) >= required:
                 avg_price = sum(prices) / len(prices)
-                consensus_signals.append({
-                    "timestamp": ts,
-                    "action": action,
-                    "price": avg_price,
-                })
+                consensus_signals.append(
+                    {
+                        "timestamp": ts,
+                        "action": action,
+                        "price": avg_price,
+                    }
+                )
                 break
 
     return sorted(consensus_signals, key=lambda s: s["timestamp"])

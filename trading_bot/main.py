@@ -93,32 +93,20 @@ def parse_args():
         type=str,
         help="Timeframe for candles (e.g., 1m, 5m). Overrides config files.",
     )
-    common.add_argument(
-        "--limit", type=int, help="Number of candles to fetch. Overrides config files."
-    )
-    common.add_argument(
-        "--sma-short", type=int, help="Short-period SMA window. Overrides config files."
-    )
-    common.add_argument(
-        "--sma-long", type=int, help="Long-period SMA window. Overrides config files."
-    )
+    common.add_argument("--limit", type=int, help="Number of candles to fetch. Overrides config files.")
+    common.add_argument("--sma-short", type=int, help="Short-period SMA window. Overrides config files.")
+    common.add_argument("--sma-long", type=int, help="Long-period SMA window. Overrides config files.")
     common.add_argument(
         "--live-trade",
         action="store_true",
         help="Execute real orders when in live mode",
     )
-    common.add_argument(
-        "--dry-run", action="store_true", help="Print order payload without executing"
-    )
+    common.add_argument("--dry-run", action="store_true", help="Print order payload without executing")
     common.add_argument("--api-key", type=str, help="Exchange API key")
     common.add_argument("--api-secret", type=str, help="Exchange API secret")
-    common.add_argument(
-        "--api-passphrase", type=str, help="Exchange API passphrase (if required)"
-    )
+    common.add_argument("--api-passphrase", type=str, help="Exchange API passphrase (if required)")
     common.add_argument("--broker", type=str, help="Broker type to use (paper or ccxt)")
-    common.add_argument(
-        "--strategy", type=str, default="sma", help="Trading strategy to use"
-    )
+    common.add_argument("--strategy", type=str, default="sma", help="Trading strategy to use")
     common.add_argument(
         "--list-strategies",
         action="store_true",
@@ -181,12 +169,8 @@ def parse_args():
         type=str,
         help="Comma-separated list of trading symbols for live mode",
     )
-    common.add_argument(
-        "--risk-profile", type=str, help="Risk profile name. Overrides config files."
-    )
-    common.add_argument(
-        "--state-dir", type=str, help="Directory for logs and database state"
-    )
+    common.add_argument("--risk-profile", type=str, help="Risk profile name. Overrides config files.")
+    common.add_argument("--state-dir", type=str, help="Directory for logs and database state")
     common.add_argument(
         "--log-level",
         type=str.upper,
@@ -194,9 +178,7 @@ def parse_args():
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level for the application",
     )
-    common.add_argument(
-        "--json-logs", action="store_true", help="Output logs in JSON format"
-    )
+    common.add_argument("--json-logs", action="store_true", help="Output logs in JSON format")
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -204,12 +186,8 @@ def parse_args():
     subparsers.add_parser("live", parents=[common], help="Run live trading")
 
     # backtest subcommand
-    backtest_parser = subparsers.add_parser(
-        "backtest", parents=[common], help="Run a backtest on historical data"
-    )
-    backtest_parser.add_argument(
-        "--file", required=True, help="Path to CSV file for historical backtesting"
-    )
+    backtest_parser = subparsers.add_parser("backtest", parents=[common], help="Run a backtest on historical data")
+    backtest_parser.add_argument("--file", required=True, help="Path to CSV file for historical backtesting")
     backtest_parser.add_argument(
         "--save-chart",
         action="store_true",
@@ -217,12 +195,8 @@ def parse_args():
     )
 
     # optimization subcommand
-    opt_parser = subparsers.add_parser(
-        "optimize", parents=[common], help="Run parameter tuning or walk-forward"
-    )
-    opt_parser.add_argument(
-        "--file", required=True, help="Path to CSV file for historical backtesting"
-    )
+    opt_parser = subparsers.add_parser("optimize", parents=[common], help="Run parameter tuning or walk-forward")
+    opt_parser.add_argument("--file", required=True, help="Path to CSV file for historical backtesting")
     opt_parser.add_argument(
         "--tune",
         action="store_true",
@@ -313,9 +287,7 @@ def log_signals_to_file(
             f.write("=" * 50 + "\n")
             for signal in signals:
                 ts = signal["timestamp"].isoformat()
-                f.write(
-                    f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n"
-                )
+                f.write(f"{ts} | {signal['action'].upper()} | {symbol} | ${signal['price']:.2f}\n")
         logger.info("Logged %d signals to %s", len(signals), log_path)
     except OSError as e:
         logger.error("Failed to log signals to %s: %s", log_path, e)
@@ -357,9 +329,7 @@ def send_alert(signal):
 
 
 def signal_handler(signum, frame):  # noqa: ARG001 (frame unused)
-    logger.info(
-        "Received interrupt signal. Shutting down live trading mode gracefully..."
-    )
+    logger.info("Received interrupt signal. Shutting down live trading mode gracefully...")
     logger.info("=== Live Trading Mode Shutdown ===")
     sys.exit(0)
 
@@ -492,10 +462,7 @@ def run_live_mode(
     guardrails = None
     if risk_config is not None:
         md_cfg = getattr(risk_config, "max_drawdown", None)
-        if md_cfg and (
-            getattr(md_cfg, "monthly_pct", 0) > 0
-            or getattr(md_cfg, "cooldown_bars", 0) > 0
-        ):
+        if md_cfg and (getattr(md_cfg, "monthly_pct", 0) > 0 or getattr(md_cfg, "cooldown_bars", 0) > 0):
             from trading_bot.risk.guardrails import Guardrails
 
             guardrails = Guardrails(
@@ -576,13 +543,9 @@ def run_live_mode(
                     equity = portfolio.equity({sym: price}) if portfolio else 0
                     qty = trade_amount or 0.0
                     if not trade_amount and risk_config:
-                        qty = calculate_position_size(
-                            risk_config.position_sizing, price, equity
-                        )
+                        qty = calculate_position_size(risk_config.position_sizing, price, equity)
 
-                    if guardrails and not guardrails.allow_trade(
-                        equity, price=price, qty=qty
-                    ):
+                    if guardrails and not guardrails.allow_trade(equity, price=price, qty=qty):
                         logger.info("Guardrails blocked trade due to limits")
                         continue
 
@@ -641,9 +604,7 @@ def run_live_mode(
                             )
                             metrics.TRADES_EXECUTED.inc()
                         except ValueError:
-                            logger.debug(
-                                "Trade skipped due to portfolio/broker constraints"
-                            )
+                            logger.debug("Trade skipped due to portfolio/broker constraints")
 
                     if guardrails and qty > 0:
                         guardrails.record_trade(0)
@@ -667,9 +628,7 @@ def main() -> None:
     setup_logging(level=args.log_level, state_dir=state_dir, json_logs=args.json_logs)
     config = get_config()
     configure_alerts(config)
-    risk_config = get_risk_config(
-        config.get("risk"), getattr(args, "risk_overrides", {})
-    )
+    risk_config = get_risk_config(config.get("risk"), getattr(args, "risk_overrides", {}))
 
     symbol = args.symbol or config["symbol"]
     symbols = args.symbols.split(",") if getattr(args, "symbols", None) else [symbol]
@@ -683,26 +642,16 @@ def main() -> None:
 
     confluence_cfg = config.get("confluence", {})
     confluence_meta = STRATEGY_REGISTRY["confluence"].metadata
-    confluence_members = confluence_cfg.get(
-        "members", confluence_meta.get("requires")
-    )
-    confluence_required = confluence_cfg.get(
-        "required", confluence_meta.get("required_count")
-    )
+    confluence_members = confluence_cfg.get("members", confluence_meta.get("requires"))
+    confluence_required = confluence_cfg.get("required", confluence_meta.get("required_count"))
 
     os.makedirs(state_dir, exist_ok=True)
     api_key = args.api_key or config.get("api_key")
     api_secret = args.api_secret or config.get("api_secret")
     api_passphrase = args.api_passphrase or config.get("api_passphrase")
-    trade_size = (
-        args.trade_size
-        if args.trade_size is not None
-        else config.get("trade_size", 1.0)
-    )
+    trade_size = args.trade_size if args.trade_size is not None else config.get("trade_size", 1.0)
     broker_cfg = config.get("broker", {})
-    fee_bps = (
-        args.fee_bps if args.fee_bps is not None else broker_cfg.get("fees_bps", 0.0)
-    )
+    fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get("fees_bps", 0.0)
     slippage_bps = broker_cfg.get("slippage_bps", 5.0)
     broker_type = getattr(args, "broker", None) or broker_cfg.get("type", "paper")
     exchange_name = args.exchange or config.get("exchange", "binance")
@@ -722,9 +671,7 @@ def main() -> None:
             slippage_bps=slippage_bps,
         )
     elif broker_type == "ccxt":
-        broker = CcxtSpotBroker(
-            exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, "dry_run", False)
-        )
+        broker = CcxtSpotBroker(exchange=exchange, fees_bps=fee_bps, dry_run=getattr(args, "dry_run", False))
 
     # List strategies and exit
     if getattr(args, "list_strategies", False):
@@ -750,18 +697,14 @@ def main() -> None:
             logger.info("=== Tuning Results ===")
             for res in results:
                 params_str = ", ".join(f"{k}={v}" for k, v in res["params"].items())
-                logger.info(
-                    f"{params_str} -> PnL {res['net_pnl']:.2f}, Win {res['win_rate']:.2f}%"
-                )
+                logger.info(f"{params_str} -> PnL {res['net_pnl']:.2f}, Win {res['win_rate']:.2f}%")
             if results:
                 logger.info("Best parameters: %s", results[0]["params"])
             return
 
         if getattr(args, "walk_forward", False):
             if not args.backtest:
-                raise ValueError(
-                    "--file CSV path required for walk-forward optimization"
-                )
+                raise ValueError("--file CSV path required for walk-forward optimization")
             from trading_bot.tuner import walk_forward_optimize
 
             train_size = getattr(args, "train_size", None) or 100
@@ -774,13 +717,10 @@ def main() -> None:
             )
             logger.info("=== Walk-Forward Results ===")
             for res in results:
-                params_str = ", ".join(
-                    f"{k}={v}" for k, v in res["best_params"].items()
-                )
+                params_str = ", ".join(f"{k}={v}" for k, v in res["best_params"].items())
                 stats = res["test_stats"]
                 logger.info(
-                    f"{params_str} -> Test PnL {stats.get('net_pnl', 0.0):.2f}, "
-                    f"Win {stats.get('win_rate', 0.0):.2f}%"
+                    f"{params_str} -> Test PnL {stats.get('net_pnl', 0.0):.2f}, Win {stats.get('win_rate', 0.0):.2f}%"
                 )
             return
 
@@ -844,9 +784,7 @@ def main() -> None:
                 logger.info("Last 5 signals:")
                 for i, s in enumerate(signals[-5:], 1):
                     ts = s["timestamp"].isoformat()
-                    logger.info(
-                        "%d. %s - %s @ $%.2f", i, ts, s["action"].upper(), s["price"]
-                    )
+                    logger.info("%d. %s - %s @ $%.2f", i, ts, s["action"].upper(), s["price"])
             else:
                 logger.info("No trading signals generated.")
     except Exception:

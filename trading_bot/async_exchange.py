@@ -70,9 +70,7 @@ class AsyncExchange:
         """Execute a market order asynchronously."""
         side = "buy" if action.lower() == "buy" else "sell"
         try:
-            order = await self.exchange.create_market_order(
-                symbol, side, amount
-            )
+            order = await self.exchange.create_market_order(symbol, side, amount)
             logger.info(
                 "Executed %s order for %s %s: id=%s",
                 side,
