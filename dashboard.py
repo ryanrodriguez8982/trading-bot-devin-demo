@@ -555,17 +555,40 @@ with col2:
             if portfolio.positions:
                 pos_rows = []
                 for sym, pos in portfolio.positions.items():
+                    current_price = None
+                    try:
+                        ticker = exchange.fetch_ticker(sym)
+                        current_price = ticker.get("last") or ticker.get("close")
+                    except Exception as exc:  # pragma: no cover - best effort only
+                        logger.warning("Error fetching price for %s: %s", sym, exc)
+                    if current_price is not None:
+                        pnl = (current_price - pos.avg_cost) * pos.qty
+                        pnl_pct = ((current_price / pos.avg_cost) - 1) * 100
+                    else:
+                        pnl = pnl_pct = None
                     pos_rows.append(
                         {
                             "Symbol": sym,
                             "Qty": pos.qty,
                             "Avg Cost": pos.avg_cost,
+                            "Last Price": current_price,
+                            "Unrealized PnL": pnl,
+                            "Unrealized PnL %": pnl_pct,
                             "Stop Loss": pos.stop_loss,
                             "Take Profit": pos.take_profit,
                         }
                     )
                 st.subheader("Open Positions")
-                st.dataframe(pd.DataFrame(pos_rows), use_container_width=True)
+                df_pos = pd.DataFrame(pos_rows)
+                if not df_pos.empty:
+                    for col in ["Avg Cost", "Last Price", "Unrealized PnL"]:
+                        df_pos[col] = df_pos[col].apply(
+                            lambda x: f"${x:,.2f}" if pd.notnull(x) else "N/A"
+                        )
+                    df_pos["Unrealized PnL %"] = df_pos["Unrealized PnL %"].apply(
+                        lambda x: f"{x:.2f}%" if pd.notnull(x) else "N/A"
+                    )
+                st.dataframe(df_pos, use_container_width=True)
         else:
             st.info("No trades found in database")
     except sqlite3.Error as e:
