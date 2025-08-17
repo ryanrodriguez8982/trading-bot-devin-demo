@@ -463,6 +463,7 @@ def run_live_mode(
     retry_policy: Optional[RetryPolicy] = None,
     metrics_port: Optional[int] = None,
     health_port: Optional[int] = None,
+    min_balance_threshold: float = 0.0,
 ) -> None:
     state_dir = state_dir or default_state_dir()
     retry_policy = retry_policy or default_retry()
@@ -506,6 +507,23 @@ def run_live_mode(
             )
             if portfolio:
                 guardrails.reset_month(portfolio.equity())
+
+    def _available_cash(symbol: str) -> float:
+        if broker is not None:
+            balances = broker.get_balances()
+            quote = symbol.split("/")[1]
+            return float(balances.get("cash") or balances.get(quote, 0.0))
+        if portfolio is not None:
+            return portfolio.cash
+        if exchange is not None:
+            try:
+                data = exchange.fetch_balance()
+                free = data.get("free") or data
+                quote = symbol.split("/")[1]
+                return float(free.get(quote, 0.0))
+            except Exception:
+                return 0.0
+        return 0.0
 
     while True:
         iteration += 1
@@ -587,6 +605,17 @@ def run_live_mode(
                             continue
                     if guardrails and not guardrails.allow_trade(equity, price=price, qty=qty):
                         logger.info("Guardrails blocked trade due to limits")
+                        continue
+
+                    if (
+                        action == "buy"
+                        and min_balance_threshold > 0
+                        and _available_cash(sym) < min_balance_threshold
+                    ):
+                        logger.warning(
+                            "Balance below minimum $%s – halting new trades.",
+                            min_balance_threshold,
+                        )
                         continue
 
                     logger.info(
@@ -807,6 +836,7 @@ def main() -> None:
                 state_dir=state_dir,
                 metrics_port=args.metrics_port,
                 health_port=args.health_port,
+                min_balance_threshold=config.get("min_balance_threshold", 0.0),
             )
         else:
             signals = run_single_analysis(
