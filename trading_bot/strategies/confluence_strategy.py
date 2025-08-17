@@ -1,8 +1,12 @@
+"""Confluence strategy combining signals from multiple member strategies."""
+
 import logging
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Optional
 
 import pandas as pd
+
+from trading_bot.types import Signals
 
 from trading_bot.strategies import register_strategy
 
@@ -22,7 +26,7 @@ def confluence_strategy(
     members: Optional[List[str]] = None,
     required: int = METADATA["required_count"],
     **_kwargs,
-):
+) -> Signals:
     """Generate signals only when multiple strategies agree.
 
     Args:
@@ -32,7 +36,7 @@ def confluence_strategy(
         required (int): Number of strategies that must agree. Defaults to 2.
 
     Returns:
-        list[dict]: Consolidated trading signals.
+        Signals: Consolidated trading signals generated when quorum is met.
     """
     if members is None:
         members = METADATA["requires"].copy()

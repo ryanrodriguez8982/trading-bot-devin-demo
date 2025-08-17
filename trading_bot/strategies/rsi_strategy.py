@@ -1,8 +1,12 @@
+"""RSI threshold crossover strategy implementation."""
+
 import logging
 from typing import List, Dict, Any
 
 import numpy as np
 import pandas as pd
+from trading_bot.types import Signals
+
 
 from trading_bot.config import get_config
 from trading_bot.strategies import register_strategy
@@ -22,17 +26,20 @@ def rsi_strategy(
     lower_thresh: float = DEFAULT_RSI_LOWER,
     upper_thresh: float = DEFAULT_RSI_UPPER,
     **_kwargs,
-) -> List[Dict[str, Any]]:
+) -> Signals:
     """Generate trading signals based on RSI threshold crossovers.
 
     Args:
-        df: DataFrame with 'close' price column and 'timestamp'.
-        period: Lookback period for RSI calculation.
-        lower_thresh: Oversold threshold.
-        upper_thresh: Overbought threshold.
+        df (pd.DataFrame): Price data with columns ['timestamp', 'close'].
+        period (int): Lookback period for RSI calculation (must be &gt; 0).
+        lower_thresh (float): Oversold threshold.
+        upper_thresh (float): Overbought threshold.
 
     Returns:
-        List of dicts: { 'timestamp': pd.Timestamp, 'action': 'buy'|'sell', 'price': float }.
+        Signals: List of signal dictionaries with keys 'timestamp', 'action', and 'price'.
+
+    Raises:
+        KeyError: If required columns are missing.
     """
     if df is None or df.empty:
         logger.warning("Empty dataframe provided to RSI strategy")

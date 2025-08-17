@@ -1,7 +1,11 @@
+"""Bollinger Bands crossover strategy implementation."""
+
 import logging
 from typing import Any, Dict, List
 
 import pandas as pd
+
+from trading_bot.types import Signals
 
 from trading_bot.strategies import register_strategy
 
@@ -14,16 +18,19 @@ def bbands_strategy(
     window: int = 20,
     num_std: float = 2,
     **_kwargs,
-) -> List[Dict[str, Any]]:
+) -> Signals:
     """Generate trading signals using Bollinger Bands crossovers.
 
     Args:
-        df: DataFrame with at least ['timestamp', 'close'] columns.
-        window: Rolling window used for the middle band SMA.
-        num_std: Number of standard deviations for upper/lower bands.
+        df (pd.DataFrame): Price data with columns ['timestamp', 'close'].
+        window (int): Rolling window used for the middle band SMA.
+        num_std (float): Number of standard deviations for upper/lower bands.
 
     Returns:
-        A list of dicts: { 'timestamp': pd.Timestamp, 'action': 'buy'|'sell', 'price': float }.
+        Signals: List of signal dictionaries with keys 'timestamp', 'action', and 'price'.
+
+    Raises:
+        KeyError: If required columns are missing.
     """
     if df is None or df.empty:
         logger.warning("Empty dataframe provided to Bollinger strategy")
