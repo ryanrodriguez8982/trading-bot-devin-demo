@@ -107,9 +107,10 @@ class RiskConfig:
     position_sizing: PositionSizingConfig = field(default_factory=PositionSizingConfig)
     stops: StopsConfig = field(default_factory=StopsConfig)
     max_drawdown: MaxDrawdownConfig = field(default_factory=MaxDrawdownConfig)
+    daily_loss_limit_pct: float = 0.05
 
     def __post_init__(self) -> None:
-        if self.slippage_bps < 0:
+        if self.slippage_bps < 0 or self.daily_loss_limit_pct < 0:
             raise ValueError("bps values must be non-negative")
 
     @classmethod
@@ -119,11 +120,13 @@ class RiskConfig:
             position_sizing=PositionSizingConfig.from_dict(data.get("position_sizing", {})),
             stops=StopsConfig.from_dict(data.get("stops", {})),
             max_drawdown=MaxDrawdownConfig.from_dict(data.get("max_drawdown", {})),
+            daily_loss_limit_pct=data.get("daily_loss_limit_pct", 0.05),
         )
 
 
 DEFAULT_RISK_DICT: Dict[str, Any] = {
     "slippage_bps": 5,
+    "daily_loss_limit_pct": 0.05,
     "position_sizing": {
         "mode": "fixed_fraction",
         "fraction_of_equity": 0.10,
