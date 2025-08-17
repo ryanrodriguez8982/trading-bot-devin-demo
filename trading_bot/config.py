@@ -60,6 +60,7 @@ def load_config(config_dir: Optional[str] = None) -> Dict:
             "rsi_lower": 30,
             "rsi_upper": 70,
             "trade_size": 1.0,
+            "max_position_pct": 1.0,
         }
 
     local_path = os.path.join(base_dir, "config.local.json")
@@ -126,6 +127,7 @@ class ConfigModel(BaseModel):
     rsi_upper: int = Field(ge=0, le=100)
     trade_size: float = Field(gt=0)
     min_balance_threshold: float = Field(ge=0, default=0)
+    max_position_pct: float = Field(default=1.0, gt=0, le=1)
     confluence: ConfluenceModel
 
     model_config = ConfigDict(extra="allow")
