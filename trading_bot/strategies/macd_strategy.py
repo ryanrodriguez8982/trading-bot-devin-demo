@@ -1,7 +1,11 @@
+"""MACD crossover strategy implementation."""
+
 import logging
 from typing import List, Dict, Any
 
 import pandas as pd
+
+from trading_bot.types import Signals
 
 from trading_bot.strategies import register_strategy
 
@@ -15,17 +19,20 @@ def macd_strategy(
     slow_period: int = 26,
     signal_period: int = 9,
     **_kwargs,
-) -> List[Dict[str, Any]]:
+) -> Signals:
     """Generate trading signals based on MACD crossovers.
 
     Args:
-        df: DataFrame with 'close' and 'timestamp' columns.
-        fast_period: Fast EMA period.
-        slow_period: Slow EMA period.
-        signal_period: Signal line EMA period.
+        df (pd.DataFrame): Price data with columns ['timestamp', 'close'].
+        fast_period (int): Fast EMA period.
+        slow_period (int): Slow EMA period.
+        signal_period (int): Signal line EMA period.
 
     Returns:
-        List of dicts with keys: 'timestamp', 'action', 'price'.
+        Signals: List of signal dictionaries with keys 'timestamp', 'action', and 'price'.
+
+    Raises:
+        KeyError: If required columns are missing.
     """
     if df is None or df.empty:
         logger.warning("Empty dataframe provided to MACD strategy")

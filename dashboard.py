@@ -236,7 +236,7 @@ with col1:
                     signals = []
 
             if selected_strategy == "rsi":
-                fig, (ax, ax_rsi) = plt.subplots(2, 1, sharex=True, figsize=(12, 8))
+                fig, (ax, ax_rsi) = plt.subplots(2, 1, sharex=True, figsize=(12, 8))  # type: ignore[misc]
                 ax_rsi.plot(df_copy["timestamp"], df_copy["rsi"], label="RSI", color="purple")
                 ax_rsi.axhline(lower_thresh, color="green", linestyle="--", label="Lower")
                 ax_rsi.axhline(upper_thresh, color="red", linestyle="--", label="Upper")
@@ -244,7 +244,7 @@ with col1:
                 ax_rsi.set_ylim(0, 100)
                 ax_rsi.legend()
             elif selected_strategy == "macd":
-                fig, (ax, ax_macd) = plt.subplots(2, 1, sharex=True, figsize=(12, 8))
+                fig, (ax, ax_macd) = plt.subplots(2, 1, sharex=True, figsize=(12, 8))  # type: ignore[misc]
                 ax_macd.plot(df_copy["timestamp"], df_copy["macd"], label="MACD", color="blue")
                 ax_macd.plot(df_copy["timestamp"], df_copy["signal_line"], label="Signal", color="orange")
                 hist = df_copy["macd"] - df_copy["signal_line"]

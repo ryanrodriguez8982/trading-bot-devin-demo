@@ -1,7 +1,11 @@
+"""SMA crossover strategy implementation."""
+
 import logging
 from typing import List, Dict, Any
 
 import pandas as pd
+from trading_bot.types import Signals
+
 
 from trading_bot.config import get_config
 from trading_bot.strategies import register_strategy
@@ -19,7 +23,7 @@ def sma_strategy(
     sma_short: int = DEFAULT_SMA_SHORT,
     sma_long: int = DEFAULT_SMA_LONG,
     **_kwargs,
-) -> List[Dict[str, Any]]:
+) -> Signals:
     """
     SMA crossover strategy.
 
@@ -27,12 +31,16 @@ def sma_strategy(
     Sell when short SMA crosses below long SMA.
 
     Args:
-        df: DataFrame with at least ['timestamp', 'close'] columns.
-        sma_short: Short-period SMA window.
-        sma_long: Long-period SMA window.
+        df (pd.DataFrame): Price data with columns ['timestamp', 'close'].
+        sma_short (int): Short-period SMA window (must be &gt; 0).
+        sma_long (int): Long-period SMA window (must be &gt; 0).
 
     Returns:
-        List of dicts: { 'timestamp': pd.Timestamp, 'action': 'buy'|'sell', 'price': float }.
+        Signals: List of signal dictionaries with keys 'timestamp', 'action', and 'price'.
+
+    Raises:
+        KeyError: If required columns are missing.
+        ValueError: If sma_short or sma_long are not positive.
     """
     if df is None or df.empty:
         logger.warning("Empty dataframe provided to SMA strategy")
