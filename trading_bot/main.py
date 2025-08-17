@@ -218,6 +218,33 @@ def parse_args():
         help="Testing window size for walk-forward optimization",
     )
 
+    # Simulation matrix subcommand
+    simulate_parser = subparsers.add_parser(
+        "simulate",
+        help="Run simulation matrix across strategies, timeframes, and position sizes",
+        description="Run comprehensive simulation matrix for performance analysis",
+    )
+    simulate_parser.add_argument(
+        "--strategies",
+        type=str,
+        nargs="*",
+        help="Strategies to test (default: auto-discover from registry)",
+    )
+    simulate_parser.add_argument(
+        "--timeframes",
+        type=str,
+        nargs="*",
+        default=["5m", "1h"],
+        help="Timeframes to test (default: 5m, 1h)",
+    )
+    simulate_parser.add_argument(
+        "--position-sizes",
+        type=float,
+        nargs="*",
+        default=[0.02, 0.05, 0.10],
+        help="Position sizes as decimal (default: 0.02, 0.05, 0.10)",
+    )
+
     args, unknown = parser.parse_known_args()
     if not getattr(args, "command", None):
         parser.error("a subcommand is required")
@@ -260,6 +287,9 @@ def parse_args():
     elif args.command == "optimize":
         setattr(args, "live", False)
         setattr(args, "backtest", args.file)
+    elif args.command == "simulate":
+        setattr(args, "live", False)
+        setattr(args, "backtest", None)
 
     try:
         CLIArgsModel(**vars(args))
@@ -688,6 +718,12 @@ def main() -> None:
         raise ValueError("Unknown strategy. Use --list-strategies to view options.")
 
     try:
+        if args.command == "simulate":
+            from scripts.simulate_matrix import SimulationMatrix
+            sim = SimulationMatrix()
+            sim.run_full_simulation()
+            return
+
         if getattr(args, "tune", False):
             if not args.backtest:
                 raise ValueError("--file CSV path required for tuning")
