@@ -15,6 +15,7 @@ CONFIG = get_config()
 DEFAULT_SMA_SHORT: int = int(CONFIG.get("sma_short", 5))
 DEFAULT_SMA_LONG: int = int(CONFIG.get("sma_long", 20))
 
+
 @register_strategy("sma")
 def sma_strategy(
     df: pd.DataFrame,
