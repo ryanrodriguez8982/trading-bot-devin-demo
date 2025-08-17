@@ -37,6 +37,7 @@ DEFAULT_RSI_PERIOD = CONFIG.get("rsi_period", 14)
 DEFAULT_RSI_LOWER = CONFIG.get("rsi_lower", 30)
 DEFAULT_RSI_UPPER = CONFIG.get("rsi_upper", 70)
 DEFAULT_BBANDS_STD = CONFIG.get("bbands_std", 2)
+MAX_POSITION_PCT = CONFIG.get("max_position_pct", 1.0)
 
 try:
     from plyer import notification
@@ -574,7 +575,16 @@ def run_live_mode(
                     qty = trade_amount or 0.0
                     if not trade_amount and risk_config:
                         qty = calculate_position_size(risk_config.position_sizing, price, equity)
-
+                    if action == "buy" and portfolio and MAX_POSITION_PCT < 1.0:
+                        current_val = portfolio.position_qty(sym) * price
+                        allowed_val = equity * MAX_POSITION_PCT - current_val
+                        if allowed_val <= 0:
+                            qty = 0.0
+                        else:
+                            qty = min(qty, allowed_val / price)
+                        if qty == 0:
+                            logger.debug("Skipping buy; max_position_pct reached")
+                            continue
                     if guardrails and not guardrails.allow_trade(equity, price=price, qty=qty):
                         logger.info("Guardrails blocked trade due to limits")
                         continue
