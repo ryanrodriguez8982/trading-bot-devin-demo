@@ -6,7 +6,6 @@ from typing import List, Dict, Any
 import pandas as pd
 from trading_bot.types import Signals
 
-
 from trading_bot.config import get_config
 from trading_bot.strategies import register_strategy
 
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 CONFIG = get_config()
 DEFAULT_SMA_SHORT: int = int(CONFIG.get("sma_short", 5))
 DEFAULT_SMA_LONG: int = int(CONFIG.get("sma_long", 20))
-
 
 @register_strategy("sma")
 def sma_strategy(
