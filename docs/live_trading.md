@@ -62,6 +62,17 @@ trading-bot --live --max-trades-per-day 5 --max-position-pct 0.1 --trading-windo
 These safeguards complement stop-loss and take-profit rules by preventing
 over-trading in unfavourable conditions.
 
+To automatically attach protective exits to each trade, configure
+`stop_loss_pct` and `take_profit_pct` in `config.json`.
+For example:
+
+```json
+"stop_loss_pct": 0.02,
+"take_profit_pct": 0.05
+```
+
+This will sell a position if price falls 2% below entry or rises 5% above it.
+
 To automatically limit exposure in both backtests and live trading, set
 `max_position_pct` in your `config.json`. For example, adding
 

@@ -16,6 +16,8 @@
     "api_secret": "",
     "api_passphrase": "",
     "trade_size": 1.0,
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": 0.05,
     "min_balance_threshold": 0,
     "min_trade_interval_sec": 60,
     "max_position_pct": 1.0,

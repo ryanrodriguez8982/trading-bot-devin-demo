@@ -122,6 +122,8 @@ Default settings live in [`config.json`](config.json). Key options include:
 - Strategy parameters such as `sma_short`, `rsi_period`, `macd_fast`, or `bbands_window`.
 - API credentials and trade sizing under `api_key`, `api_secret`, and `trade_size`.
 - Risk controls and broker settings in the nested `risk` and `broker` sections.
+- Per-trade exits with `stop_loss_pct` and `take_profit_pct` to automatically
+  close positions when price moves beyond configured thresholds.
 
 Any value can be overridden from the command line by passing the corresponding flag, e.g.:
 
