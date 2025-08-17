@@ -491,6 +491,8 @@ def run_live_mode(
     portfolio = None
     if broker is None:
         portfolio = Portfolio(cash=trade_amount * 100 if trade_amount else 0)
+    elif hasattr(broker, "portfolio"):
+        portfolio = broker.portfolio
 
     guardrails = None
     if risk_config is not None:
@@ -511,6 +513,13 @@ def run_live_mode(
 
     last_trade_time: Optional[float] = None
 
+    # Daily loss limit tracking
+    day_start = datetime.now(timezone.utc).date()
+    daily_start_equity = portfolio.equity() if portfolio else 0.0
+    start_day_realized_pnl = portfolio.realized_pnl if portfolio else 0.0
+    daily_halted = False
+    daily_loss_limit_pct = getattr(risk_config, "daily_loss_limit_pct", 0.0) if risk_config else 0.0
+
     def _available_cash(symbol: str) -> float:
         if broker is not None:
             balances = broker.get_balances()
@@ -530,7 +539,25 @@ def run_live_mode(
 
     while True:
         iteration += 1
-        if guardrails and portfolio:
+        today = datetime.now(timezone.utc).date()
+        if today != day_start:
+            day_start = today
+            if portfolio:
+                daily_start_equity = portfolio.equity()
+                start_day_realized_pnl = portfolio.realized_pnl
+            daily_halted = False
+
+        if portfolio and daily_loss_limit_pct > 0:
+            daily_pnl = portfolio.realized_pnl - start_day_realized_pnl
+            if daily_pnl <= -daily_loss_limit_pct * daily_start_equity:
+                if not daily_halted:
+                    logger.warning(
+                        "Daily max loss exceeded (>-%s%%). Trading halted until next day.",
+                        daily_loss_limit_pct * 100,
+                    )
+                daily_halted = True
+
+        if guardrails and portfolio and not daily_halted:
             eq = portfolio.equity()
             now = datetime.now(timezone.utc)
             if guardrails.should_halt(eq):
@@ -545,7 +572,7 @@ def run_live_mode(
         logger.info("[%s] Iteration #%d", now_iso, iteration)
 
         def _iteration_body():
-            nonlocal last_trade_time
+            nonlocal last_trade_time, daily_halted
             for sym in symbols:
                 signals = run_single_analysis(
                     sym,
@@ -590,6 +617,10 @@ def run_live_mode(
                                 }
                             )
                         )
+                        continue
+
+                    if daily_halted:
+                        logger.info("Daily loss limit reached - skipping trade execution")
                         continue
 
                     # Determine quantity and equity
@@ -693,6 +724,16 @@ def run_live_mode(
                             last_trade_time = now_ts
                         except ValueError:
                             logger.debug("Trade skipped due to portfolio/broker constraints")
+
+                    if portfolio and daily_loss_limit_pct > 0:
+                        daily_pnl = portfolio.realized_pnl - start_day_realized_pnl
+                        if daily_pnl <= -daily_loss_limit_pct * daily_start_equity:
+                            logger.warning(
+                                "Daily max loss exceeded (>-%s%%). Trading halted until next day.",
+                                daily_loss_limit_pct * 100,
+                            )
+                            daily_halted = True
+                            return
 
                     if guardrails and qty > 0:
                         guardrails.record_trade(0)
