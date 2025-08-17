@@ -9,7 +9,7 @@ import sys
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class SimulationMatrix:
-    def __init__(self, base_dir: str = None):
+    def __init__(self, base_dir: Optional[str] = None) -> None:
         self.base_dir = Path(base_dir) if base_dir else Path(__file__).parent.parent
         self.data_dir = self.base_dir / "data" / "sim"
         self.artifacts_dir = self.base_dir / "artifacts" / "simulations"
@@ -45,7 +45,7 @@ class SimulationMatrix:
         self.initial_capital = 10000.0
 
         self.target_strategies = ["sma", "rsi", "macd", "bbands"]
-        self.results = []
+        self.results: List[Dict[str, Any]] = []
 
     def get_available_strategies(self) -> List[str]:
         available = []
