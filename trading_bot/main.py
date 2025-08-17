@@ -18,6 +18,7 @@ from trading_bot.data_fetch import fetch_market_data
 from trading_bot.exchange import create_exchange, execute_trade
 from trading_bot.notify import configure as configure_alerts
 from trading_bot.portfolio import Portfolio
+from trading_bot.risk.exits import ExitManager
 from trading_bot.risk.position_sizing import calculate_position_size
 from trading_bot.risk.config import get_risk_config
 from trading_bot.signal_logger import (
@@ -141,6 +142,18 @@ def parse_args():
         type=float,
         default=None,
         help="Trading fee in basis points. Overrides config files.",
+    )
+    common.add_argument(
+        "--stop-loss-pct",
+        type=float,
+        default=None,
+        help="Decimal percentage drop from entry to trigger a stop-loss (e.g. 0.02).",
+    )
+    common.add_argument(
+        "--take-profit-pct",
+        type=float,
+        default=None,
+        help="Decimal percentage gain from entry to take profit (e.g. 0.05).",
     )
     common.add_argument(
         "--position-sizing",
@@ -454,6 +467,8 @@ def run_live_mode(
     live_trade: bool = False,
     trade_amount: float = 0.0,
     fee_bps: float = 0.0,
+    stop_loss_pct: float = 0.0,
+    take_profit_pct: float = 0.0,
     risk_config: Optional[Any] = None,
     interval_seconds: int = 60,
     broker: Optional[Any] = None,
@@ -518,6 +533,12 @@ def run_live_mode(
     daily_start_equity = portfolio.equity() if portfolio else 0.0
     start_day_realized_pnl = portfolio.realized_pnl if portfolio else 0.0
     daily_halted = False
+    exit_manager: Optional[ExitManager] = None
+    if stop_loss_pct > 0 or take_profit_pct > 0:
+        exit_manager = ExitManager(
+            stop_loss_pct=stop_loss_pct * 100 if stop_loss_pct > 0 else None,
+            take_profit_pct=take_profit_pct * 100 if take_profit_pct > 0 else None,
+        )
     daily_loss_limit_pct = getattr(risk_config, "daily_loss_limit_pct", 0.0) if risk_config else 0.0
 
     def _available_cash(symbol: str) -> float:
@@ -574,6 +595,53 @@ def run_live_mode(
         def _iteration_body():
             nonlocal last_trade_time, daily_halted
             for sym in symbols:
+                current_price: Optional[float] = None
+                if exchange is not None:
+                    try:
+                        ticker = exchange.fetch_ticker(sym)
+                        current_price = (
+                            ticker.get("last")
+                            or ticker.get("close")
+                            or ticker.get("ask")
+                            or ticker.get("bid")
+                        )
+                    except Exception:
+                        current_price = None
+                elif broker is not None:
+                    try:
+                        current_price = broker.get_price(sym)
+                    except Exception:
+                        current_price = None
+                if current_price is not None and broker is not None:
+                    broker.set_price(sym, float(current_price))
+                if exit_manager is not None and current_price is not None:
+                    pos_qty = 0.0
+                    if broker is not None:
+                        pos_qty = broker.get_open_positions().get(sym, 0.0)
+                    elif portfolio is not None:
+                        pos_qty = portfolio.position_qty(sym)
+                    if pos_qty > 0:
+                        arm = exit_manager.arms.get(sym)
+                        exit_price = exit_manager.check(sym, float(current_price))
+                        if exit_price is not None:
+                            if broker is not None:
+                                broker.set_price(sym, float(exit_price))
+                                broker.create_order("sell", sym, pos_qty)
+                            elif portfolio is not None:
+                                portfolio.sell(sym, pos_qty, float(exit_price), fee_bps=fee_bps)
+                            if arm and exit_manager.stop_loss_pct is not None and exit_price <= arm.entry_price * (1 - exit_manager.stop_loss_pct / 100):
+                                logger.info(
+                                    "Stop-loss triggered at $%.4f, selling %.4f.",
+                                    exit_price,
+                                    pos_qty,
+                                )
+                            else:
+                                logger.info(
+                                    "Take-profit target hit at $%.4f, selling %.4f.",
+                                    exit_price,
+                                    pos_qty,
+                                )
+                            continue
                 signals = run_single_analysis(
                     sym,
                     timeframe,
@@ -725,6 +793,21 @@ def run_live_mode(
                         except ValueError:
                             logger.debug("Trade skipped due to portfolio/broker constraints")
 
+                    if exit_manager is not None:
+                        if action == "buy" and qty > 0:
+                            exit_manager.arm(sym, float(price))
+                            sl_price = price * (1 - stop_loss_pct) if stop_loss_pct > 0 else None
+                            tp_price = price * (1 + take_profit_pct) if take_profit_pct > 0 else None
+                            msg_parts = []
+                            if sl_price is not None:
+                                msg_parts.append(f"stop-loss at ${sl_price:.4f}")
+                            if tp_price is not None:
+                                msg_parts.append(f"take-profit at ${tp_price:.4f}")
+                            if msg_parts:
+                                logger.info("Set %s for this trade", " and ".join(msg_parts))
+                        elif action == "sell":
+                            exit_manager.disarm(sym)
+
                     if portfolio and daily_loss_limit_pct > 0:
                         daily_pnl = portfolio.realized_pnl - start_day_realized_pnl
                         if daily_pnl <= -daily_loss_limit_pct * daily_start_equity:
@@ -782,6 +865,16 @@ def main() -> None:
     broker_cfg = config.get("broker", {})
     fee_bps = args.fee_bps if args.fee_bps is not None else broker_cfg.get("fees_bps", 0.0)
     slippage_bps = broker_cfg.get("slippage_bps", 5.0)
+    stop_loss_pct = (
+        args.stop_loss_pct
+        if getattr(args, "stop_loss_pct", None) is not None
+        else config.get("stop_loss_pct", 0.0)
+    )
+    take_profit_pct = (
+        args.take_profit_pct
+        if getattr(args, "take_profit_pct", None) is not None
+        else config.get("take_profit_pct", 0.0)
+    )
     broker_type = getattr(args, "broker", None) or broker_cfg.get("type", "paper")
     exchange_name = args.exchange or config.get("exchange", "binance")
 
@@ -888,6 +981,8 @@ def main() -> None:
                 live_trade=args.live_trade,
                 trade_amount=trade_size,
                 fee_bps=fee_bps,
+                stop_loss_pct=stop_loss_pct,
+                take_profit_pct=take_profit_pct,
                 risk_config=risk_config,
                 interval_seconds=interval_seconds,
                 broker=broker,
