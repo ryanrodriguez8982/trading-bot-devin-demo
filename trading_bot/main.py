@@ -464,6 +464,7 @@ def run_live_mode(
     metrics_port: Optional[int] = None,
     health_port: Optional[int] = None,
     min_balance_threshold: float = 0.0,
+    min_trade_interval_sec: int = 0,
 ) -> None:
     state_dir = state_dir or default_state_dir()
     retry_policy = retry_policy or default_retry()
@@ -508,6 +509,8 @@ def run_live_mode(
             if portfolio:
                 guardrails.reset_month(portfolio.equity())
 
+    last_trade_time: Optional[float] = None
+
     def _available_cash(symbol: str) -> float:
         if broker is not None:
             balances = broker.get_balances()
@@ -542,6 +545,7 @@ def run_live_mode(
         logger.info("[%s] Iteration #%d", now_iso, iteration)
 
         def _iteration_body():
+            nonlocal last_trade_time
             for sym in symbols:
                 signals = run_single_analysis(
                     sym,
@@ -618,6 +622,19 @@ def run_live_mode(
                         )
                         continue
 
+                    now_ts = time.time()
+                    if (
+                        min_trade_interval_sec > 0
+                        and last_trade_time is not None
+                        and now_ts - last_trade_time < min_trade_interval_sec
+                    ):
+                        logger.info(
+                            "Trade signal at %s skipped – last trade %.0f seconds ago.",
+                            datetime.fromtimestamp(now_ts, timezone.utc).strftime("%H:%M"),
+                            now_ts - last_trade_time,
+                        )
+                        continue
+
                     logger.info(
                         "Processing signal: symbol=%s action=%s price=%.4f qty=%f strategy=%s",
                         sym,
@@ -645,6 +662,7 @@ def run_live_mode(
                             )
                         )
                         metrics.TRADES_EXECUTED.inc()
+                        last_trade_time = now_ts
                     else:
                         try:
                             if broker:
@@ -672,6 +690,7 @@ def run_live_mode(
                                 )
                             )
                             metrics.TRADES_EXECUTED.inc()
+                            last_trade_time = now_ts
                         except ValueError:
                             logger.debug("Trade skipped due to portfolio/broker constraints")
 
@@ -837,6 +856,7 @@ def main() -> None:
                 metrics_port=args.metrics_port,
                 health_port=args.health_port,
                 min_balance_threshold=config.get("min_balance_threshold", 0.0),
+                min_trade_interval_sec=config.get("min_trade_interval_sec", 0),
             )
         else:
             signals = run_single_analysis(
