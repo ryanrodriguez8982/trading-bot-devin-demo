@@ -125,6 +125,7 @@ class ConfigModel(BaseModel):
     rsi_lower: int = Field(ge=0, le=100)
     rsi_upper: int = Field(ge=0, le=100)
     trade_size: float = Field(gt=0)
+    min_balance_threshold: float = Field(ge=0, default=0)
     confluence: ConfluenceModel
 
     model_config = ConfigDict(extra="allow")
