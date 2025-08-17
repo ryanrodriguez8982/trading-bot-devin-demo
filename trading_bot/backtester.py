@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 CONFIG = get_config()
 DEFAULT_INITIAL_CAPITAL = 10000.0
 DEFAULT_TRADE_SIZE = CONFIG.get("trade_size", 1.0)
+DEFAULT_MAX_POSITION_PCT = CONFIG.get("max_position_pct", 1.0)
 
 REQUIRED_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 
@@ -82,6 +83,7 @@ def simulate_equity(
     stop_loss_pct: Optional[float] = None,
     take_profit_rr: Optional[float] = None,
     trailing_stop_pct: Optional[float] = None,
+    max_position_pct: float = DEFAULT_MAX_POSITION_PCT,
     symbol: str = "asset",
 ):
     """Simulate an equity curve given a stream of trade signals.
@@ -96,6 +98,8 @@ def simulate_equity(
         Starting cash balance for the simulated portfolio.
     trade_size : float, default ``DEFAULT_TRADE_SIZE``
         Quantity to buy or sell on each signal.
+    max_position_pct : float, default ``DEFAULT_MAX_POSITION_PCT``
+        Maximum fraction of equity allocated to the position.
     fees_bps : float, default ``0.0``
         Trading fee in basis points applied to each transaction.
     slippage_bps : float, default ``0.0``
@@ -166,16 +170,28 @@ def simulate_equity(
                     if trailing_stop_pct is not None:
                         trail_price = buy_price * (1 - trailing_stop_pct)
                         stop_price = max(stop_price, trail_price) if stop_price is not None else trail_price
-                    portfolio.buy(
-                        symbol,
-                        trade_size,
-                        buy_price,
-                        fee_bps=fees_bps,
-                        stop_loss=stop_price,
-                        take_profit=take_price,
-                    )
-                    if exits is not None:
-                        exits.arm(symbol, buy_price)
+                    qty = trade_size
+                    if max_position_pct < 1.0:
+                        equity = portfolio.equity({symbol: buy_price})
+                        current_val = portfolio.position_qty(symbol) * buy_price
+                        allowed_val = equity * max_position_pct - current_val
+                        if allowed_val <= 0:
+                            qty = 0.0
+                        else:
+                            qty = min(qty, allowed_val / buy_price)
+                        if qty < trade_size:
+                            logger.debug("Capping buy to %.8f due to max_position_pct", qty)
+                    if qty > 0:
+                        portfolio.buy(
+                            symbol,
+                            qty,
+                            buy_price,
+                            fee_bps=fees_bps,
+                            stop_loss=stop_price,
+                            take_profit=take_price,
+                        )
+                        if exits is not None:
+                            exits.arm(symbol, buy_price)
                 elif action == "sell":
                     sell_price = close_price * (1 - slippage_bps / 10_000)
                     pos = portfolio.positions.get(symbol)
@@ -204,6 +220,8 @@ def simulate_equity(
         "net_pnl": float(net_pnl),
         "win_rate": float(win_rate),
         "max_drawdown": float(max_drawdown),
+        "final_position_qty": portfolio.position_qty(symbol),
+        "cash": portfolio.cash,
     }
 
 
@@ -299,6 +317,7 @@ def run_backtest(
     stop_loss_pct: Optional[float] = None,
     take_profit_rr: Optional[float] = None,
     trailing_stop_pct: Optional[float] = None,
+    max_position_pct: float = DEFAULT_MAX_POSITION_PCT,
     **strategy_kwargs,
 ):
     """Run backtest on CSV data using specified strategy.
@@ -322,6 +341,7 @@ def run_backtest(
         stop_loss_pct=stop_loss_pct,
         take_profit_rr=take_profit_rr,
         trailing_stop_pct=trailing_stop_pct,
+        max_position_pct=max_position_pct,
     )
 
     eq_df = pd.DataFrame(
